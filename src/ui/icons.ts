@@ -41,11 +41,6 @@ const SVG: Record<string, string> = {
     <path d="M20 40V26c0-10 6-19 12-22 6 3 12 12 12 22v14z" fill="#ffc94d" ${S}/>
     <rect x="17" y="40" width="30" height="18" rx="4" fill="#ff8a5b" ${S}/>
     <path d="M27 14c-1.5 3-2.5 7-2.5 11" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".8"/>`,
-  gun: `
-    <path d="M6 22h38l6-6h8v14H44v4H30l-4 18H14l4-18H10a4 4 0 0 1-4-4z" fill="currentColor" ${S}/>
-    <rect x="44" y="20" width="8" height="6" rx="2" fill="#fff" opacity=".7"/>
-    <path d="M12 25h20" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".7"/>
-    <circle cx="27" cy="38" r="3" fill="none" stroke="${INK}" stroke-width="3"/>`,
   lock: `
     <path d="M20 30v-8a12 12 0 0 1 24 0v8" fill="none" ${S} stroke-width="5"/>
     <rect x="13" y="28" width="38" height="30" rx="7" fill="#c9d2ea" ${S}/>
@@ -61,7 +56,7 @@ const SVG: Record<string, string> = {
     <path d="M22 22l20 20M42 22L22 42" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>`,
 };
 
-export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'gun' | 'lock' | 'close';
+export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'lock' | 'close';
 
 /** 아이콘 span (크기는 CSS .ico / 추가 클래스) */
 export function icon(name: IconName, cls = ''): HTMLSpanElement {

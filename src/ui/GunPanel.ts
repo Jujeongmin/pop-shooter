@@ -10,6 +10,7 @@ import { WORLD1_FACILITIES } from '../world/facilities';
 import { button, el } from './dom';
 import type { FloatText } from './FloatText';
 import { icon } from './icons';
+import { bakeGunIcons, tintedGun } from './gunIcons';
 import { bump, Panel } from './Panel';
 import type { ZoneCallout } from './ZoneCallout';
 
@@ -30,6 +31,10 @@ export class GunPanel {
   private readonly float: FloatText;
   private readonly callout: ZoneCallout;
   private readonly zone: ZoneEntry;
+  /** 총 썸네일 (처음 창 열 때 한 번 구움) */
+  private thumbs: string[] | null = null;
+  /** 가판대 진열 총: 복제 material 소유 (광장과 수명 같음) */
+  private readonly displayMats: THREE.Material[] = [];
 
   constructor(game: Game, ui: HTMLElement, callout: ZoneCallout, float: FloatText) {
     this.game = game;
@@ -50,6 +55,31 @@ export class GunPanel {
     game.facilityLeave.guns = () => { this.zone.leave(); this.panel.close(); };
     game.onTick((dt) => this.zone.update(dt));
     game.onStateChange(() => { if (this.panel.isOpen) this.render(); });
+    this.buildDisplay(f.x, f.z);
+  }
+
+  /** 가판대 위에 월드 1 총 4자루를 옆으로 눕혀 진열 */
+  private buildDisplay(fx: number, fz: number): void {
+    const box = new THREE.Box3();
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    GUNS.filter((g) => g.world === 1).forEach((g, i) => {
+      const { obj, mats } = tintedGun(this.game.assets, g);
+      this.displayMats.push(...mats);
+      const holder = new THREE.Group();
+      box.setFromObject(obj);
+      box.getSize(size);
+      box.getCenter(center);
+      obj.position.sub(center);
+      // 총열을 x축으로 (카메라가 남쪽에서 보므로 옆모습)
+      if (size.z > size.x) obj.rotation.y = Math.PI / 2;
+      holder.add(obj);
+      holder.scale.setScalar(0.85 / Math.max(size.x, size.z));
+      holder.position.set(fx + 0.75 + i * 0.72, 1.1 + 0.22, fz - 0.2 + (i % 2) * 0.4);
+      holder.rotation.y = -0.15;
+      obj.traverse((o) => { o.castShadow = true; });
+      this.game.hub.root.add(holder);
+    });
   }
 
   private render(): void {
@@ -62,8 +92,11 @@ export class GunPanel {
       body.append(el('div', 'shop-world', t('shop.world', { w })));
       for (const g of GUNS.filter((x) => x.world === w)) {
         const row = el('div', 'gun-row');
-        const gi = icon('gun');
-        gi.style.color = g.tint === '#ffffff' ? '#ffd34d' : g.tint;
+        this.thumbs ??= bakeGunIcons(this.game.assets, GUNS);
+        const gi = el('img', 'gun-thumb');
+        gi.src = this.thumbs[g.index]!;
+        gi.alt = '';
+        gi.draggable = false;
         const mid = el('div', '');
         mid.append(el('div', 'gun-name', gunName(g.world, g.model)), el('div', 'gun-dmg', t('shop.dmg', { m: multText(gunMult(g.index)) })));
         let right: HTMLElement;
