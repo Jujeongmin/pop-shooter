@@ -14,10 +14,10 @@ import { RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES } from '../world/facilities
 const HUB_WORLD = 1;
 const FLUSH_SEC = 0.25;
 /** 들어오면 사격 자리로 폴짝 빨려 들어가는 시간·높이, 착지 뒤 이동 잠금 */
-const SNAP_SEC = 0.24;
-const SNAP_HOP = 0.6;
-const LAND_LOCK = 0.3;
-const SQUASH_SEC = 0.6;
+const SNAP_SEC = 0.38;
+const SNAP_HOP = 0.9;
+/** 착지 클립(landHold 0.3초)이 끝날 때까지 */
+const LAND_LOCK = 0.35;
 
 const _muzzle = new THREE.Vector3();
 const _aim = new THREE.Vector3();
@@ -46,7 +46,6 @@ export class TrainingRange {
   /** 자리로 빨려 들어가는 중이면 0..SNAP_SEC, 아니면 −1 */
   private snapT = -1;
   private readonly snapFrom = new THREE.Vector3();
-  private squashT = SQUASH_SEC;
   private readonly callout: ZoneCallout;
   /** 디버그·검증: 지금까지 인정한 탭 수 */
   tapsAccepted = 0;
@@ -88,20 +87,19 @@ export class TrainingRange {
     this.game.tapHandler = null;
     this.game.pose.aimAt = null;
     this.game.pose.kick = 0;
-    this.game.pose.squash = 0;
+    this.game.pose.grounded = true;
     this.game.pos.y = 0;
     this.snapT = -1;
-    this.squashT = SQUASH_SEC;
     this.ring.setInside(false);
     this.game.cam.focus = 0;
     this.callout.hide();
   }
 
-  /** 사격 자리 착지: 링 튕김 + 화면 번쩍 + 흔들림 + 찌그러짐 + 문구 + 첫 발 */
+  /** 사격 자리 착지 (착지 클립) + 링 튕김 + 화면 번쩍 + 흔들림 + 문구 + 첫 발 */
   private land(): void {
     const g = this.game;
     g.pos.y = 0;
-    this.squashT = 0;
+    g.pose.grounded = true;
     this.ring.burst();
     g.cam.shake(0.08);
     this.callout.flash('rgba(79, 179, 255, 0.85)');
@@ -118,7 +116,7 @@ export class TrainingRange {
     g.pos.z = this.snapFrom.z + (RANGE_SPOT.z - this.snapFrom.z) * e;
     g.pos.y = Math.sin(Math.PI * k) * SNAP_HOP;
     g.yaw = Math.atan2(RANGE_TARGET.x - g.pos.x, RANGE_TARGET.z - g.pos.z);
-    g.pose.squash = -0.25 * Math.sin(Math.PI * k);
+    g.pose.grounded = false;
     if (k >= 1) {
       this.snapT = -1;
       this.land();
@@ -168,11 +166,6 @@ export class TrainingRange {
     });
     if (!this.active) return;
     if (this.snapT >= 0) { this.updateSnap(dt); return; }
-    if (this.squashT < SQUASH_SEC) {
-      this.squashT += dt;
-      const t = this.squashT;
-      g.pose.squash = t < SQUASH_SEC ? Math.exp(-t * 7) * Math.cos(t * 24) : 0;
-    }
     // 걷는 중엔 쏘지 않음 (판 밖으로 나가면 facilityLeave가 stop)
     if (g.velocity.lengthSq() > 0.04) {
       g.pose.aimAt = null;

@@ -15,8 +15,8 @@ export interface AvatarPose {
   aimAt: THREE.Vector3 | null;
   /** 반동 (m) */
   kick: number;
-  /** 착지 찌그러짐 (+ = 납작, − = 길쭉), 0이면 원래 크기 */
-  squash?: number;
+  /** 공중이면 false (점프·공중·착지 클립 자동 재생). 없으면 땅 */
+  grounded?: boolean;
 }
 
 const _dir = new THREE.Vector3();
@@ -31,6 +31,7 @@ export class Avatar {
   /** 이 아바타가 복제한 총 material (dispose 대상). 총 geometry·texture는 GLB 원본과 공유 */
   private gunMats: THREE.Material[] = [];
   private readonly frame: AvatarFrame;
+  private airTime = 0;
 
   constructor(assets: Assets, char: CharId, gun: GunDef) {
     this.assets = assets;
@@ -79,6 +80,13 @@ export class Avatar {
     f.bodyYaw = p.yaw;
     f.velocity.copy(p.velocity);
     f.weaponKick = p.kick;
+    const grounded = p.grounded ?? true;
+    f.justJumped = f.grounded && !grounded;
+    f.justLanded = !f.grounded && grounded;
+    f.landedAirTime = this.airTime;
+    this.airTime = grounded ? 0 : this.airTime + dt;
+    f.grounded = grounded;
+    f.mode = grounded ? 'ground' : 'air';
     if (p.aimAt) {
       this.avatar.getChestPosition(_chest);
       _dir.copy(p.aimAt).sub(_chest);
@@ -92,8 +100,6 @@ export class Avatar {
       f.pitch = -0.1;
     }
     this.avatar.update(f);
-    const q = p.squash ?? 0;
-    this.root.scale.set(1 + q * 0.35, 1 - q * 0.45, 1 + q * 0.35);
   }
 
   getMuzzle(out: THREE.Vector3): void {
