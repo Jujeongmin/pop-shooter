@@ -14,6 +14,8 @@ import { BattleHud } from './ui/BattleHud';
 import { ResultCard } from './ui/ResultCard';
 import { ZoneCallout } from './ui/ZoneCallout';
 import { loadBricks } from './world/kit';
+import { Loading } from './ui/Loading';
+import { Tutorial } from './ui/Tutorial';
 import { applyLang } from './i18n/i18n';
 import { audio } from './audio/audio';
 import { SettingsPanel } from './ui/SettingsPanel';
@@ -25,6 +27,7 @@ import { showOfflineReward } from './ui/OfflinePanel';
 
 async function boot(): Promise<void> {
   const ui = document.getElementById('ui')!;
+  const loading = new Loading(ui);
   // 첫 입력(클릭·터치·키)에서 소리를 켬. 광장 음악은 그때부터
   audio.attachUnlock(window);
   audio.setMusic('hub');
@@ -33,7 +36,7 @@ async function boot(): Promise<void> {
   const cloud = new CloudSave();
   const cloudReady = cloud.connect();
   const stage = new Stage3D(document.getElementById('view') as HTMLCanvasElement);
-  const [assets, kit] = await Promise.all([loadAssets(stage.renderer), loadBricks()]);
+  const [assets, kit] = await Promise.all([loadAssets(stage.renderer, (p) => loading.set(p * 0.9)), loadBricks()]);
   // 3D 글자 라벨이 언어 글꼴로 구워지도록 글꼴 먼저
   await fontReady;
   await cloudReady;
@@ -59,7 +62,9 @@ async function boot(): Promise<void> {
   new CharacterPanel(game, ui, callout);
   const settings = new SettingsPanel(ui);
   game.menuActions.settings = () => settings.open();
+  new Tutorial(game, ui);
   stage.start();
+  loading.done();
   showOfflineReward(game, ui, save.now);
   if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud, __audio: audio });
 }
