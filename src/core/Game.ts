@@ -21,7 +21,7 @@ const _dir = new THREE.Vector3();
 
 export type GameMode = 'hub' | 'training' | 'battle';
 export type FacilityKind = Facility['id'];
-export type MenuKind = 'character' | 'settings';
+export type MenuKind = 'settings';
 
 /** 광장 이동 · 카메라 · (뒤 Task) 훈련·전투 흐름 */
 export class Game {

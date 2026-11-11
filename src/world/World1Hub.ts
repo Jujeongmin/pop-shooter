@@ -234,6 +234,18 @@ export class World1Hub {
     this.colliders.push({ kind: 'box', x: gs.x + 1.8, z: gs.z, hx: 1.6, hz: 0.7 });
     this.label(t('fac.guns'), gs.x + 1.8, 3.6, gs.z);
 
+    const ch = f('chars');
+    this.mesh(new THREE.CylinderGeometry(1.5, 1.7, 0.3, 32), '#ffd34d', ch.x, 0.15, ch.z).castShadow = false;
+    this.mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.06, 32), '#ffffff', ch.x, 0.33, ch.z).castShadow = false;
+    const mirrorMat = new THREE.MeshStandardMaterial({ color: '#d9f0ff', metalness: 0.6, roughness: 0.15, emissive: '#bfe3ff', emissiveIntensity: 0.25 });
+    this.owned.push(mirrorMat);
+    this.mesh(new THREE.BoxGeometry(1.6, 2.4, 0.12), '', ch.x, 1.6, ch.z - 2.2, mirrorMat);
+    const frame = this.mesh(new THREE.TorusGeometry(1.3, 0.12, 10, 40), '#ff9ec4', ch.x, 1.6, ch.z - 2.15);
+    frame.scale.set(0.72, 1.05, 1);
+    this.mesh(new THREE.BoxGeometry(0.2, 0.5, 0.2), '#ff9ec4', ch.x, 0.25, ch.z - 2.2);
+    this.colliders.push({ kind: 'box', x: ch.x, z: ch.z - 2.2, hx: 1, hz: 0.3 });
+    this.label(t('fac.chars'), ch.x, 3.4, ch.z - 2.2);
+
     const al = f('altar');
     this.mesh(new THREE.CylinderGeometry(1.6, 1.9, 0.6, 6), '#b9a6ff', al.x, 0.3, al.z - 1.6);
     const orbMat = new THREE.MeshStandardMaterial({ color: '#f3ecff', emissive: '#b9a6ff', emissiveIntensity: 0.6 });

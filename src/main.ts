@@ -44,7 +44,7 @@ async function boot(): Promise<void> {
   new UpgradePanel(game, ui, callout, float);
   new GunPanel(game, ui, callout, float);
   new RebirthPanel(game, ui, callout, float);
-  new CharacterPanel(game, ui);
+  new CharacterPanel(game, ui, callout);
   const settings = new SettingsPanel(ui);
   game.menuActions.settings = () => settings.open();
   stage.start();

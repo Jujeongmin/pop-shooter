@@ -1,6 +1,6 @@
 import { t } from '../i18n/i18n.ts';
 
-export type FacilityId = 'range' | 'upgrade' | 'guns' | 'altar' | 'portal';
+export type FacilityId = 'range' | 'upgrade' | 'guns' | 'altar' | 'portal' | 'chars';
 
 export interface Facility {
   id: FacilityId;
@@ -25,6 +25,7 @@ export const WORLD1_FACILITIES: readonly Facility[] = [
   { id: 'upgrade', x: 9, z: 4, radius: 2.6, label: t('fac.upgrade') },
   { id: 'guns', x: 4.5, z: -3.5, radius: 2.4, label: t('fac.guns') },
   { id: 'altar', x: -8, z: 11, radius: 2.6, label: t('fac.altar') },
+  { id: 'chars', x: 8, z: 11, radius: 2.4, label: t('fac.chars') },
   { id: 'portal', x: PORTAL_SPOT.x, z: PORTAL_SPOT.z, radius: 2.4, label: t('fac.portal', { w: 1 }) },
 ];
 

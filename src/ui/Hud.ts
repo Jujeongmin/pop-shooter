@@ -7,7 +7,7 @@ import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 
 export interface HudActions {
-  menu: (which: 'character' | 'settings') => void;
+  menu: (which: 'settings') => void;
 }
 
 /** 광장 HUD: 위 = 코인·팝젬·환생 배율, 왼쪽 = 능력치. 시설은 들어가면 바로 동작(버튼 없음) */
@@ -33,7 +33,7 @@ export class Hud {
     this.gems = pill('gem');
     this.mult = pill('reb');
     const menu = el('div', 'hud-menu');
-    menu.append(button(t('hud.character'), () => actions.menu('character'), 'btn small'), button(t('hud.settings'), () => actions.menu('settings'), 'btn small'));
+    menu.append(button(t('hud.settings'), () => actions.menu('settings'), 'btn small'));
     top.appendChild(menu);
 
     const stats = el('div', 'hud-stats');

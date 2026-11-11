@@ -13,7 +13,6 @@ const KEY = 'pop-shooter.lang';
 type Entry = Record<Lang, string>;
 
 const STRINGS = {
-  'hud.character': { en: 'Hero', ko: '캐릭터', ja: 'キャラ', 'zh-TW': '角色', 'zh-CN': '角色' },
   'hud.settings': { en: 'Settings', ko: '설정', ja: '設定', 'zh-TW': '設定', 'zh-CN': '设置' },
   'stat.atk': { en: 'Attack', ko: '공격력', ja: '攻撃力', 'zh-TW': '攻擊力', 'zh-CN': '攻击力' },
   'stat.sps': { en: 'Shots/sec', ko: '초당 발사', ja: '秒間発射', 'zh-TW': '每秒射擊', 'zh-CN': '每秒射击' },
@@ -23,6 +22,7 @@ const STRINGS = {
   'fac.upgrade': { en: 'Upgrades', ko: '업그레이드', ja: 'アップグレード', 'zh-TW': '升級', 'zh-CN': '升级' },
   'fac.guns': { en: 'Gun Shop', ko: '총 상점', ja: '銃ショップ', 'zh-TW': '槍械商店', 'zh-CN': '枪械商店' },
   'fac.altar': { en: 'Rebirth Altar', ko: '환생 제단', ja: '転生の祭壇', 'zh-TW': '轉生祭壇', 'zh-CN': '转生祭坛' },
+  'fac.chars': { en: 'Heroes', ko: '캐릭터', ja: 'キャラ', 'zh-TW': '角色', 'zh-CN': '角色' },
   'fac.portal': { en: 'World {w} Portal', ko: '월드 {w} 포털', ja: 'ワールド{w}ポータル', 'zh-TW': '世界{w}傳送門', 'zh-CN': '世界{w}传送门' },
   'portal.first': { en: 'First run', ko: '첫 도전', ja: '初挑戦', 'zh-TW': '首次挑戰', 'zh-CN': '首次挑战' },
   'portal.best': { en: 'Best {s}', ko: '최고 {s}', ja: '最高 {s}', 'zh-TW': '最佳 {s}', 'zh-CN': '最佳 {s}' },
