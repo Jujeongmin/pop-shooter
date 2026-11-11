@@ -8,10 +8,11 @@
  */
 import { writeFileSync } from 'node:fs';
 import { BALANCE, FIRST_STAGE_MIN, STAGE_COUNT, WORLD_END_MIN } from '../../src/sim/balance.ts';
-import { buyAtk, buyNextGun, buySpd, canRebirth, clearStage, coinPerShot, damagePerShot, doRebirth, highestWorld, shotsPerSec } from '../../src/sim/actions.ts';
+import { buyAtk, buyNextGun, buySpd, canRebirth, coinPerShot, damagePerShot, doRebirth, highestWorld, shotsPerSec } from '../../src/sim/actions.ts';
+import { finishRun, startRun, stepRun, tapRun } from '../../src/sim/run.ts';
 import { GUNS, gunPrice } from '../../src/sim/guns.ts';
 import { newState, type GameState } from '../../src/sim/state.ts';
-import { stageHp, stageLabel, stageTime, isBoss } from '../../src/sim/stages.ts';
+import { stageHp, stageLabel, stageTime, isBoss, worldOf } from '../../src/sim/stages.ts';
 import { STAGE_HP } from '../../src/sim/stageTable.ts';
 import { atkCost, spdCost } from '../../src/sim/stats.ts';
 
@@ -62,16 +63,26 @@ function runUntil(c: Ctx, stopStage: number, maxT: number, onClear?: (stage: num
       if (!n) break;
       c.s = n;
     }
-    for (;;) {
-      const next = c.s.bestStage + 1;
-      if (next > STAGE_COUNT) break;
-      const d = effDps(c.s);
-      if (d * stageTime(next) < stageHp(next)) break;
-      c.t += Math.ceil(stageHp(next) / d) + 3;
-      c.s = clearStage(c.s, next).state;
-      c.lastProgress = c.t;
-      onClear?.(next, c);
-      if (next >= stopStage) return c.t;
+    // 도전: 다음 기록 스테이지를 깰 수 있으면 그 월드 입구에서 연속 도전 (탭 포함, 깬 만큼 보상)
+    const next = c.s.bestStage + 1;
+    if (next <= STAGE_COUNT && effDps(c.s) * stageTime(next) >= stageHp(next)) {
+      const run = startRun(c.s, worldOf(next));
+      let tapAcc = 0;
+      const DT = 0.25;
+      while (!run.done) {
+        stepRun(run, DT);
+        tapAcc += TAPS * DT;
+        while (tapAcc >= 1 && !run.done) { tapAcc -= 1; tapRun(run); }
+        c.t += DT;
+      }
+      const before = c.s.bestStage;
+      c.s = finishRun(c.s, run.cleared).state;
+      c.t = Math.ceil(c.t) + 3;
+      if (c.s.bestStage > before) {
+        c.lastProgress = c.t;
+        for (let st = before + 1; st <= c.s.bestStage; st++) onClear?.(st, c);
+        if (c.s.bestStage >= stopStage) return c.t;
+      }
     }
     if (canRebirth(c.s) && c.t - c.lastProgress > STALL_SEC) {
       c.s = doRebirth(c.s)!;
