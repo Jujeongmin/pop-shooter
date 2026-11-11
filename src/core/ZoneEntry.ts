@@ -46,7 +46,8 @@ export class ZoneEntry {
     this.opt = opt;
     this.spot = opt.spot ?? { x: zone.x, z: zone.z };
     this.ring = new ZoneRing(zone.x, zone.z, zone.radius, opt.color);
-    game.stage.scene.add(this.ring.root);
+    // 광장에 붙여서 전투 중 광장을 숨기면 같이 숨음
+    game.hub.root.add(this.ring.root);
   }
 
   /** 폴짝 중이면 true (시설은 이동안 자기 동작을 쉼) */

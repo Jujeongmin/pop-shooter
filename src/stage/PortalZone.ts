@@ -13,6 +13,15 @@ export class PortalZone {
   /** 착지 뒤 연속 도전 시작 (전투 화면이 등록) */
   onEnterRun: (() => void) | null = null;
 
+  /** 전투로 넘어갈 때: 구역 연출 끄기 (광장에서 순간이동하므로 나가기 이벤트가 안 옴) */
+  release(): void {
+    this.zone.leave();
+  }
+
+  get inside(): boolean {
+    return this.zone.inside;
+  }
+
   constructor(game: Game, callout: ZoneCallout) {
     this.zone = new ZoneEntry(game, callout, WORLD1_FACILITIES.find((f) => f.id === 'portal')!, {
       color: '#9b87ff',
