@@ -16,6 +16,8 @@ const STEPS: readonly { target: FacilityId | null; text: () => string }[] = [
 ];
 
 const _to = new THREE.Vector3();
+/** 바닥 화살표 높이: 사격장 매트(윗면 0.08m)·길보다 위 */
+const ARROW_Y = 0.12;
 
 /**
  * 처음 3분 안내: 위쪽 한 줄 안내 + 바닥 화살표(캐릭터 → 목표 방향) + 목표 위 통통 튀는 화살표, [건너뛰기].
@@ -55,7 +57,7 @@ export class Tutorial {
     this.owned.push(triGeo, triMat);
     for (let i = 0; i < 3; i++) {
       const m = new THREE.Mesh(triGeo, triMat);
-      m.position.y = 0.06;
+      m.position.y = ARROW_Y;
       m.renderOrder = 3;
       this.chevrons.push(m);
       this.group.add(m);
@@ -136,7 +138,7 @@ export class Tutorial {
       // 0.8m 간격으로 앞으로 흐름
       const k = ((this.clock * 1.2 + i / 3) % 1);
       const dist = Math.min(d - 0.8, 1.4 + k * 3.6);
-      c.position.set(g.pos.x + _to.x * dist, 0.06, g.pos.z + _to.z * dist);
+      c.position.set(g.pos.x + _to.x * dist, ARROW_Y, g.pos.z + _to.z * dist);
       // 모양 끝이 -z를 가리키므로 반 바퀴 더
       c.rotation.y = yaw + Math.PI;
       (c.material as THREE.MeshBasicMaterial).opacity = 0.9;
