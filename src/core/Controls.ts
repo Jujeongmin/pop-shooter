@@ -62,7 +62,12 @@ export class Controls {
   };
 
   private readonly onUp = (e: PointerEvent): void => {
-    if (this.joy.owns(e.pointerId)) { this.joy.end(); return; }
+    if (this.joy.owns(e.pointerId)) {
+      // 끌지 않고 뗀 조이스틱 = 탭 (훈련·전투 중 왼쪽을 눌러도 추가 발사)
+      if (this.joy.maxDrag <= DRAG_PX && e.type === 'pointerup') this.taps.push({ x: e.clientX, y: e.clientY });
+      this.joy.end();
+      return;
+    }
     const d = this.downs.get(e.pointerId);
     if (!d) return;
     this.downs.delete(e.pointerId);

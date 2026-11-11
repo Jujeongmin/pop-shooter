@@ -8,6 +8,8 @@ export class Joystick {
   private readonly radius = 56;
   x = 0;
   y = 0;
+  /** 누른 뒤 가장 멀리 끈 거리(px): 거의 안 끌었으면 탭으로 침 */
+  maxDrag = 0;
 
   constructor(parent: HTMLElement) {
     this.el = document.createElement('div');
@@ -31,6 +33,7 @@ export class Joystick {
     this.ox = e.clientX;
     this.oy = e.clientY;
     this.x = this.y = 0;
+    this.maxDrag = 0;
     this.el.style.left = `${this.ox}px`;
     this.el.style.top = `${this.oy}px`;
     this.el.classList.add('on');
@@ -41,6 +44,7 @@ export class Joystick {
     let dx = e.clientX - this.ox;
     let dy = e.clientY - this.oy;
     const d = Math.hypot(dx, dy);
+    this.maxDrag = Math.max(this.maxDrag, d);
     if (d > this.radius) { dx *= this.radius / d; dy *= this.radius / d; }
     this.x = dx / this.radius;
     this.y = dy / this.radius;

@@ -145,7 +145,7 @@ export class World1Hub {
       this.targets.push(t);
       this.colliders.push({ kind: 'circle', x: t.position.x, z: t.position.z, r: 0.5 });
     }
-    this.label('사격장', RANGE_SPOT.x, 3.2, RANGE_SPOT.z - 1.5);
+    this.label('사격장', RANGE_SPOT.x - 3.4, 3, RANGE_SPOT.z - 2, 0.8);
   }
 
   /** 업그레이드 기계 · 총 상점 · 환생 제단 (임시 도형) */

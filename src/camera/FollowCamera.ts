@@ -6,8 +6,8 @@ const _look = new THREE.Vector3();
 /** 뒤 위에서 비스듬히 따라가는 카메라. 드래그로 좌우 회전 */
 export class FollowCamera {
   yaw = 0;
-  distance = 9;
-  height = 6;
+  distance = 6.5;
+  height = 3.6;
   private readonly cam: THREE.PerspectiveCamera;
   private readonly pos = new THREE.Vector3();
   private initialized = false;

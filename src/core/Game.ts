@@ -38,10 +38,12 @@ export class Game {
   near: Facility | null = null;
   /** 다른 Task가 붙는 매 프레임 훅 */
   private readonly tickers: ((dt: number) => void)[] = [];
-  /** 훈련·전투 모드의 탭 처리 (광장에서는 탭 무시, 이동은 조이스틱·키보드) */
+  /** 탭 처리 (훈련 구역·전투 = 추가 발사). 없으면 탭 무시. 이동은 조이스틱·키보드 */
   tapHandler: ((taps: Tap[]) => void) | null = null;
   /** 시설 사용 (뒤 Task가 등록: 훈련·업그레이드 창·총 상점·환생·스테이지 문) */
   readonly facilityActions: Partial<Record<FacilityKind, (f: Facility, stage: number | null) => void>> = {};
+  /** 시설 구역에서 나갈 때 (창 닫기·훈련 끝) */
+  readonly facilityLeave: Partial<Record<FacilityKind, (f: Facility) => void>> = {};
   readonly menuActions: Partial<Record<MenuKind, () => void>> = {};
   /** 상태가 바뀔 때 알림 (창 갱신 등) */
   private readonly stateListeners: ((s: GameState) => void)[] = [];
@@ -55,10 +57,7 @@ export class Game {
     this.state = state;
     this.ui = ui;
     this.controls = new Controls(stage.renderer.domElement, ui);
-    this.hud = new Hud(ui, {
-      use: (f) => this.useFacility(f),
-      menu: (m) => this.menuActions[m]?.(),
-    });
+    this.hud = new Hud(ui, { menu: (m) => this.menuActions[m]?.() });
     this.saver = new AutoSaver(() => this.state);
     this.saver.start();
     this.cam = new FollowCamera(stage.camera);
@@ -78,11 +77,25 @@ export class Game {
     this.stateListeners.push(fn);
   }
 
-  useFacility(f: Facility): void {
-    if (this.mode !== 'hub') return;
-    const g = gateIndex(f.id);
-    const kind: FacilityKind = g !== null ? 'gate' : (f.id as FacilityKind);
-    this.facilityActions[kind]?.(f, g);
+  private kindOf(f: Facility): FacilityKind {
+    return gateIndex(f.id) !== null ? 'gate' : (f.id as FacilityKind);
+  }
+
+  /** 시설 구역에 들어가면 바로 동작 (버튼 없음) */
+  private enterFacility(f: Facility): void {
+    this.facilityActions[this.kindOf(f)]?.(f, gateIndex(f.id));
+  }
+
+  private leaveFacility(f: Facility): void {
+    this.facilityLeave[this.kindOf(f)]?.(f);
+  }
+
+  /** 순간이동 (전투에서 돌아올 때 등): 도착한 곳의 시설은 다시 발동하지 않음 */
+  placeAt(x: number, z: number, yaw = this.yaw): void {
+    this.pos.set(x, 0, z);
+    this.yaw = yaw;
+    this.velocity.set(0, 0, 0);
+    this.near = nearestFacility(x, z, this.hub.facilities);
   }
 
   setMode(mode: GameMode): void {
@@ -96,12 +109,16 @@ export class Game {
     const taps = this.controls.drainTaps();
     if (this.mode === 'hub') {
       this.updateMove(dt);
+      const prev = this.near;
       this.near = nearestFacility(this.pos.x, this.pos.z, this.hub.facilities);
-    } else if (this.tapHandler && taps.length) {
-      this.tapHandler(taps);
+      if (prev?.id !== this.near?.id) {
+        if (prev) this.leaveFacility(prev);
+        if (this.near) this.enterFacility(this.near);
+      }
     }
+    if (this.tapHandler && taps.length) this.tapHandler(taps);
     for (const t of this.tickers) t(dt);
-    this.hud.update(this.state, this.near, this.mode === 'hub');
+    this.hud.update(this.state);
     this.updateAvatar(dt);
     this.cam.update(dt, this.pos);
   }

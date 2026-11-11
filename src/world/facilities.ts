@@ -4,7 +4,7 @@ export interface Facility {
   id: FacilityId;
   x: number;
   z: number;
-  /** 이 거리 안이면 사용 버튼 */
+  /** 이 거리 안에 들어가면 바로 동작 */
   radius: number;
   label: string;
 }
@@ -29,7 +29,7 @@ export const WORLD1_FACILITIES: readonly Facility[] = [
     id: `gate${i + 1}` as FacilityId,
     x: -22.5 + i * 5,
     z: -22,
-    radius: 2.6,
+    radius: 1.6,
     label: `1-${i + 1}`,
   })),
 ];

@@ -24,8 +24,6 @@
 .hud-stats { position: absolute; left: 12px; top: 64px; background: rgba(255,255,255,.88); border-radius: 16px; padding: 8px 12px; min-width: 150px; box-shadow: 0 3px 0 rgba(43,58,103,.12); }
 .stat { display: flex; justify-content: space-between; gap: 16px; font-size: 15px; line-height: 1.6; }
 .stat-l { color: var(--ink2); }
-.use { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); }
-.use:active { transform: translate(-50%, 2px); }
 @media (max-width: 760px), (max-height: 460px) {
   #ui { font-size: 14px; }
   .pill { font-size: 15px; padding: 4px 10px 4px 4px; }
@@ -34,3 +32,11 @@
   .stat { font-size: 13px; }
   .btn.big { font-size: 20px; padding: 13px 26px; }
 }
+
+.float-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.float-text { position: absolute; left: 0; top: 0; font-size: 22px; color: #fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; white-space: nowrap; will-change: transform, opacity; }
+.float-text.coin { color: #ffd34d; font-size: 26px; }
+.float-text.big { font-size: 24px; }
+.float-text.pop { color: #ff9ec4; font-size: 20px; }
+.train-bar { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; background: rgba(255,255,255,.9); border-radius: 18px; padding: 8px 10px 8px 16px; box-shadow: 0 3px 0 rgba(43,58,103,.15); pointer-events: auto; }
+.train-hint { font-size: 16px; }
