@@ -16,6 +16,7 @@ import { stageHp, stageLabel, stageTime, isBoss, worldOf } from '../../src/sim/s
 import { STAGE_HP } from '../../src/sim/stageTable.ts';
 import { atkCost, spdCost } from '../../src/sim/stats.ts';
 import { checkSave, worth } from '../../src/sim/econ.ts';
+import { buyGear, buyMachine, GEAR, machineCost, machineLv, train, TRAIN_KINDS } from '../../src/sim/training.ts';
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: number): number => {
@@ -51,20 +52,41 @@ const ASAP = opt('asap', 1) === 1;
 interface Ctx { s: GameState; t: number; lastProgress: number }
 
 const effDps = (s: GameState): number => damagePerShot(s) * (shotsPerSec(s) + TAPS);
+/** 훈련 투자 가치: HORIZON초 동안 쌓일 훈련치로 늘어날 '코인 수입 × DPS' 비율 근사 */
+const HORIZON = opt('horizon', 600);
+const NO_TRAIN = opt('notrain', 0) === 1;
+const income = (s: GameState): number => coinPerShot(s, highestWorld(s), Infinity) * (shotsPerSec(s) + TAPS);
+const future = (s: GameState): GameState => train(s, (shotsPerSec(s) + TAPS) * HORIZON);
 
 function buyBest(s: GameState): GameState | null {
   const now = effDps(s);
   const rich = { ...s, coins: Infinity };
   let best: { ratio: number; cost: number; apply: (x: GameState) => GameState | null } | null = null;
-  const consider = (cost: number, next: GameState | null, apply: (x: GameState) => GameState | null): void => {
+  const consider = (cost: number, next: GameState | null, apply: (x: GameState) => GameState | null, value?: number): void => {
     if (!next || !Number.isFinite(cost)) return;
-    const ratio = (effDps(next) - now) / cost;
+    const ratio = (value ?? effDps(next) - now) / cost;
     if (!best || ratio > best.ratio) best = { ratio, cost, apply };
   };
   consider(atkCost(s.atkLv), buyAtk(rich, 1), (x) => buyAtk(x, 1));
   consider(spdCost(s.spdLv), buySpd(rich, 1), (x) => buySpd(x, 1));
   const g = GUNS[s.gun + 1];
   if (g) consider(gunPrice(g.index), buyNextGun(rich), buyNextGun);
+  if (!NO_TRAIN) {
+    // 훈련 기계·장비: 앞으로 HORIZON초 뒤 DPS(·수입) 차이를 지금 DPS 단위로 환산
+    const base = future(s);
+    const val = (x: GameState): number => {
+      const f = future(x);
+      return (effDps(f) - effDps(base)) * 0.5 + (income(f) - income(base)) / Math.max(1, income(base)) * now * 0.5;
+    };
+    for (const k of TRAIN_KINDS) {
+      const nx = buyMachine(rich, k, 1);
+      if (nx) consider(machineCost(k, machineLv(s, k)), nx, (x) => buyMachine(x, k, 1), val(nx));
+    }
+    GEAR.forEach((gd, i) => {
+      const nx = buyGear(rich, i);
+      if (nx) consider(gd.price, nx, (x) => buyGear(x, i), val(nx));
+    });
+  }
   const b = best as { cost: number; apply: (x: GameState) => GameState | null } | null;
   return b && b.cost <= s.coins ? b.apply(s) : null;
 }
@@ -72,7 +94,9 @@ function buyBest(s: GameState): GameState | null {
 /** stopStage를 처음 깰 때까지(또는 maxT) 진행. 깬 시각 반환, 못 깨면 Infinity */
 function runUntil(c: Ctx, stopStage: number, maxT: number, onClear?: (stage: number, c: Ctx) => void): number {
   while (c.t < maxT) {
-    c.s = { ...c.s, coins: c.s.coins + coinPerShot(c.s, highestWorld(c.s), Infinity) * (shotsPerSec(c.s) + TAPS) };
+    const shots = shotsPerSec(c.s) + TAPS;
+    c.s = { ...c.s, coins: c.s.coins + coinPerShot(c.s, highestWorld(c.s), Infinity) * shots };
+    if (!NO_TRAIN) c.s = train(c.s, shots);
     c.t += 1;
     econCheck(c);
     for (let k = 0; k < 400; k++) {
@@ -164,12 +188,12 @@ if (args.includes('--fit')) {
   console.log('wrote src/sim/stageTable.ts');
 } else {
   const ctx: Ctx = { s: newState(0), t: 0, lastProgress: 0 };
-  const at = new Map<number, { t: number; r: number }>();
-  runUntil(ctx, STAGE_COUNT, 40 * 3600, (st, c) => at.set(st, { t: c.t, r: c.s.rebirths }));
+  const at = new Map<number, { t: number; r: number; tr: string }>();
+  runUntil(ctx, STAGE_COUNT, 40 * 3600, (st, c) => at.set(st, { t: c.t, r: c.s.rebirths, tr: `tr ${c.s.trAtk.toFixed(0)}/${c.s.trSpd.toFixed(0)}/${c.s.trCoin.toFixed(0)}% m ${c.s.mAtk}/${c.s.mSpd}/${c.s.mCoin} gear ${c.s.gear.toString(2)}` }));
   console.log(`taps=${TAPS} stall=${STALL_SEC}s`);
   if (ECON) console.log(`econ checks ${econ.checks} clamps ${econ.clamps} rejects ${econ.rejects} ${JSON.stringify(econ.reasons)}`);
   for (const st of [1, 5, 10, 15, 20, 25, 30, 35, 40]) {
     const r = at.get(st);
-    console.log(`${stageLabel(st).padEnd(5)} ${hms(r?.t ?? Infinity).padStart(7)}  rebirths ${r ? r.r : '-'}`);
+    console.log(`${stageLabel(st).padEnd(5)} ${hms(r?.t ?? Infinity).padStart(7)}  rebirths ${r ? r.r : '-'}  ${r?.tr ?? ''}`);
   }
 }

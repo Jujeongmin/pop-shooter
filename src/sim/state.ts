@@ -25,6 +25,16 @@ export interface GameState {
   chars: CharId[];
   /** 튜토리얼 단계, 끝 = 99 */
   tutorial: number;
+  /** 훈련치 (%, training.ts): 공격력·초당 발사·코인. 환생하면 0 */
+  trAtk: number;
+  trSpd: number;
+  trCoin: number;
+  /** 훈련 기계 레벨 (공격·발사·코인). 환생하면 0 */
+  mAtk: number;
+  mSpd: number;
+  mCoin: number;
+  /** 가진 장비 비트 (GEAR 순서). 환생하면 0 */
+  gear: number;
 }
 
 export function newState(now: number): GameState {
@@ -32,5 +42,6 @@ export function newState(now: number): GameState {
     v: 1, coins: 0, gems: 0, atkLv: 0, spdLv: 0, gun: 0, bestStage: 0, runBest: 0,
     rebirths: 0, tokens: 0, passMult: 1, boostUntil: 0, lastSeen: now,
     char: 'blue', chars: ['blue'], tutorial: 0,
+    trAtk: 0, trSpd: 0, trCoin: 0, mAtk: 0, mSpd: 0, mCoin: 0, gear: 0,
   };
 }

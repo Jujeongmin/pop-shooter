@@ -45,6 +45,41 @@ const SVG: Record<string, string> = {
     <path d="M20 30v-8a12 12 0 0 1 24 0v8" fill="none" ${S} stroke-width="5"/>
     <rect x="13" y="28" width="38" height="30" rx="7" fill="#c9d2ea" ${S}/>
     <circle cx="32" cy="41" r="4" fill="${INK}"/><path d="M32 43v7" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`,
+  target: `
+    <circle cx="32" cy="32" r="27" fill="#fff" ${S}/>
+    <circle cx="32" cy="32" r="18" fill="#ff5e6a"/>
+    <circle cx="32" cy="32" r="11" fill="#fff"/>
+    <circle cx="32" cy="32" r="5" fill="#ff5e6a"/>`,
+  rapid: `
+    <circle cx="32" cy="32" r="27" fill="#7cc4ff" ${S}/>
+    <path d="M14 26h14M10 34h18M14 42h14" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M34 22l14 10-14 10z" fill="#fff" ${S}/>`,
+  cointarget: `
+    <circle cx="32" cy="32" r="27" fill="#fff" ${S}/>
+    <circle cx="32" cy="32" r="18" fill="#ffc928"/>
+    <circle cx="32" cy="32" r="11" fill="#fff3a6"/>
+    <path d="M32 25v14M27.5 28.5h7a2.5 2.5 0 0 1 0 5h-5a2.5 2.5 0 0 0 0 5h7" fill="none" stroke="#d98a0c" stroke-width="3" stroke-linecap="round"/>`,
+  gloves: `
+    <path d="M18 56V30c0-3 2-5 4.5-5S27 27 27 30V16c0-3 2-5 4.5-5S36 13 36 16v-2c0-3 2-5 4.5-5S45 11 45 14v14l4-4c2.5-2.5 6.5-1 6.5 2.5 0 1.2-.4 2.3-1.2 3.2L45 44v12z" fill="#ff8a5b" ${S}/>
+    <rect x="16" y="50" width="31" height="9" rx="3" fill="#2b3a67"/>
+    <path d="M30 18v10M39 16v12" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>`,
+  goggles: `
+    <path d="M6 30c8-4 44-4 52 0" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
+    <rect x="9" y="22" width="21" height="20" rx="8" fill="#9be7ff" ${S}/>
+    <rect x="34" y="22" width="21" height="20" rx="8" fill="#9be7ff" ${S}/>
+    <path d="M30 32h4" stroke="${INK}" stroke-width="4"/>
+    <path d="M14 27l5-1M39 27l5-1" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>`,
+  piggy: `
+    <ellipse cx="32" cy="36" rx="23" ry="17" fill="#ffaecb" ${S}/>
+    <path d="M18 25l-3-9 9 5" fill="#ffaecb" ${S}/>
+    <rect x="26" y="17" width="12" height="4" rx="2" fill="${INK}"/>
+    <ellipse cx="53" cy="36" rx="5" ry="6" fill="#ff8fb5" ${S}/>
+    <circle cx="40" cy="31" r="2.5" fill="${INK}"/>
+    <path d="M20 51v6M42 51v6" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`,
+  medal: `
+    <path d="M20 4h10l4 18H24zM34 4h10l-4 18H30z" fill="#7cc4ff" ${S}/>
+    <circle cx="32" cy="40" r="19" fill="#ffd34d" ${S}/>
+    <path d="M32 29l3.4 7 7.6 1-5.5 5.3 1.3 7.6L32 46.3l-6.8 3.6 1.3-7.6L21 37l7.6-1z" fill="#fff6c2" stroke="#d98a0c" stroke-width="2" stroke-linejoin="round"/>`,
   close: `
     <circle cx="32" cy="32" r="27" fill="#fff" ${S}/>
     <path d="M23 23l18 18M41 23L23 41" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>`,
@@ -59,7 +94,7 @@ const SVG: Record<string, string> = {
     <path d="M22 22l20 20M42 22L22 42" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>`,
 };
 
-export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'heart' | 'lock' | 'close';
+export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'heart' | 'lock' | 'close' | 'target' | 'rapid' | 'cointarget' | 'gloves' | 'goggles' | 'piggy' | 'medal';
 
 /** 아이콘 span (크기는 CSS .ico / 추가 클래스) */
 export function icon(name: IconName, cls = ''): HTMLSpanElement {

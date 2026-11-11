@@ -3,6 +3,7 @@ import { t } from '../i18n/i18n';
 import { addCoins } from '../sim/actions.ts';
 import { formatNum } from '../sim/format.ts';
 import { offlineReward } from '../sim/offline.ts';
+import { train } from '../sim/training.ts';
 import { button, el } from './dom';
 import { icon } from './icons';
 
@@ -36,7 +37,7 @@ export function showOfflineReward(game: Game, ui: HTMLElement, now: number): boo
     if (!wrap.isConnected) return;
     wrap.remove();
     game.saver.hold = false;
-    game.setState(addCoins(game.state, r.coins), true);
+    game.setState(train(addCoins(game.state, r.coins), r.shots), true);
   }, 'btn big'));
   wrap.append(card);
   ui.append(wrap);

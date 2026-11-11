@@ -25,11 +25,27 @@ export const BALANCE = {
   /** 캐릭터 피해 배율: 해금 순서대로 점점 좋게 (사용자 2026-11-11). 코인도 피해에 비례해 같이 오름 */
   charMult: { blue: 1, yellow: 1.5, red: 2, pink: 3, white: 5, black: 8 },
   /** 월드별 보스 체력 배수: 앞 월드 대장으로 얻는 캐릭터 배율만큼 (캐릭터를 세게 한 만큼 진행 시간이 줄지 않게) */
-  worldHpMult: [1, 1.4, 1.5, 2.22],
+  // 훈련 성장(training.ts)을 넣으며 다시 맞춤 (2026-11-11): 훈련치가 회차마다 공격·코인을 몇 배 올려서 그만큼 체력을 올림.
+  // 월드 1은 앞쪽이 firstRamp 곡선이라 조금만 영향. 시뮬레이터로 찾은 값 (scratch tune: 목표 1-10 ~25분, 2-10 180, 3-10 360, 4-10 690분)
+  worldHpMult: [30, 3970, 8290, 18700],
   range: { multByWorld: [1, 4, 16, 64] },
   offline: { rate: 0.5, capSec: 7200 },
   gems: { worldBossFirst: 50, perRebirth: 10 },
   boost: { coinMult: 2 },
+  /**
+   * 훈련 성장 (training.ts). gain = 기계 0레벨에서 한 발에 쌓이는 %, 기계 레벨마다 +levelStep (덧셈: 곱이면 코인과 같이 기하급수로 커져 진행이 무너짐),
+   * 한도 = capBase + capStep × 기계 레벨 (%), 장비 하나마다 ×gearMult, 멘토 한 명마다 ×mentorMult (한도·속도). 초당 발사 훈련은 spdCap%까지.
+   */
+  train: {
+    gain: { atk: 0.01, spd: 0.005, coin: 0.01 },
+    capBase: { atk: 10, spd: 5, coin: 10 },
+    capStep: { atk: 5, spd: 2, coin: 5 },
+    levelStep: 0.1,
+    machine: { atk: { base: 30, growth: 1.4 }, spd: { base: 45, growth: 1.4 }, coin: { base: 35, growth: 1.4 } },
+    gearMult: 1.45,
+    mentorMult: 1.28,
+    spdCap: 100,
+  },
 } as const;
 
 export const STAGE_COUNT = BALANCE.stage.perWorld * BALANCE.stage.worlds;

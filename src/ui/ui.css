@@ -240,3 +240,36 @@
   .stat { font-size: 12px; line-height: 1.45; }
   .stat-l .ico { width: 14px; height: 14px; }
 }
+
+/* 업그레이드 탭 + 훈련 (training.ts) */
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: #e9edf7; border-radius: 16px; padding: 4px; }
+.tabs button { font: inherit; border: 0; background: none; color: var(--ink2); padding: 8px 4px; border-radius: 12px; cursor: pointer; font-size: 15px; white-space: nowrap; }
+.tabs button.on { background: var(--yellow); color: var(--ink); box-shadow: 0 3px 0 #e0a92a; }
+.up-sec { display: flex; flex-direction: column; gap: 10px; }
+.up-sec[hidden], .seg[hidden] { display: none; }
+.up-hint { font-size: 13px; color: var(--ink2); text-align: center; }
+.up-row.locked { opacity: .55; }
+.up-row.owned { background: #effbef; }
+.up-row.locked .ico, .up-row.mentor.locked .ico { filter: grayscale(1); }
+.mentor-st { font-size: 13px; color: var(--ink2); text-align: right; max-width: 110px; }
+.mentor-st .ico { width: 34px; height: 34px; }
+.ico.tier2 { filter: hue-rotate(40deg) saturate(1.4); }
+.ico.tier3 { filter: hue-rotate(200deg) saturate(1.6); }
+.ico.m1 { filter: hue-rotate(160deg); }
+.ico.m2 { filter: hue-rotate(260deg); }
+.ico.m3 { filter: hue-rotate(320deg) saturate(1.5); }
+.hud-train { margin-top: 4px; padding-top: 4px; border-top: 2px dashed #e1e6f2; }
+.tr-head { font-size: 12px; color: var(--ink2); }
+.tr-row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 6px; font-size: 12px; line-height: 1.5; }
+.tr-l { color: var(--ink2); }
+.tr-bar { height: 8px; background: #e9edf7; border-radius: 999px; overflow: hidden; min-width: 50px; }
+.tr-fill { height: 100%; transform-origin: left center; transform: scaleX(0); border-radius: 999px; transition: transform .25s; }
+.tr-atk .tr-fill { background: #ff5e6a; }
+.tr-spd .tr-fill { background: #4fb3ff; }
+.tr-coin .tr-fill { background: #ffc928; }
+.tr-fill.full { box-shadow: inset 0 0 0 2px rgba(255,255,255,.7); }
+.tr-v { min-width: 44px; text-align: right; color: var(--ink); }
+@media (max-width: 520px), (max-height: 520px) {
+  .tabs button { font-size: 13px; padding: 7px 2px; }
+  .tr-row { font-size: 11px; grid-template-columns: 30px 1fr auto; }
+}

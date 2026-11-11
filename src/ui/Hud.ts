@@ -3,6 +3,8 @@ import { autoDps, damagePerShot, shotsPerSec } from '../sim/actions.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import { rebirthMult } from '../sim/stats.ts';
 import type { GameState } from '../sim/state.ts';
+import { TRAIN_KINDS, trainCap, trainValue, type TrainKind } from '../sim/training.ts';
+import { pct } from './UpgradePanel';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 
@@ -19,6 +21,8 @@ export class Hud {
   private readonly atk: HTMLSpanElement;
   private readonly sps: HTMLSpanElement;
   private readonly dps: HTMLSpanElement;
+  /** 훈련 막대 (공격·연사·코인): 채움 = 훈련치 / 한도 */
+  private readonly bars = new Map<TrainKind, { fill: HTMLDivElement; v: HTMLSpanElement }>();
 
   constructor(parent: HTMLElement, actions: HudActions) {
     this.root = el('div', 'hud');
@@ -49,6 +53,19 @@ export class Hud {
     this.atk = row(t('stat.atk'), 'bullet');
     this.sps = row(t('stat.sps'), 'timer');
     this.dps = row(t('stat.dps'), 'bolt');
+    const tr = el('div', 'hud-train');
+    tr.append(el('div', 'tr-head', t('tr.title')));
+    for (const k of TRAIN_KINDS) {
+      const r = el('div', `tr-row tr-${k}`);
+      const bar = el('div', 'tr-bar');
+      const fill = el('div', 'tr-fill');
+      bar.append(fill);
+      const v = el('span', 'tr-v', '+0%');
+      r.append(el('span', 'tr-l', t(`tr.${k}`)), bar, v);
+      tr.append(r);
+      this.bars.set(k, { fill, v });
+    }
+    stats.append(tr);
 
     this.root.append(top, stats);
     parent.appendChild(this.root);
@@ -66,6 +83,13 @@ export class Hud {
     setText(this.atk, formatNum(damagePerShot(s)));
     setText(this.sps, shotsPerSec(s).toFixed(2).replace(/\.?0+$/, ''));
     setText(this.dps, formatNum(autoDps(s)));
+    for (const [k, b] of this.bars) {
+      const v = trainValue(s, k);
+      const cap = trainCap(s, k);
+      b.fill.style.transform = `scaleX(${cap > 0 ? Math.min(1, v / cap) : 0})`;
+      b.fill.classList.toggle('full', v >= cap * 0.999);
+      setText(b.v, `+${pct(v)}%`);
+    }
   }
 
   setVisible(on: boolean): void {

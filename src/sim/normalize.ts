@@ -1,6 +1,7 @@
 import { BALANCE, STAGE_COUNT } from './balance.ts';
 import { CHAR_IDS, newState, type CharId, type GameState } from './state.ts';
 import { spdMaxLevel } from './stats.ts';
+import { GEAR } from './training.ts';
 
 const PASS_MULTS = [1, 2, 4, 8, 16, 32, 64];
 
@@ -44,5 +45,12 @@ export function normalizeState(raw: unknown, now: number): GameState {
     char,
     chars: charList,
     tutorial: int(r.tutorial, 0, 99),
+    trAtk: num(r.trAtk, 0, 1e15),
+    trSpd: num(r.trSpd, 0, BALANCE.train.spdCap),
+    trCoin: num(r.trCoin, 0, 1e15),
+    mAtk: int(r.mAtk, 0, 1e5),
+    mSpd: int(r.mSpd, 0, 1e5),
+    mCoin: int(r.mCoin, 0, 1e5),
+    gear: int(r.gear, 0, 2 ** GEAR.length - 1),
   };
 }

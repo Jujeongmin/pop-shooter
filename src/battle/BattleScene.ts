@@ -1,4 +1,5 @@
-import { t } from '../i18n/i18n';
+import { t, type StrKey } from '../i18n/i18n';
+import { MENTORS } from '../sim/training.ts';
 import { audio } from '../audio/audio';
 import { FIRE_SOUND } from '../config/audio';
 import { GUNS } from '../sim/guns.ts';
@@ -327,6 +328,7 @@ export class BattleScene {
     const run = this.run!;
     const g = this.game;
     const res = finishRun(g.state, run.cleared);
+    const prevBest = g.state.bestStage;
     g.setState(res.state, true);
     audio.play(run.cleared.length > 0 ? 'win' : 'lose');
     const failed = run.done === 'fail' ? run.stage : null;
@@ -344,6 +346,8 @@ export class BattleScene {
       coins: formatNum(res.coins),
       tip,
       unlocked: res.unlockedChars.map((c) => CHARACTERS[c].name),
+      // 이번에 기록을 넘어 영입된 멘토 (모든 훈련 ×1.28)
+      mentors: MENTORS.filter((m) => m.needStage > prevBest && m.needStage <= res.state.bestStage).map((m) => t(`mentor.${m.id}` as StrKey)),
     }, () => this.exit());
     this.run = null;
     this.endT = -1;

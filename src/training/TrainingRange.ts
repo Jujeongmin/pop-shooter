@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { HitFx } from '../fx/HitFx';
 import { addCoins, coinPerShot, shotsPerSec } from '../sim/actions.ts';
+import { train } from '../sim/training.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
 import { TapLimiter } from '../sim/tapLimiter.ts';
@@ -35,6 +36,8 @@ export class TrainingRange {
   private readonly limiter = new TapLimiter(BALANCE.tap.maxPerSec);
   private shotAcc = 0;
   private pending = 0;
+  /** 아직 반영 안 한 훈련 발 수 (flush 때 train) */
+  private pendingShots = 0;
   private flushT = 0;
   private clock = 0;
   private targetIdx = 0;
@@ -96,6 +99,7 @@ export class TrainingRange {
   private fire(tapped: boolean): void {
     const g = this.game;
     this.pending += coinPerShot(g.state, HUB_WORLD, Date.now());
+    this.pendingShots++;
     this.targetIdx = (this.targetIdx + 1) % g.hub.targets.length;
     const target = g.hub.targets[this.targetIdx]!;
     this.wobble[this.targetIdx] = 1;
@@ -110,7 +114,8 @@ export class TrainingRange {
   private flush(): void {
     if (this.pending <= 0) return;
     const g = this.game;
-    g.setState(addCoins(g.state, this.pending));
+    g.setState(train(addCoins(g.state, this.pending), this.pendingShots));
+    this.pendingShots = 0;
     _aim.set(RANGE_SPOT.x, 2.4, RANGE_SPOT.z - 3);
     this.float.show(`+${formatNum(this.pending)}`, _aim, 'coin');
     audio.play('coin');
@@ -156,20 +161,21 @@ export class TrainingRange {
   }
 
   /** 탭이 숨겨진 동안(RAF 멈춤) 훈련 중이었으면 경과 시간만큼 정산 (100% 속도, 탭 없음, 오프라인 한도까지) */
-  catchUp(elapsedSec: number, now: number): number {
+  catchUp(elapsedSec: number, now: number): { coins: number; shots: number } {
     const sec = Math.max(0, Math.min(BALANCE.offline.capSec, elapsedSec));
     const s = this.game.state;
-    return coinPerShot(s, HUB_WORLD, now) * shotsPerSec(s) * sec;
+    const shots = shotsPerSec(s) * sec;
+    return { coins: coinPerShot(s, HUB_WORLD, now) * shots, shots };
   }
 
   private readonly onVisibility = (): void => {
     if (document.visibilityState === 'hidden') { this.hiddenAt = Date.now(); return; }
     if (!this.active || !this.hiddenAt) return;
     const now = Date.now();
-    const coins = this.catchUp((now - this.hiddenAt) / 1000, now);
+    const { coins, shots } = this.catchUp((now - this.hiddenAt) / 1000, now);
     this.hiddenAt = 0;
     if (coins <= 0) return;
-    this.game.setState(addCoins(this.game.state, coins), true);
+    this.game.setState(train(addCoins(this.game.state, coins), shots), true);
     _aim.set(RANGE_SPOT.x, 2.8, RANGE_SPOT.z - 3);
     this.float.show(t('float.away', { n: formatNum(coins) }), _aim, 'coin big');
   };

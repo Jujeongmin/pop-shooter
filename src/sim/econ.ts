@@ -5,11 +5,13 @@ import { RUN_GAP_SEC } from './run.ts';
 import { firstClearCoins, isBoss, replayCoins, stageHp, stageTime } from './stages.ts';
 import type { CharId, GameState } from './state.ts';
 import { bulkCost } from './stats.ts';
+import { gainPerShot, TRAIN_KINDS, trainCap, trainValue, trainWorth, type TrainKind } from './training.ts';
 
 /**
  * 서버 경제 검사 (서버·테스트 공용 순수 함수, 스펙 7장).
  * 프리미엄 값(팝젬·패스·부스트·유료 캐릭터)은 서버 소유: 클라이언트 값 대신 Premium으로 덮어씀.
- * 진행 검사: "가치" = 코인 + 산 공격력·공격 속도 레벨 비용 + 산 총 가격 (이번 회차).
+ * 진행 검사: "가치" = 코인 + 산 공격력·공격 속도 레벨 비용 + 산 총 가격 + 훈련 기계·장비 값 (이번 회차).
+ * 훈련치: 늘어난 양 ≤ 여유 × 그 시간 최대 발 수 × 한 발 최대 양 + 바닥값. 넘으면 상한으로 자름.
  * 저장 사이에 늘어난 가치 ≤ 여유 × (그 시간에 벌 수 있는 최대 코인 + 새로 깬 스테이지 첫 보상 + 반복 도전 보상 한도) + 바닥값.
  * 넘으면 코인을 상한으로 자름. 레벨·총 값만으로 넘거나, 깰 수 없는 스테이지·건너뛴 환생이면 거절 (이전 저장 유지).
  */
@@ -28,6 +30,9 @@ export interface Premium {
 export const MARGIN = 1.5;
 /** 아주 초반 값 흔들림 허용 (코인) */
 const FLOOR = 500;
+/** 훈련치 흔들림 허용 (%) */
+const TRAIN_FLOOR = 1;
+const TR_FIELD: Record<TrainKind, 'trAtk' | 'trSpd' | 'trCoin'> = { atk: 'trAtk', spd: 'trSpd', coin: 'trCoin' };
 /** 월드 대장 첫 클리어로 열리는 캐릭터 (actions의 BOSS_UNLOCKS와 같은 순서) */
 const FREE_BY_STAGE: readonly [CharId, number][] = [['yellow', 10], ['red', 20], ['pink', 30]];
 /** 유료 캐릭터 */
@@ -36,7 +41,7 @@ export const PAID_CHARS: readonly CharId[] = ['white', 'black'];
 export function levelWorth(s: GameState): number {
   let g = 0;
   for (let i = 1; i <= s.gun; i++) g += gunPrice(i);
-  return bulkCost('atk', 0, s.atkLv) + bulkCost('spd', 0, s.spdLv) + g;
+  return bulkCost('atk', 0, s.atkLv) + bulkCost('spd', 0, s.spdLv) + g + trainWorth(s);
 }
 
 export function worth(s: GameState): number {
@@ -91,9 +96,26 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
     bestStage: Math.max(bestPrev, next.bestStage),
   };
   if (!prev) return { ok: true, state: s, clamped: false, prem: prem2 };
+  let trClamped = false;
 
   if (rebirthGain < 0 || rebirthGain > 1) return { ok: false, reason: 'rebirth_skip' };
   const dt = Math.max(0, elapsedSec);
+  // 훈련치: 그 시간에 쏠 수 있는 발 수 × 한 발 최대 양 (기계·장비는 이전·지금 중 큰 쪽, 멘토는 기록 기준). 먼저 잘라야 아래 수입·DPS 계산이 부풀지 않음
+  // prevUp = 이전 저장에서 그 사이 훈련으로 오를 수 있었던 최대 (깨고 바로 환생하면 지금 값은 0이라 스테이지 검사에 씀)
+  const prevUp: GameState = { ...prev };
+  {
+    const best = Math.max(prev.bestStage, s.bestStage);
+    const shots = dt * (Math.max(shotsPerSec(prev), shotsPerSec({ ...s, trSpd: rebirthGain === 1 ? 0 : prev.trSpd })) + BALANCE.tap.maxPerSec);
+    const cut: Partial<Record<'trAtk' | 'trSpd' | 'trCoin', number>> = {};
+    for (const k of TRAIN_KINDS) {
+      const per = Math.max(gainPerShot({ ...prev, bestStage: best }, k), gainPerShot({ ...s, bestStage: best }, k));
+      const base = rebirthGain === 1 ? 0 : trainValue(prev, k);
+      const cap = Math.min(base + MARGIN * shots * per + TRAIN_FLOOR, trainCap({ ...s, bestStage: best }, k) * 1.0001);
+      if (trainValue(s, k) > cap) cut[TR_FIELD[k]] = cap;
+      prevUp[TR_FIELD[k]] = Math.max(trainValue(prev, k), Math.min(trainValue(prev, k) + MARGIN * shots * per + TRAIN_FLOOR, trainCap({ ...prev, bestStage: best }, k)));
+    }
+    if (Object.keys(cut).length) { s = { ...s, ...cut }; trClamped = true; }
+  }
   const boosted = prem.boostUntil > now - dt * 1000;
   // 벌 수 있는 양: 이전·지금 능력치 중 큰 쪽 수입 (그 사이 산 레벨이 공격력 2배 구간을 넘으면 수입이 중간에 2배).
   // 지금 능력치를 부풀려도 레벨 비용(25레벨에 ×17)이 수입(×2)보다 훨씬 빨리 커서 levels 검사에 걸림.
@@ -110,7 +132,7 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
     if (worth(prev) + MARGIN * (earn + firsts) + FLOOR < need) return { ok: false, reason: 'rebirth_early' };
   }
   // 새로 깬 스테이지는 그 사이 능력치(이전·지금 중 센 쪽, 최대 DPS)로 제한 시간 안에 깰 수 있어야 (깨고 바로 환생한 경우 지금은 약함)
-  const dps = Math.max(maxDps(prev), maxDps(s));
+  const dps = Math.max(maxDps(prevUp), maxDps(s));
   for (let st = bestPrev + 1; st <= s.bestStage; st++) {
     if (dps * stageTime(st) < stageHp(st) * 0.999) return { ok: false, reason: 'stage' };
   }
@@ -118,7 +140,7 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
   const allowed = base + MARGIN * (earn + firsts) + FLOOR;
   const lv = levelWorth(s);
   if (lv > allowed) return { ok: false, reason: 'levels' };
-  let clamped = false;
+  let clamped = trClamped;
   if (s.coins + lv > allowed) {
     s = { ...s, coins: Math.max(0, allowed - lv) };
     clamped = true;
