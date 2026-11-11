@@ -13,13 +13,15 @@ export const BALANCE = {
     timeNormal: 20, timeBoss: 30, firstClearCoinMult: 2, replayCoinMult: 0.3,
     /** 1-1 체력 고정: 처음 온 사람이 몇 초 훈련하면 바로 이기게 (사용자 2026-11-11). 표(fit)는 1-2부터 의미 있음 */
     firstHp: 300,
+    /** 1-1부터 스테이지마다 체력 배수 (표에 닿을 때까지) */
+    firstRamp: 6,
   },
   /**
    * 환생 (키보드 탈출 방식, 사용자 2026-11-11): 공격력 레벨이 reqBase + reqStep × 환생 횟수에 닿으면 환생 가능.
    * 보상은 환생마다 배율 ×multGrowth (토큰 1개, 곱으로 쌓임: 보스 체력이 기하급수라 덧셈 배율은 뒤 월드에서 모자람).
    * 32회 뒤 Ascend·결제로 조건 건너뛰기는 VX 상점 때.
    */
-  rebirth: { reqBase: 60, reqStep: 30, multGrowth: 1.33 },
+  rebirth: { reqBase: 60, reqStep: 30.5, multGrowth: 1.33 },
   /** 캐릭터 피해 배율: 해금 순서대로 점점 좋게 (사용자 2026-11-11). 코인도 피해에 비례해 같이 오름 */
   charMult: { blue: 1, yellow: 1.15, red: 1.35, pink: 1.6, white: 1.9, black: 2.2 },
   range: { multByWorld: [1, 4, 16, 64] },

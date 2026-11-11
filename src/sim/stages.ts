@@ -10,10 +10,13 @@ export function isBoss(s: number): boolean {
   return s % BALANCE.stage.perWorld === 0;
 }
 
-/** 보스 체력 = 시뮬레이터가 맞춘 표 (대장 포함). 1-1만 첫 승리용 고정값 */
+/**
+ * 보스 체력: 1-1 = firstHp(첫 승리용)에서 스테이지마다 ×firstRamp로 늘다가, 시뮬레이터 표(STAGE_HP)에 닿으면 표를 따름
+ * (사용자 2026-11-11: 1-1만 쉽고 1-2부터 갑자기 표 값이면 벽처럼 느껴짐). 둘 다 늘어나므로 작은 쪽도 늘 늘어남.
+ */
 export function stageHp(s: number): number {
-  if (s === 1) return BALANCE.stage.firstHp;
-  return STAGE_HP[s - 1] ?? Infinity;
+  const table = STAGE_HP[s - 1] ?? Infinity;
+  return Math.min(table, BALANCE.stage.firstHp * BALANCE.stage.firstRamp ** (s - 1));
 }
 
 export function stageTime(s: number): number {

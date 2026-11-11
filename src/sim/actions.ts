@@ -104,7 +104,7 @@ export function clearStage(s: GameState, stage: number): ClearResult {
 
 /** 다음 환생에 필요한 공격력 레벨 (환생할수록 오름) */
 export function rebirthReqLevel(s: GameState): number {
-  return BALANCE.rebirth.reqBase + BALANCE.rebirth.reqStep * s.rebirths;
+  return Math.round(BALANCE.rebirth.reqBase + BALANCE.rebirth.reqStep * s.rebirths);
 }
 
 export function canRebirth(s: GameState): boolean {

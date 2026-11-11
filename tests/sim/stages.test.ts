@@ -18,8 +18,8 @@ test('stages', () => {
 
 test('hp table from fitter', () => {
   assert.equal(STAGE_HP.length, STAGE_COUNT);
-  // 1-1은 고정값(firstHp), 나머지는 표 그대로
-  for (let s = 2; s <= STAGE_COUNT; s++) assert.equal(stageHp(s), STAGE_HP[s - 1]);
+  // 1-1 = firstHp에서 ×firstRamp로 늘다가 표에 닿으면 표 (작은 쪽)
+  for (let s = 1; s <= STAGE_COUNT; s++) assert.equal(stageHp(s), Math.min(STAGE_HP[s - 1]!, BALANCE.stage.firstHp * BALANCE.stage.firstRamp ** (s - 1)));
   for (let s = 2; s <= STAGE_COUNT; s++) assert.ok(stageHp(s) > stageHp(s - 1), `stage ${s} hp must grow`);
   for (const s of STAGE_HP) assert.ok(Number.isFinite(s) && s > 0);
 });
