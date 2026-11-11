@@ -5,9 +5,10 @@ import { addCoins, coinPerShot, shotsPerSec } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
 import { TapLimiter } from '../sim/tapLimiter.ts';
+import { ZoneRing } from '../fx/ZoneRing';
 import type { FloatText } from '../ui/FloatText';
-import { el } from '../ui/dom';
-import { RANGE_SPOT } from '../world/facilities';
+import type { ZoneCallout } from '../ui/ZoneCallout';
+import { RANGE_SPOT, WORLD1_FACILITIES } from '../world/facilities';
 
 /** 지금 있는 광장 월드 (계획 1 = 월드 1) */
 const HUB_WORLD = 1;
@@ -36,19 +37,20 @@ export class TrainingRange {
   private kick = 0;
   private readonly wobble: number[];
   private hiddenAt = 0;
-  private readonly bar: HTMLDivElement;
+  private readonly ring: ZoneRing;
+  private readonly callout: ZoneCallout;
   /** 디버그·검증: 지금까지 인정한 탭 수 */
   tapsAccepted = 0;
 
-  constructor(game: Game, fx: HitFx, float: FloatText) {
+  constructor(game: Game, fx: HitFx, float: FloatText, callout: ZoneCallout) {
     this.game = game;
     this.fx = fx;
     this.float = float;
+    this.callout = callout;
     this.wobble = game.hub.targets.map(() => 0);
-    this.bar = el('div', 'train-bar');
-    this.bar.append(el('div', 'train-hint', '훈련 중! 화면을 탭하면 더 빨리 쏴요'));
-    this.bar.hidden = true;
-    game.ui.appendChild(this.bar);
+    const zone = WORLD1_FACILITIES.find((f) => f.id === 'range')!;
+    this.ring = new ZoneRing(zone.x, zone.z, zone.radius, '#4fb3ff');
+    game.stage.scene.add(this.ring.root);
     game.facilityActions.range = () => this.start();
     game.facilityLeave.range = () => this.stop();
     game.onTick((dt) => this.update(dt));
@@ -61,8 +63,12 @@ export class TrainingRange {
     if (this.active) return;
     this.active = true;
     this.game.tapHandler = (taps) => { for (let i = 0; i < taps.length; i++) this.tap(); };
-    this.bar.hidden = false;
     this.shotAcc = 0;
+    this.ring.setInside(true);
+    this.game.cam.focus = 1;
+    this.callout.show({ title: '사격장 훈련 중!', big: '화면을 탭하면 더 빨리 쏴요!', hand: true });
+    // 들어오자마자 한 발: 자리 잡은 느낌
+    this.fire(false);
   }
 
   stop(): void {
@@ -72,7 +78,9 @@ export class TrainingRange {
     this.game.tapHandler = null;
     this.game.pose.aimAt = null;
     this.game.pose.kick = 0;
-    this.bar.hidden = true;
+    this.ring.setInside(false);
+    this.game.cam.focus = 0;
+    this.callout.hide();
   }
 
   private tap(): void {
@@ -108,6 +116,7 @@ export class TrainingRange {
     this.clock += dt;
     this.fx.update(dt);
     this.float.update(dt);
+    this.ring.update(dt);
     const g = this.game;
     g.hub.targets.forEach((t, i) => {
       const w = this.wobble[i]!;

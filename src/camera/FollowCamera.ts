@@ -8,6 +8,9 @@ export class FollowCamera {
   yaw = 0;
   distance = 6.5;
   height = 3.6;
+  /** 0 = 평소, 1 = 구역 집중 (조금 당겨짐). focus 목표로 부드럽게 따라감 */
+  focus = 0;
+  private focusNow = 0;
   private readonly cam: THREE.PerspectiveCamera;
   private readonly pos = new THREE.Vector3();
   private initialized = false;
@@ -30,7 +33,10 @@ export class FollowCamera {
   }
 
   update(dt: number, target: THREE.Vector3): void {
-    _goal.set(target.x + Math.sin(this.yaw) * this.distance, target.y + this.height, target.z + Math.cos(this.yaw) * this.distance);
+    this.focusNow += (this.focus - this.focusNow) * (1 - Math.exp(-dt * 5));
+    const dist = this.distance * (1 - 0.22 * this.focusNow);
+    const h = this.height * (1 - 0.12 * this.focusNow);
+    _goal.set(target.x + Math.sin(this.yaw) * dist, target.y + h, target.z + Math.cos(this.yaw) * dist);
     if (!this.initialized) { this.pos.copy(_goal); this.initialized = true; }
     this.pos.lerp(_goal, 1 - Math.exp(-dt * 8));
     this.cam.position.copy(this.pos);

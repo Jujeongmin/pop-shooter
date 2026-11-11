@@ -7,6 +7,7 @@ import { HitFx } from './fx/HitFx';
 import { loadSave } from './save/localSave';
 import { TrainingRange } from './training/TrainingRange';
 import { FloatText } from './ui/FloatText';
+import { ZoneCallout } from './ui/ZoneCallout';
 import { loadBricks } from './world/kit';
 
 async function boot(): Promise<void> {
@@ -16,7 +17,7 @@ async function boot(): Promise<void> {
   const game = new Game(stage, assets, kit, loadSave(Date.now()), ui);
   const fx = new HitFx(stage.scene);
   const float = new FloatText(ui, stage.camera);
-  const training = new TrainingRange(game, fx, float);
+  const training = new TrainingRange(game, fx, float, new ZoneCallout(ui));
   stage.start();
   if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training });
 }
