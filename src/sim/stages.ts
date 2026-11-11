@@ -15,7 +15,7 @@ export function isBoss(s: number): boolean {
  * (사용자 2026-11-11: 1-1만 쉽고 1-2부터 갑자기 표 값이면 벽처럼 느껴짐). 둘 다 늘어나므로 작은 쪽도 늘 늘어남.
  */
 export function stageHp(s: number): number {
-  const table = STAGE_HP[s - 1] ?? Infinity;
+  const table = (STAGE_HP[s - 1] ?? Infinity) * (BALANCE.worldHpMult[worldOf(s) - 1] ?? 1);
   return Math.min(table, BALANCE.stage.firstHp * BALANCE.stage.firstRamp ** (s - 1));
 }
 

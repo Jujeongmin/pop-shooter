@@ -23,7 +23,9 @@ export const BALANCE = {
    */
   rebirth: { reqBase: 60, reqStep: 30.5, multGrowth: 1.33 },
   /** 캐릭터 피해 배율: 해금 순서대로 점점 좋게 (사용자 2026-11-11). 코인도 피해에 비례해 같이 오름 */
-  charMult: { blue: 1, yellow: 1.15, red: 1.35, pink: 1.6, white: 1.9, black: 2.2 },
+  charMult: { blue: 1, yellow: 1.5, red: 2, pink: 3, white: 5, black: 8 },
+  /** 월드별 보스 체력 배수: 앞 월드 대장으로 얻는 캐릭터 배율만큼 (캐릭터를 세게 한 만큼 진행 시간이 줄지 않게) */
+  worldHpMult: [1, 1.4, 1.5, 2.22],
   range: { multByWorld: [1, 4, 16, 64] },
   offline: { rate: 0.5, capSec: 7200 },
   gems: { worldBossFirst: 50, perRebirth: 10 },
