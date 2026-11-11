@@ -217,7 +217,7 @@
 @keyframes tut-pop { 0% { transform: translateX(-50%) scale(.3); opacity: 0 } 100% { transform: translateX(-50%) scale(1); opacity: 1 } }
 .tut-ico { width: 28px; height: 28px; }
 .tut-text { font-size: 17px; color: var(--ink); }
-.tut-skip { font-size: 13px; padding: 5px 10px; }
+.tut-skip { font-size: 13px; padding: 5px 10px; white-space: nowrap; flex: none; }
 @media (max-width: 760px) { .tut-bar { top: 112px; } .tut-text { font-size: 14px; } }
 
 .reb-price { flex-wrap: wrap; row-gap: 6px; }

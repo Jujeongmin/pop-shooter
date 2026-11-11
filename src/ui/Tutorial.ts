@@ -10,7 +10,7 @@ const DONE = 99;
 const COIN_GOAL = 100;
 const STEPS: readonly { target: FacilityId | null; text: () => string }[] = [
   { target: 'range', text: () => t('tut.range') },
-  { target: null, text: () => t('tut.coins', { n: COIN_GOAL }) },
+  { target: null, text: () => t('tut.coins', { c: 0, n: COIN_GOAL }) },
   { target: 'upgrade', text: () => t('tut.upgrade') },
   { target: 'portal', text: () => t('tut.portal') },
 ];
@@ -100,8 +100,19 @@ export class Tutorial {
   }
 
   private finish(): void {
+    const completed = this.step === STEPS.length - 1;
     if (this.step !== DONE) this.game.setState({ ...this.game.state, tutorial: DONE }, true);
-    this.bar.remove();
+    if (completed) {
+      // 끝까지 따라왔으면 마무리 한 줄을 잠깐 보여 주고 사라짐 (건너뛰기는 바로 사라짐)
+      setText(this.text, t('tut.done'));
+      this.bar.querySelector('.tut-skip')?.remove();
+      this.bar.classList.remove('pop');
+      void this.bar.offsetWidth;
+      this.bar.classList.add('pop');
+      window.setTimeout(() => this.bar.remove(), 3500);
+    } else {
+      this.bar.remove();
+    }
     this.group.removeFromParent();
     for (const o of this.owned) o.dispose();
     this.owned.length = 0;
@@ -115,7 +126,10 @@ export class Tutorial {
     if (step === 0 && g.near?.id === 'range') this.setStep(1);
     else if (step === 1 && g.state.coins >= COIN_GOAL) this.setStep(2);
     else if (step === 2 && g.state.atkLv > this.startAtk) this.setStep(3);
-    else if (step === 3 && (g.mode === 'battle' || g.state.bestStage >= 1)) { this.finish(); return; }
+    // 포털 단계는 1-1을 실제로 깨고 광장에 돌아왔을 때 끝 (지면 안내가 남아 다시 도전)
+    else if (step === 3 && g.mode === 'hub' && g.state.bestStage >= 1) { this.finish(); return; }
+    // 코인 단계: 모은 양을 실시간으로 (바뀔 때만 DOM 갱신)
+    if (step === 1) setText(this.text, t('tut.coins', { c: Math.min(COIN_GOAL, Math.floor(g.state.coins)), n: COIN_GOAL }));
     // 전투 중엔 숨김 (광장이 숨겨지면 화살표도 같이 숨음, 안내 줄만)
     this.bar.hidden = g.mode === 'battle';
     const st = STEPS[this.step];
