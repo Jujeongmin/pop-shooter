@@ -1,4 +1,4 @@
-/** 터치 전용 떠다니는 조이스틱: 화면 왼쪽 영역에서 누른 곳에 뜸 */
+/** 떠다니는 조이스틱 (마우스·터치): 화면 왼쪽 영역에서 누른 곳에 뜸 */
 export class Joystick {
   readonly el: HTMLDivElement;
   private readonly knob: HTMLDivElement;

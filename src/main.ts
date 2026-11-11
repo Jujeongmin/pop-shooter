@@ -1,4 +1,5 @@
 import './style.css';
+import './ui/ui.css';
 import { loadAssets } from './assets/loadAssets';
 import { Game } from './core/Game';
 import { Stage3D } from './core/Stage3D';

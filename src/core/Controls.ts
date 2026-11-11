@@ -5,7 +5,7 @@ export interface Tap { x: number; y: number }
 const DRAG_PX = 8;
 
 /**
- * 입력 하나로 모음: 키보드 WASD/화살표 + 마우스/터치 탭 + 드래그(카메라 회전) + 터치 조이스틱.
+ * 입력 하나로 모음: 키보드 WASD/화살표 + 왼쪽 끌기 조이스틱(마우스·터치) + 오른쪽 끌기(카메라 회전) + 탭.
  * UI 요소 위 입력은 무시 (UI는 pointer-events로 따로 받음).
  */
 export class Controls {
@@ -16,6 +16,8 @@ export class Controls {
   /** 이번 프레임까지 쌓인 카메라 회전 드래그(px) */
   private dragDx = 0;
   touchMode = false;
+  /** 광장에서만 켬: 화면 왼쪽 40%를 누르고 끌면 조이스틱 (마우스·터치 공통). 끄면 모든 누름 = 탭 */
+  joystickEnabled = true;
   private readonly target: HTMLElement;
 
   constructor(target: HTMLElement, uiLayer: HTMLElement) {
@@ -40,7 +42,7 @@ export class Controls {
 
   private readonly onDown = (e: PointerEvent): void => {
     this.touchMode = e.pointerType === 'touch';
-    if (this.touchMode && e.clientX < window.innerWidth * 0.4 && !this.joy.active) {
+    if (this.joystickEnabled && e.clientX < window.innerWidth * 0.4 && !this.joy.active) {
       this.joy.begin(e);
       return;
     }
@@ -78,10 +80,9 @@ export class Controls {
     return { x, y };
   }
 
-  /** 키보드·조이스틱 이동 중인지 (클릭 이동 목표 취소용) */
-  get steering(): boolean {
-    const m = this.move();
-    return m.x !== 0 || m.y !== 0;
+  setJoystickEnabled(on: boolean): void {
+    this.joystickEnabled = on;
+    if (!on && this.joy.active) this.joy.end();
   }
 
   drainTaps(): Tap[] {
