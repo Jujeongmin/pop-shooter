@@ -1,4 +1,5 @@
 import { button, el } from './dom';
+import { icon } from './icons';
 
 export interface ResultInfo {
   title: string;
@@ -30,11 +31,16 @@ export class ResultCard {
     this.card.replaceChildren();
     this.card.append(el('div', 'result-title', r.title));
     const chips = el('div', 'result-chips');
-    for (const c of r.cleared) chips.append(el('span', 'chip ok', `${c} ✓`));
-    if (r.failed) chips.append(el('span', 'chip fail', `${r.failed} ✗`));
+    const chip = (label: string, ok: boolean): HTMLSpanElement => {
+      const c = el('span', `chip ${ok ? 'ok' : 'fail'}`);
+      c.append(icon(ok ? 'check' : 'cross'), el('span', '', label));
+      return c;
+    };
+    for (const c of r.cleared) chips.append(chip(c, true));
+    if (r.failed) chips.append(chip(r.failed, false));
     this.card.append(chips);
     const coin = el('div', 'result-coins');
-    coin.append(el('span', 'ico coin'), el('span', '', `+${r.coins}`));
+    coin.append(icon('coin', 'big'), el('span', '', `+${r.coins}`));
     this.card.append(coin);
     for (const u of r.unlocked) this.card.append(el('div', 'result-unlock', `새 캐릭터 ${u} 열림!`));
     if (r.tip) this.card.append(el('div', 'result-tip', r.tip));

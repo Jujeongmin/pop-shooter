@@ -3,6 +3,7 @@ import { formatNum } from '../sim/format.ts';
 import { rebirthMult } from '../sim/stats.ts';
 import type { GameState } from '../sim/state.ts';
 import { button, el, setText } from './dom';
+import { icon, type IconName } from './icons';
 
 export interface HudActions {
   menu: (which: 'character' | 'settings') => void;
@@ -21,9 +22,9 @@ export class Hud {
   constructor(parent: HTMLElement, actions: HudActions) {
     this.root = el('div', 'hud');
     const top = el('div', 'hud-top');
-    const pill = (icon: string): HTMLSpanElement => {
+    const pill = (name: IconName): HTMLSpanElement => {
       const p = el('div', 'pill');
-      p.append(el('span', `ico ${icon}`), el('span', 'val', '0'));
+      p.append(icon(name), el('span', 'val', '0'));
       top.appendChild(p);
       return p.querySelector('.val') as HTMLSpanElement;
     };
@@ -35,16 +36,18 @@ export class Hud {
     top.appendChild(menu);
 
     const stats = el('div', 'hud-stats');
-    const row = (label: string): HTMLSpanElement => {
+    const row = (label: string, ic: IconName): HTMLSpanElement => {
       const r = el('div', 'stat');
       const v = el('span', 'stat-v', '0');
-      r.append(el('span', 'stat-l', label), v);
+      const l = el('span', 'stat-l');
+      l.append(icon(ic), el('span', '', label));
+      r.append(l, v);
       stats.appendChild(r);
       return v;
     };
-    this.atk = row('공격력');
-    this.sps = row('초당 발사');
-    this.dps = row('DPS');
+    this.atk = row('공격력', 'bullet');
+    this.sps = row('초당 발사', 'timer');
+    this.dps = row('DPS', 'bolt');
 
     this.root.append(top, stats);
     parent.appendChild(this.root);

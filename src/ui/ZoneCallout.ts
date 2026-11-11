@@ -1,4 +1,5 @@
 import { el } from './dom';
+import { icon } from './icons';
 
 export interface CalloutText {
   /** 큰 글씨 위 작은 띠 (예: '사격장 훈련 중!') */
@@ -17,7 +18,7 @@ export class ZoneCallout {
   private readonly top: HTMLDivElement;
   private readonly center: HTMLDivElement;
   private readonly bigText: HTMLDivElement;
-  private readonly hand: HTMLDivElement;
+  private readonly hand: HTMLSpanElement;
   private readonly flashEl: HTMLDivElement;
   private hideTimer = 0;
 
@@ -25,7 +26,7 @@ export class ZoneCallout {
     this.top = el('div', 'zone-top', '');
     this.center = el('div', 'zone-center');
     this.bigText = el('div', 'zone-big');
-    this.hand = el('div', 'zone-hand', '👆');
+    this.hand = icon('hand', 'zone-hand');
     this.center.append(this.top, this.bigText, this.hand);
     this.center.hidden = true;
     this.flashEl = el('div', 'zone-flash');
