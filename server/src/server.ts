@@ -1,12 +1,33 @@
 /**
- * POP Shooter 서버: 계정별 진행 저장 (원본 = Verse8 글로벌 사용자 상태 `save`).
- * - 계정은 인자가 아니라 $sender.account (플랫폼이 인증, 클라이언트가 못 바꿈).
- * - 저장값은 sim/normalize로 형식·범위를 고친 뒤 저장, lastSeen은 서버 시각으로 찍음 (오프라인 보상 = 서버 시각 기준).
- * - 같은 계정 동시 저장은 $lock으로 한 줄로.
- * - 코인 증가량 상한 검사(스펙 7장)는 아직 없음 → 기록은 공식 랭킹이 아님.
- * 위치·전투 중 상태는 저장하지 않음: 다시 켜면 늘 광장 시작 지점, 끝나지 않은 연속 도전은 버려짐.
+ * POP Shooter 서버
+ * 1) 계정별 진행 저장 (원본 = Verse8 글로벌 사용자 상태 `save`).
+ *    - 저장값은 sim/normalize로 형식·범위를 고친 뒤 저장, lastSeen은 서버 시각으로 찍음 (오프라인 보상 = 서버 시각 기준).
+ *    - 코인 증가량 상한 검사(스펙 8장)는 아직 없음 → 기록은 공식 랭킹이 아님.
+ *    위치·전투 중 상태는 저장하지 않음: 다시 켜면 늘 광장 시작 지점, 끝나지 않은 연속 도전은 버려짐.
+ * 2) 광장 멀티 (월드별 룸 w<월드>-<번호>, 정원 8): 서로 보이기만 함 (충돌 없음, 전투·훈련은 혼자). pop-battle 허브를 복사해 고침.
+ * 3) 닉네임 (계정별 글로벌 사용자 상태 nick + 중복 방지 컬렉션 ps_nick). pop-battle에서 복사.
+ *
+ * 공통 규칙 (verse8-upload 4장): 계정은 인자가 아니라 $sender.account (플랫폼이 인증, 클라이언트가 못 바꿈).
+ * 모든 메서드가 공개 엔드포인트 → 인자는 모두 다시 검사. 같은 계정·같은 장부의 읽기-수정-쓰기는 $lock.
+ * 요청마다 새 인스턴스라 상태는 모듈 변수에 두지 않음.
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
+import {
+  HUB_MAX_PLAYERS,
+  HUB_TIMING,
+  HUB_AREA,
+  hubMoveOk,
+  hubRoomId,
+  hubWorldOf,
+  isHubRoom,
+  isHubWorld,
+  sanitizeHubField,
+  sanitizeHubPacket,
+  type HubInfo,
+  type HubInfoField,
+  type HubPacket,
+} from '../../src/net/shared/hub.ts';
+import { checkNickname } from '../../src/net/shared/nickFilter.ts';
 
 /** 저장 한 건 최대 크기 (문서 1MB 한도보다 훨씬 작게) */
 const MAX_SAVE_CHARS = 20000;
@@ -17,7 +38,143 @@ function saveOf(st: unknown): Record<string, unknown> | null {
   return s && typeof s === 'object' ? (s as Record<string, unknown>) : null;
 }
 
+/** 서버 로그 (Verse8 서버 콘솔). 이동 패킷은 남기지 않음, 계정은 앞뒤만 */
+function slog(event: string, roomId: string, account: string): void {
+  const a = account.length > 14 ? `${account.slice(0, 6)}…${account.slice(-4)}` : account;
+  console.log(`[ps] ${new Date().toISOString()} ${event} room=${roomId} account=${a}`);
+}
+
+// ---------------- 광장 장부 ----------------
+
+/** 호출한 클라이언트의 광장 룸 (아니면 null — SDK는 룸 밖에서 '__no_room__'을 줌) */
+function hubOf(): string | null {
+  const r = $sender.roomId;
+  return r && isHubRoom(r) ? r : null;
+}
+
+/**
+ * 광장 인원 장부 (월드마다 글로벌 상태 하나 hub_book_w<월드>, 'hub:w<월드>' 락 안에서만 읽고 씀): 룸 → 계정 → 기록.
+ * - a: 실제 접속 시각 (hubHello 뒤). 정상 퇴장(hubBye·onRoomLeave)하면 즉시 지움 → 바로 빈자리
+ * - d: 연결 끊김 시각. 30초 재접속 대기 자리 (정원에는 넣고, 실제 접속 인원에서는 뺌)
+ * - r: 배정 예약 시각 (hubFind 뒤 20초 안에 들어와야 함, 동시 입장 정원 초과 방지)
+ * 크기: 지금 접속 중인 사람만 들어 있고 끝난 기록은 매번 지움 → 동시 접속자 수에 비례 (누적되지 않음).
+ * SDK 룸 사용자 목록은 나간 사람도 30초 동안 남아 있어 인원 계산에 쓰지 않고, 서버가 놓친 퇴장(유령) 정리에만 씀
+ */
+type HubEntry = { a?: number; d?: number; r?: number };
+type HubBook = Record<string, Record<string, HubEntry>>;
+const bookKey = (world: number) => `hub_book_w${world}`;
+const bookLock = (world: number) => `hub:w${world}`;
+
+async function readBook(world: number): Promise<HubBook> {
+  const key = bookKey(world);
+  const g = ((await $global.getGlobalState([key])) || {}) as Record<string, unknown>;
+  const v = g[key];
+  return v && typeof v === 'object' ? (v as HubBook) : {};
+}
+
+/** 끝난 예약·재접속 대기를 지움 (빈 룸 키도) */
+function pruneBook(book: HubBook, now: number): void {
+  for (const [id, accs] of Object.entries(book)) {
+    for (const [acc, e] of Object.entries(accs)) {
+      if (e.d !== undefined && !(now - e.d < HUB_TIMING.graceMs)) delete accs[acc];
+      else if (e.a === undefined && e.d === undefined && !(now - (e.r ?? 0) < HUB_TIMING.reserveMs)) delete accs[acc];
+    }
+    if (Object.keys(accs).length === 0) delete book[id];
+  }
+}
+
+/** 자리 수 (실제 접속 + 재접속 대기 + 예약), except = 셈에서 뺄 계정 */
+function hubSeats(accs: Record<string, HubEntry> | undefined, except?: string): number {
+  return accs ? Object.keys(accs).filter((a) => a !== except).length : 0;
+}
+
+/** 실제 접속 인원 (재접속 대기·예약 제외) */
+function hubActive(accs: Record<string, HubEntry> | undefined): number {
+  return accs ? Object.values(accs).filter((e) => e.a !== undefined && e.d === undefined).length : 0;
+}
+
+/** 장부 고치기 (월드 락 안에서 읽고 씀). fn이 false를 돌려주면 쓰지 않음 */
+async function editBook(world: number, fn: (book: HubBook, now: number) => boolean | void): Promise<void> {
+  await $lock(bookLock(world), async () => {
+    const now = Date.now();
+    const book = await readBook(world);
+    if (fn(book, now) === false) return;
+    pruneBook(book, now);
+    await $global.updateGlobalState({ [bookKey(world)]: book });
+  });
+}
+
+/** 보이는 정보 검사: 들어온 칸만 검사해 patch로. 잘못된 칸이 하나라도 있으면 그 칸 이름 */
+function hubPatch(raw: unknown, fields: readonly HubInfoField[]): { patch: Partial<HubInfo>; bad?: HubInfoField } {
+  const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const patch: Record<string, unknown> = {};
+  for (const k of fields) {
+    if (src[k] === undefined) continue;
+    const v = sanitizeHubField(k, src[k]);
+    if (v === undefined) return { patch: {}, bad: k };
+    patch[k] = v;
+  }
+  return { patch: patch as Partial<HubInfo> };
+}
+
+const HUB_FIELDS: readonly HubInfoField[] = ['c', 'g', 'r', 'pw', 's'];
+const HUB_DEFAULTS: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub' };
+
+// ---------------- 닉네임 ----------------
+// 원본 = 계정별 글로벌 사용자 상태 nick (save와 같은 문서, updateMyState는 합치기라 서로 덮지 않음).
+// 중복 방지 등록부: 컬렉션 ps_nick 한 줄 = { key: 비교용 닉네임, acc: 주인 계정 } (항목당 문서 하나 → 단일 문서가 커지지 않음).
+// 비교는 NFC + 앞뒤 공백 제거 + 대소문자 무시. 같은 이름 동시 요청은 이름별 락으로 한 명만 차지. 바꾸면 새 이름을 먼저 차지한 뒤 예전 이름을 놓음.
+
+/** 닉네임 변경 간격 (첫 설정은 제한 없음) */
+const NICK_CHANGE_MS = 10_000;
+const NICK_COLLECTION = 'ps_nick';
+
+function nickKey(nick: string): string {
+  return nick.normalize('NFC').trim().toLowerCase();
+}
+
+async function nickOwner(key: string): Promise<{ id: string; acc: string } | null> {
+  const items = await $global.getCollectionItems(NICK_COLLECTION, { filters: [{ field: 'key', operator: '==', value: key }], limit: 1 });
+  const it = items[0];
+  return it ? { id: it.__id, acc: String(it.acc) } : null;
+}
+
+/** 이 계정이 이 닉네임을 차지 (이미 내 것이면 그대로). 다른 계정 것이면 false */
+async function claimNick(account: string, nick: string): Promise<boolean> {
+  const key = nickKey(nick);
+  return $lock(`nick:${key}`, async () => {
+    const owner = await nickOwner(key);
+    if (owner) return owner.acc === account;
+    await $global.addCollectionItem(NICK_COLLECTION, { key, acc: account, t: Date.now() });
+    return true;
+  });
+}
+
+/** 내 것인 닉네임 등록을 놓음 (바꾼 뒤 예전 이름) */
+async function releaseNick(account: string, nick: string): Promise<void> {
+  const key = nickKey(nick);
+  await $lock(`nick:${key}`, async () => {
+    const owner = await nickOwner(key);
+    if (owner && owner.acc === account) await $global.deleteCollectionItem(NICK_COLLECTION, owner.id);
+  });
+}
+
+/** 저장된 닉네임이 지금 규칙에 걸림 (금칙어 목록이 바뀐 뒤 등) → 바꿀 때까지 표시 안 함, 저장값은 지우지 않음 */
+function nickNeedsChange(st: Record<string, unknown> | null): boolean {
+  const raw = st?.nick;
+  return typeof raw === 'string' && raw.trim() !== '' && !checkNickname(raw).ok;
+}
+
+/** 저장된 내 닉네임 (지금 규칙으로 다시 검사, 걸리면 없는 것으로) */
+async function storedNick(): Promise<string | null> {
+  const st = ((await $global.getMyState()) || {}) as { nick?: unknown };
+  const r = checkNickname(st.nick);
+  return r.ok ? r.value : null;
+}
+
 export class Server {
+  // ---------------- 저장 ----------------
+
   /** 내 저장 + 서버 지금 시각 (오프라인 보상 계산용) */
   async saveLoad(): Promise<{ ok: true; save: Record<string, unknown> | null; now: number }> {
     const st = await $global.getMyState();
@@ -36,5 +193,201 @@ export class Server {
       await $global.updateMyState({ save: { ...clean, lastSeen: now } });
     });
     return { ok: true, now };
+  }
+
+  // ---------------- 광장 (w<월드>-<번호> 룸) ----------------
+
+  /**
+   * 광장 인스턴스 배정 (룸 밖에서 호출, 클라이언트가 결과 룸에 joinRoom). world = 1..HUB_WORLDS.
+   * 이 월드에 이미 자리(접속·재접속 대기·예약)가 있으면 그 룸 → 중복 입장 방지·재접속은 같은 룸.
+   * 아니면 정원이 남은 룸 중 가장 많이 찬 곳 (적은 수의 룸에 모음), 모두 차면 새 번호.
+   * 실제 접속자 + 아직 들어오지 않은 예약을 함께 셈 (동시에 여러 명이 배정받아도 정원을 넘지 않게)
+   */
+  async hubFind(world: unknown): Promise<{ ok: true; roomId: string; max: number } | { ok: false; reason: string }> {
+    if (!isHubWorld(world)) return { ok: false, reason: 'bad_world' };
+    const me = $sender.account;
+    return $lock(bookLock(world), async () => {
+      const now = Date.now();
+      const book = await readBook(world);
+      pruneBook(book, now);
+      // 유령 정리: 실제 접속으로 적혀 있는데 SDK 룸에도 없는 계정 (서버가 퇴장 알림을 놓친 경우)
+      for (const [id, accs] of Object.entries(book)) {
+        const inRoom = new Set(await $global.getRoomUserAccounts(id));
+        for (const [acc, e] of Object.entries(accs)) if (e.a !== undefined && !inRoom.has(acc)) delete accs[acc];
+      }
+      pruneBook(book, now);
+      let pick: string | null = null;
+      for (const [id, accs] of Object.entries(book)) if (accs[me]) pick = id;
+      if (!pick) {
+        for (const [id, accs] of Object.entries(book)) if (hubSeats(accs) < HUB_MAX_PLAYERS && (!pick || hubSeats(accs) > hubSeats(book[pick]))) pick = id;
+      }
+      if (!pick) {
+        let n = 1;
+        while (book[hubRoomId(world, n)]) n++;
+        pick = hubRoomId(world, n);
+      }
+      const accs = (book[pick] ??= {});
+      accs[me] = { ...accs[me], r: now };
+      await $global.updateGlobalState({ [bookKey(world)]: book });
+      return { ok: true as const, roomId: pick, max: HUB_MAX_PLAYERS };
+    });
+  }
+
+  /**
+   * 광장 입장 직후: 보이는 정보 등록 + 시작 위치. 정원 초과면 'full' (클라이언트가 나가서 다시 배정받음).
+   * c는 필수, g·r·pw·s는 없으면 기본값, 잘못된 값이 있으면 거절 (bad_<칸>). 닉네임은 서버 저장값만 (없으면 '')
+   */
+  async hubHello(info: unknown): Promise<{ ok: boolean; reason?: string; max: number; count: number }> {
+    const roomId = hubOf();
+    if (!roomId) return { ok: false, reason: 'not_in_hub', max: HUB_MAX_PLAYERS, count: 0 };
+    const { patch, bad } = hubPatch(info, HUB_FIELDS);
+    if (bad) return { ok: false, reason: `bad_${bad}`, max: HUB_MAX_PLAYERS, count: 0 };
+    if (!patch.c) return { ok: false, reason: 'bad_c', max: HUB_MAX_PLAYERS, count: 0 };
+    const me = $sender.account;
+    // 장부에 실제 접속으로 등록 (나를 뺀 자리 수가 정원이면 거절). 같은 월드의 다른 룸 기록은 지움 (중복 세션·유령 방지)
+    let count = 0;
+    let full = false;
+    await editBook(hubWorldOf(roomId), (book, now) => {
+      if (hubSeats(book[roomId], me) >= HUB_MAX_PLAYERS) {
+        full = true;
+        count = hubSeats(book[roomId], me);
+        return false;
+      }
+      for (const [id, accs] of Object.entries(book)) if (id !== roomId) delete accs[me];
+      (book[roomId] ??= {})[me] = { a: now };
+      count = hubActive(book[roomId]);
+    });
+    if (full) return { ok: false, reason: 'full', max: HUB_MAX_PLAYERS, count };
+    const s = HUB_AREA.spawn;
+    const p: HubPacket = [0, 0, s.x, s.z, Math.PI, 0, 0, 0];
+    const n = (await storedNick()) ?? '';
+    await $room.updateMyState({ ...HUB_DEFAULTS, ...patch, n, p, t: Date.now(), x: 0 }, { returnState: false });
+    slog('hub_hello', roomId, me);
+    return { ok: true, max: HUB_MAX_PLAYERS, count };
+  }
+
+  /** 보이는 정보 바꾸기 (캐릭터·총·환생·공격력·상태 중 바뀐 칸만). 잘못된 칸이 있으면 아무것도 안 바꾸고 bad_<칸> */
+  async hubInfo(info: unknown): Promise<{ ok: boolean; reason?: string }> {
+    if (!hubOf()) return { ok: false, reason: 'not_in_hub' };
+    const { patch, bad } = hubPatch(info, HUB_FIELDS);
+    if (bad) return { ok: false, reason: `bad_${bad}` };
+    if (Object.keys(patch).length) await $room.updateMyState(patch, { returnState: false });
+    return { ok: true };
+  }
+
+  /**
+   * 광장 위치 (throttle 호출, 응답 없음): 형식·범위·전송 빈도·이동 속도 검사 후 내 사용자 상태에 저장 → SDK가 같은 룸에 푸시.
+   * 너무 잦으면 버림, 너무 멀리 갔으면 버림(직전 위치 유지) — 단 resyncMs 넘게 버려졌으면 다시 맞춤 (범위 검사는 그대로).
+   * 순간이동 허용 구역(시설 스냅·전투 복귀·시작 지점)은 속도 검사 없이 받음 (hub.ts HUB_SNAPS)
+   */
+  async hubMove(raw: unknown): Promise<void> {
+    if (!hubOf()) return;
+    const pkt = sanitizeHubPacket(raw);
+    if (!pkt) return;
+    const now = Date.now();
+    const st = ((await $room.getMyState()) || {}) as { p?: HubPacket; t?: number; x?: number };
+    const lastT = st.t ?? 0;
+    if (now - lastT < HUB_TIMING.minAcceptMs) return;
+    if (!hubMoveOk(st.p, lastT, pkt, now) && now - lastT < HUB_TIMING.resyncMs) return;
+    const patch: Record<string, unknown> = { p: pkt, t: now };
+    if (st.x) patch.x = 0;
+    await $room.updateMyState(patch, { returnState: false });
+  }
+
+  /** 같은 룸의 사용자 상태 (구독으로 받는 것과 같은 값). 입장 직후 한 번·테스트용 */
+  async hubState(): Promise<{ ok: boolean; users: Array<{ account: string } & Record<string, unknown>> }> {
+    if (!hubOf()) return { ok: false, users: [] };
+    const all = await $room.getAllUserStates();
+    return { ok: true, users: all.map((u) => ({ account: u.account, n: u.n, c: u.c, g: u.g, r: u.r, pw: u.pw, s: u.s, p: u.p, x: u.x })) };
+  }
+
+  /** 광장에서 나감 (정상 퇴장): 다른 사람 화면에서 바로 숨기고 장부에서 바로 지움 → 그 자리는 곧바로 빈자리 */
+  async hubBye(): Promise<{ ok: boolean }> {
+    const roomId = hubOf();
+    if (!roomId) return { ok: false };
+    const me = $sender.account;
+    await $room.updateMyState({ x: 1 }, { returnState: false });
+    await editBook(hubWorldOf(roomId), (book) => {
+      if (!book[roomId]?.[me]) return false;
+      delete book[roomId]![me];
+    });
+    slog('hub_bye', roomId, me);
+    return { ok: true };
+  }
+
+  // ---------------- 닉네임 (룸 안팎 모두) ----------------
+
+  /** 저장된 내 닉네임 (없으면 null → 클라이언트가 첫 설정 화면). 지금 규칙에 걸리는 예전 이름은 mustChange */
+  async nickGet(): Promise<{ ok: true; nick: string | null; mustChange?: boolean }> {
+    const st0 = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+    if (nickNeedsChange(st0)) return { ok: true, nick: null, mustChange: true };
+    const nick = await storedNick();
+    // 등록부에 비어 있으면(등록부 쓰기가 실패했던 경우 등) 이 계정 것으로 등록
+    if (nick && st0.nickReg !== nickKey(nick)) {
+      try {
+        if (await claimNick($sender.account, nick)) await $global.updateMyState({ nickReg: nickKey(nick) });
+      } catch {
+        // 등록부를 못 써도 접속은 그대로
+      }
+    }
+    return { ok: true, nick };
+  }
+
+  /**
+   * 닉네임 저장 (최종 검사): 형식(2~12자, 한글·영문·숫자·공백)·금칙어·사칭 통과 + 다른 계정이 쓰지 않는 이름만 ('taken').
+   * 실패하면 이전 값 그대로. 바꾸는 간격 10초 (첫 설정·규칙에 걸려 바꿔야 하는 경우 제외).
+   * 광장 안이면 광장 사용자 상태도 바꿈 → 다른 사람 머리 위 이름이 바로 바뀜
+   */
+  async nickSet(raw: unknown): Promise<{ ok: boolean; nick?: string; reason?: string; retryMs?: number }> {
+    const r = checkNickname(raw);
+    if (!r.ok) return { ok: false, reason: r.reason };
+    const me = $sender.account;
+    const now = Date.now();
+    const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+    if (st.nick !== r.value) {
+      const last = typeof st.nickAt === 'number' ? st.nickAt : 0;
+      const forced = nickNeedsChange(st);
+      if (!forced && typeof st.nick === 'string' && st.nick && now - last < NICK_CHANGE_MS) return { ok: false, reason: 'rate', retryMs: NICK_CHANGE_MS - (now - last) };
+      if (!(await claimNick(me, r.value))) return { ok: false, reason: 'taken' };
+      await $global.updateMyState({ nick: r.value, nickAt: now, nickReg: nickKey(r.value) });
+      // 예전 이름은 놓음 (대소문자만 바꾼 경우는 같은 등록이라 그대로)
+      if (typeof st.nick === 'string' && st.nick && nickKey(st.nick) !== nickKey(r.value)) await releaseNick(me, st.nick).catch(() => undefined);
+    }
+    if (hubOf()) await $room.updateMyState({ n: r.value }, { returnState: false });
+    return { ok: true, nick: r.value };
+  }
+
+  // ---------------- 룸 수명 주기 (광장 룸만 있음) ----------------
+
+  /** 끊김: 30초 유예 동안 다른 사람 화면에서 숨김 (다시 들어오면 hubHello·hubMove가 x: 0), 장부는 재접속 대기 자리로 */
+  async onRoomDisconnect(roomId: string, account: string): Promise<void> {
+    if (!isHubRoom(roomId)) return;
+    await $room.updateUserState(account, { x: 1 }, { returnState: false });
+    await editBook(hubWorldOf(roomId), (book, now) => {
+      const e = book[roomId]?.[account];
+      if (!e || e.a === undefined) return false;
+      e.d = now;
+    });
+  }
+
+  /** 나감(leaveRoom)·재접속 대기 끝: 장부에서 지움. 단 그 사이 다시 배정받은 예약(r만 있음)은 남김 */
+  async onRoomLeave(roomId: string, account: string): Promise<void> {
+    if (!isHubRoom(roomId)) return;
+    await editBook(hubWorldOf(roomId), (book) => {
+      const e = book[roomId]?.[account];
+      if (!e || (e.a === undefined && e.d === undefined)) return false;
+      delete book[roomId]![account];
+    });
+    slog('hub_leave', roomId, account);
+  }
+
+  /** 빈 룸: 남은 장부 정리 (방금 배정받아 들어오는 중인 예약은 남김) */
+  async onRoomDestroy(roomId: string): Promise<void> {
+    if (!isHubRoom(roomId)) return;
+    await editBook(hubWorldOf(roomId), (book) => {
+      const accs = book[roomId];
+      if (!accs) return false;
+      for (const [acc, e] of Object.entries(accs)) if (e.a !== undefined || e.d !== undefined) delete accs[acc];
+    });
   }
 }
