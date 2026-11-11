@@ -4,6 +4,7 @@ import { FollowCamera } from '../camera/FollowCamera';
 import { Avatar } from '../player/Avatar';
 import { GUNS } from '../sim/guns.ts';
 import type { CharId, GameState } from '../sim/state.ts';
+import type { CloudSave } from '../platform/CloudSave';
 import { AutoSaver } from '../save/localSave';
 import { Hud } from '../ui/Hud';
 import { HUB_SPAWN, nearestFacility, type Facility } from '../world/facilities';
@@ -55,14 +56,14 @@ export class Game {
   readonly hud: Hud;
   readonly saver: AutoSaver;
 
-  constructor(stage: Stage3D, assets: Assets, kit: Record<BrickName, KitModel>, state: GameState, ui: HTMLElement) {
+  constructor(stage: Stage3D, assets: Assets, kit: Record<BrickName, KitModel>, state: GameState, ui: HTMLElement, save: { account: string | null; cloud: CloudSave | null } = { account: null, cloud: null }) {
     this.stage = stage;
     this.assets = assets;
     this.state = state;
     this.ui = ui;
     this.controls = new Controls(stage.renderer.domElement, ui);
     this.hud = new Hud(ui, { menu: (m) => this.menuActions[m]?.() });
-    this.saver = new AutoSaver(() => this.state);
+    this.saver = new AutoSaver(() => this.state, save.account, save.cloud);
     this.saver.start();
     this.cam = new FollowCamera(stage.camera);
     this.hub = new World1Hub(kit);

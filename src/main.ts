@@ -4,7 +4,8 @@ import { loadAssets } from './assets/loadAssets';
 import { Game } from './core/Game';
 import { Stage3D } from './core/Stage3D';
 import { HitFx } from './fx/HitFx';
-import { loadSave } from './save/localSave';
+import { pickSave } from './save/localSave';
+import { CloudSave } from './platform/CloudSave';
 import { TrainingRange } from './training/TrainingRange';
 import { FloatText } from './ui/FloatText';
 import { BattleScene } from './battle/BattleScene';
@@ -24,11 +25,18 @@ import { showOfflineReward } from './ui/OfflinePanel';
 async function boot(): Promise<void> {
   const ui = document.getElementById('ui')!;
   const fontReady = applyLang();
+  // 계정 저장 서버 연결은 에셋 받는 동안 같이 (안 되면 기기 저장으로)
+  const cloud = new CloudSave();
+  const cloudReady = cloud.connect();
   const stage = new Stage3D(document.getElementById('view') as HTMLCanvasElement);
   const [assets, kit] = await Promise.all([loadAssets(stage.renderer), loadBricks()]);
   // 3D 글자 라벨이 언어 글꼴로 구워지도록 글꼴 먼저
   await fontReady;
-  const game = new Game(stage, assets, kit, loadSave(Date.now()), ui);
+  await cloudReady;
+  const save = await pickSave(cloud);
+  const game = new Game(stage, assets, kit, save.state, ui, { account: save.account, cloud: cloud.online ? cloud : null });
+  // 고른 저장을 바로 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기)
+  game.saver.saveNow();
   const fx = new HitFx(stage.scene);
   const float = new FloatText(ui, stage.camera);
   const callout = new ZoneCallout(ui);
@@ -48,8 +56,8 @@ async function boot(): Promise<void> {
   const settings = new SettingsPanel(ui);
   game.menuActions.settings = () => settings.open();
   stage.start();
-  showOfflineReward(game, ui, Date.now());
-  if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle });
+  showOfflineReward(game, ui, save.now);
+  if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud });
 }
 
 boot().catch((e) => {

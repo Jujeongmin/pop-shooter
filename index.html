@@ -7,6 +7,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet" />
+    <!-- Verse8: iframe이 게임 크기를 물어봄 (지우지 말 것) -->
+    <script>
+      (function () {
+        function reportGameSize() {
+          var height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+          var width = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth);
+          window.parent.postMessage({ type: 'GAME_SIZE_RESPONSE', height: height, width: width }, '*');
+        }
+        window.addEventListener('load', reportGameSize);
+        window.addEventListener('resize', reportGameSize);
+        window.addEventListener('message', function (event) {
+          if (event.data && event.data.type === 'REQUEST_GAME_SIZE') reportGameSize();
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="app">

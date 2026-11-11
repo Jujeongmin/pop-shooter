@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.log
 .superpowers/
+
+# Verse8: .env는 플랫폼이 관리 (커밋 유지)
