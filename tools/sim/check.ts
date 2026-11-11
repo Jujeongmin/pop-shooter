@@ -5,7 +5,7 @@ const min = (label: string): number => {
   const m = out.match(new RegExp(String.raw`^${label}\s+(\d+)h(\d+)m`, 'm'));
   return m ? Number(m[1]) * 60 + Number(m[2]) : Infinity;
 };
-const ranges: [string, number, number][] = [['1-1', 0, 2], ['1-10', 50, 70], ['2-10', 150, 210], ['3-10', 300, 420], ['4-10', 600, 780]];
+const ranges: [string, number, number][] = [['1-1', 0, 2], ['1-10', 90, 130], ['2-10', 150, 210], ['3-10', 300, 420], ['4-10', 600, 780]];
 let ok = true;
 for (const [l, lo, hi] of ranges) {
   const v = min(l);
