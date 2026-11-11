@@ -6,7 +6,7 @@ import { button, el } from './dom';
 export class SettingsPanel {
   private readonly root: HTMLDivElement;
 
-  constructor(parent: HTMLElement) {
+  constructor(parent: HTMLElement, guide: { enabled: boolean; setEnabled(on: boolean): void } | null = null) {
     this.root = el('div', 'result-wrap ui-on');
     const card = el('div', 'result-card settings');
     card.append(el('div', 'result-title', t('settings.title')));
@@ -16,8 +16,17 @@ export class SettingsPanel {
       mute.classList.toggle('on', audio.muted);
     };
     syncMute();
+    // 상황 안내 켜기·끄기
+    const guideBtn = button('', () => { if (guide) { guide.setEnabled(!guide.enabled); syncGuide(); } }, 'btn small mute-btn');
+    const syncGuide = (): void => {
+      guideBtn.textContent = t(guide?.enabled ? 'settings.guideOn' : 'settings.guideOff');
+      guideBtn.classList.toggle('on', !guide?.enabled);
+    };
+    syncGuide();
+    guideBtn.hidden = !guide;
     card.append(
       mute,
+      guideBtn,
       this.slider('settings.master', audio.masterVolume, (v) => audio.setMaster(v)),
       this.slider('settings.sfx', audio.volume, (v) => audio.setVolume(v), true),
       this.slider('settings.music', audio.musicVolume, (v) => audio.setMusicVolume(v)),

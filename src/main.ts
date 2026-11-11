@@ -67,9 +67,9 @@ async function boot(): Promise<void> {
   new GunPanel(game, ui, callout, float);
   new RebirthPanel(game, ui, callout, float);
   new CharacterPanel(game, ui, callout);
-  const settings = new SettingsPanel(ui);
+  const guide = new Tutorial(game, ui);
+  const settings = new SettingsPanel(ui, guide);
   game.menuActions.settings = () => settings.open();
-  new Tutorial(game, ui);
   stage.start();
   loading.done();
   // 고른 저장을 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기).

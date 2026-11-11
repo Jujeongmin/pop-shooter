@@ -1,28 +1,36 @@
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
-import { t } from '../i18n/i18n';
-import { WORLD1_FACILITIES, type FacilityId } from '../world/facilities';
+import { t, type StrKey } from '../i18n/i18n';
+import { stageLabel } from '../sim/stages.ts';
+import { WORLD1_FACILITIES } from '../world/facilities';
 import { button, el, setText } from './dom';
+import { pickGuide, type GuideKind } from './guidePick';
 import { icon } from './icons';
-
-/** 튜토리얼 단계 (state.tutorial): 0 사격장 가기 → 1 코인 모으기 → 2 업그레이드 사기 → 3 포털 도전 → 99 끝 */
-const DONE = 99;
-const COIN_GOAL = 100;
-const STEPS: readonly { target: FacilityId | null; text: () => string }[] = [
-  { target: 'range', text: () => t('tut.range') },
-  { target: null, text: () => t('tut.coins', { c: 0, n: COIN_GOAL }) },
-  { target: 'upgrade', text: () => t('tut.upgrade') },
-  { target: 'portal', text: () => t('tut.portal') },
-];
 
 const _to = new THREE.Vector3();
 /** 바닥 화살표 높이: 사격장 매트(윗면 0.08m)·길보다 위 */
 const ARROW_Y = 0.12;
+/** 상황 다시 판단 간격(초), 안내가 바뀐 뒤 최소 유지 시간(초): 깜빡이지 않게 */
+const CHECK_SEC = 0.5;
+const HOLD_SEC = 2.5;
+/** 안내 켜기·끄기 (기기 설정) */
+const KEY = 'pop-shooter.guide';
+
+const TEXT: Record<GuideKind, StrKey> = { altar: 'g.altar', portal: 'g.portal', guns: 'g.guns', upgrade: 'g.upgrade', range: 'g.range' };
+
+export function guideEnabled(): boolean {
+  try { return localStorage.getItem(KEY) !== 'off'; } catch { return true; }
+}
+
+export function setGuideEnabled(on: boolean): void {
+  try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch { /* 이번 세션만 */ }
+}
 
 /**
- * 처음 3분 안내: 위쪽 한 줄 안내 + 바닥 화살표(캐릭터 → 목표 방향) + 목표 위 통통 튀는 화살표, [건너뛰기].
- * 단계는 저장(state.tutorial)에 남아서 새로고침해도 이어짐. 끝나면 3D 오브젝트 해제.
- * 소유: 화살표 geometry·material → finish()에서 dispose.
+ * 상황 안내 (정해진 순서가 아님): 지금 할 만한 것 하나를 위쪽 한 줄 + 바닥 화살표 + 목표 위 화살표로 가리킴.
+ * 판단은 guidePick (환생 가능 → 다음 스테이지 깰 수 있음 → 새 총 → 공격력 여러 단계 → 사격장). 목표에 들어가 있으면 숨김.
+ * [닫기]는 지금 안내만 닫음(상황이 바뀌면 다시 뜸). 설정에서 아예 끌 수 있음.
+ * 소유: 화살표 geometry·material (게임 내내 씀).
  */
 export class Tutorial {
   private readonly game: Game;
@@ -31,16 +39,20 @@ export class Tutorial {
   private readonly group = new THREE.Group();
   private readonly chevrons: THREE.Mesh[] = [];
   private readonly marker = new THREE.Group();
-  private readonly owned: { dispose(): void }[] = [];
   private clock = 0;
-  private startAtk: number;
+  private checkT = CHECK_SEC;
+  private holdT = 0;
+  private kind: GuideKind | null = null;
+  /** 닫은 안내 (같은 안내는 상황이 바뀔 때까지 안 띄움) */
+  private dismissed: GuideKind | null = null;
+  enabled = guideEnabled();
 
   constructor(game: Game, ui: HTMLElement) {
     this.game = game;
-    this.startAtk = game.state.atkLv;
     this.bar = el('div', 'tut-bar');
     this.text = el('span', 'tut-text');
-    this.bar.append(icon('hand', 'tut-ico'), this.text, button(t('tut.skip'), () => this.finish(), 'btn small tut-skip'));
+    this.bar.append(icon('hand', 'tut-ico'), this.text, button(t('g.close'), () => { this.dismissed = this.kind; this.show(null); }, 'btn small tut-skip'));
+    this.bar.hidden = true;
     ui.append(this.bar);
     // 바닥 화살표: 납작한 삼각형 셋 (캐릭터 앞에서 목표 쪽으로 흐름)
     const tri = new THREE.Shape();
@@ -53,8 +65,7 @@ export class Tutorial {
     tri.closePath();
     // 카메라가 멀어서 크게 (폭 약 1.4m)
     const triGeo = new THREE.ShapeGeometry(tri).rotateX(-Math.PI / 2).scale(2.2, 1, 2.2);
-    const triMat = new THREE.MeshBasicMaterial({ color: '#ff8a5b', transparent: true, depthWrite: false, side: THREE.DoubleSide });
-    this.owned.push(triGeo, triMat);
+    const triMat = new THREE.MeshBasicMaterial({ color: '#ff8a5b', transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
     for (let i = 0; i < 3; i++) {
       const m = new THREE.Mesh(triGeo, triMat);
       m.position.y = ARROW_Y;
@@ -66,96 +77,75 @@ export class Tutorial {
     const cone = new THREE.ConeGeometry(0.45, 0.7, 20).rotateX(Math.PI);
     const stick = new THREE.CylinderGeometry(0.16, 0.16, 0.6, 12);
     const markMat = new THREE.MeshStandardMaterial({ color: '#ffd34d', emissive: '#ffb000', emissiveIntensity: 0.4 });
-    this.owned.push(cone, stick, markMat);
     const c = new THREE.Mesh(cone, markMat);
     const s = new THREE.Mesh(stick, markMat);
     s.position.y = 0.6;
     this.marker.add(c, s);
     this.group.add(this.marker);
+    this.group.visible = false;
     game.hub.root.add(this.group);
     game.onTick((dt) => this.update(dt));
-    this.refresh();
   }
 
-  private get step(): number {
-    return this.game.state.tutorial;
+  setEnabled(on: boolean): void {
+    this.enabled = on;
+    setGuideEnabled(on);
+    if (!on) this.show(null);
   }
 
-  private setStep(n: number): void {
-    this.game.setState({ ...this.game.state, tutorial: n }, true);
-    if (n === 2) this.startAtk = this.game.state.atkLv;
-    this.refresh();
-  }
-
-  private refresh(): void {
-    const st = STEPS[this.step];
-    const on = !!st;
-    this.bar.hidden = !on;
-    this.group.visible = on;
-    if (!on) return;
-    setText(this.text, st.text());
+  private show(kind: GuideKind | null): void {
+    const changed = kind !== this.kind;
+    this.kind = kind;
+    this.bar.hidden = !kind;
+    this.group.visible = !!kind;
+    if (!kind) return;
+    setText(this.text, t(TEXT[kind], { s: stageLabel(this.game.state.bestStage + 1) }));
+    if (!changed) return;
+    this.holdT = HOLD_SEC;
     this.bar.classList.remove('pop');
     void this.bar.offsetWidth;
     this.bar.classList.add('pop');
   }
 
-  private finish(): void {
-    const completed = this.step === STEPS.length - 1;
-    if (this.step !== DONE) this.game.setState({ ...this.game.state, tutorial: DONE }, true);
-    if (completed) {
-      // 끝까지 따라왔으면 마무리 한 줄을 잠깐 보여 주고 사라짐 (건너뛰기는 바로 사라짐)
-      setText(this.text, t('tut.done'));
-      this.bar.querySelector('.tut-skip')?.remove();
-      this.bar.classList.remove('pop');
-      void this.bar.offsetWidth;
-      this.bar.classList.add('pop');
-      window.setTimeout(() => this.bar.remove(), 3500);
-    } else {
-      this.bar.remove();
-    }
-    this.group.removeFromParent();
-    for (const o of this.owned) o.dispose();
-    this.owned.length = 0;
-  }
-
   private update(dt: number): void {
     const g = this.game;
-    const step = this.step;
-    if (step >= DONE || !this.owned.length) return;
-    // 단계 넘기기
-    if (step === 0 && g.near?.id === 'range') this.setStep(1);
-    else if (step === 1 && g.state.coins >= COIN_GOAL) this.setStep(2);
-    else if (step === 2 && g.state.atkLv > this.startAtk) this.setStep(3);
-    // 포털 단계는 1-1을 실제로 깨고 광장에 돌아왔을 때 끝 (지면 안내가 남아 다시 도전)
-    else if (step === 3 && g.mode === 'hub' && g.state.bestStage >= 1) { this.finish(); return; }
-    // 코인 단계: 모은 양을 실시간으로 (바뀔 때만 DOM 갱신)
-    if (step === 1) setText(this.text, t('tut.coins', { c: Math.min(COIN_GOAL, Math.floor(g.state.coins)), n: COIN_GOAL }));
-    // 전투 중엔 숨김 (광장이 숨겨지면 화살표도 같이 숨음, 안내 줄만)
-    this.bar.hidden = g.mode === 'battle';
-    const st = STEPS[this.step];
-    if (!st) return;
     this.clock += dt;
-    const f = st.target ? WORLD1_FACILITIES.find((x) => x.id === st.target) : null;
-    // 목표에 들어와 있으면 화살표 숨김
-    const there = !f || g.near?.id === f.id;
-    for (const c of this.chevrons) c.visible = !there;
-    this.marker.visible = !!f;
-    if (!f) return;
+    this.holdT -= dt;
+    if (!this.enabled || g.mode === 'battle') {
+      this.bar.hidden = true;
+      return;
+    }
+    this.checkT += dt;
+    if (this.checkT >= CHECK_SEC) {
+      this.checkT = 0;
+      const next = pickGuide(g.state, g.near?.id === 'range');
+      if (next !== this.dismissed) this.dismissed = null;
+      const want = next === this.dismissed ? null : next;
+      // 바뀐 지 얼마 안 됐으면 유지 (단, 할 일이 없어진 경우는 바로 내림)
+      if (want !== this.kind && (this.holdT <= 0 || want === null)) this.show(want);
+      else if (this.kind) this.bar.hidden = false;
+    }
+    const kind = this.kind;
+    if (!kind) return;
+    const f = WORLD1_FACILITIES.find((x) => x.id === kind)!;
+    // 목표에 들어와 있으면 화살표·안내 숨김
+    const there = g.near?.id === f.id;
+    this.bar.hidden = there;
+    this.group.visible = !there;
+    if (there) return;
     this.marker.position.set(f.x, 3.2 + Math.abs(Math.sin(this.clock * 3)) * 0.5, f.z);
     this.marker.rotation.y += dt * 2;
-    if (there) return;
     _to.set(f.x - g.pos.x, 0, f.z - g.pos.z);
     const d = _to.length();
     _to.normalize();
     const yaw = Math.atan2(_to.x, _to.z);
     this.chevrons.forEach((c, i) => {
-      // 0.8m 간격으로 앞으로 흐름
       const k = ((this.clock * 1.2 + i / 3) % 1);
       const dist = Math.min(d - 0.8, 1.4 + k * 3.6);
+      c.visible = dist > 0.5;
       c.position.set(g.pos.x + _to.x * dist, ARROW_Y, g.pos.z + _to.z * dist);
       // 모양 끝이 -z를 가리키므로 반 바퀴 더
       c.rotation.y = yaw + Math.PI;
-      (c.material as THREE.MeshBasicMaterial).opacity = 0.9;
       c.scale.setScalar(1 + Math.sin(k * Math.PI) * 0.2);
     });
   }

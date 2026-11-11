@@ -110,12 +110,14 @@ const STRINGS = {
   'char.pick': { en: 'Pick', ko: '고르기', ja: '選ぶ', 'zh-TW': '選擇', 'zh-CN': '选择' },
   'char.unlockWorld': { en: 'Clear {s}', ko: '{s} 클리어', ja: '{s}クリア', 'zh-TW': '通關{s}', 'zh-CN': '通关{s}' },
   'char.shop': { en: 'Shop (soon)', ko: '상점 (준비 중)', ja: 'ショップ(準備中)', 'zh-TW': '商店(準備中)', 'zh-CN': '商店(准备中)' },
-  'tut.range': { en: 'First, go to the Shooting Range!', ko: '먼저 사격장으로 가요!', ja: 'まずは射撃場へ行こう!', 'zh-TW': '先去射擊場吧!', 'zh-CN': '先去射击场吧!' },
-  'tut.coins': { en: 'Tap the screen to earn coins ({c}/{n})', ko: '화면을 탭해서 코인을 모아요 ({c}/{n})', ja: 'タップしてコインを集めよう ({c}/{n})', 'zh-TW': '點擊畫面收集金幣 ({c}/{n})', 'zh-CN': '点击屏幕收集金币 ({c}/{n})' },
-  'tut.upgrade': { en: 'Coins collected! Raise Attack at the Upgrade machine', ko: '코인이 모였어요! 업그레이드 기계에서 공격력을 올려요', ja: 'コインが貯まった! アップグレードで攻撃力を上げよう', 'zh-TW': '金幣夠了! 到升級機器提升攻擊力', 'zh-CN': '金币够了! 到升级机器提升攻击力' },
-  'tut.portal': { en: 'Stronger now! Enter the portal and beat 1-1', ko: '공격력이 올랐어요! 포털에 들어가 1-1에 도전해요', ja: '強くなった! ポータルに入って1-1に挑戦しよう', 'zh-TW': '變強了! 進入傳送門挑戰1-1', 'zh-CN': '变强了! 进入传送门挑战1-1' },
-  'tut.done': { en: 'All set! Train, upgrade and push further stages', ko: '준비 끝! 훈련하고 강해져서 다음 스테이지를 깨요', ja: '準備完了! 鍛えて次のステージへ', 'zh-TW': '準備完成! 變強挑戰下一關', 'zh-CN': '准备完成! 变强挑战下一关' },
-  'tut.skip': { en: 'Skip', ko: '건너뛰기', ja: 'スキップ', 'zh-TW': '略過', 'zh-CN': '跳过' },
+  'g.range': { en: 'Train at the Shooting Range to earn coins', ko: '사격장에서 훈련해 코인을 모아요', ja: '射撃場で訓練してコインを集めよう', 'zh-TW': '在射擊場訓練收集金幣', 'zh-CN': '在射击场训练收集金币' },
+  'g.upgrade': { en: 'Coins piled up! Raise Attack at Upgrades', ko: '코인이 모였어요! 업그레이드에서 공격력을 올려요', ja: 'コインが貯まった! アップグレードで攻撃力を上げよう', 'zh-TW': '金幣夠了! 到升級提升攻擊力', 'zh-CN': '金币够了! 到升级提升攻击力' },
+  'g.guns': { en: 'You can buy a new gun! Go to the Gun Shop', ko: '새 총을 살 수 있어요! 총 상점으로 가요', ja: '新しい銃が買える! 銃ショップへ', 'zh-TW': '可以買新槍了! 去槍械商店', 'zh-CN': '可以买新枪了! 去枪械商店' },
+  'g.portal': { en: 'Strong enough for {s}! Enter the portal', ko: '지금 공격력이면 {s} 클리어 가능! 포털로 가요', ja: '今なら{s}をクリアできる! ポータルへ', 'zh-TW': '現在可以通關{s}! 進入傳送門', 'zh-CN': '现在可以通关{s}! 进入传送门' },
+  'g.altar': { en: 'Rebirth is ready! Go to the Rebirth Altar', ko: '환생할 수 있어요! 환생 제단으로 가요', ja: '転生できる! 転生の祭壇へ', 'zh-TW': '可以轉生了! 去轉生祭壇', 'zh-CN': '可以转生了! 去转生祭坛' },
+  'g.close': { en: 'Close', ko: '닫기', ja: '閉じる', 'zh-TW': '關閉', 'zh-CN': '关闭' },
+  'settings.guideOn': { en: 'Hints: ON', ko: '안내: 켜짐', ja: 'ヒント: ON', 'zh-TW': '提示:開', 'zh-CN': '提示:开' },
+  'settings.guideOff': { en: 'Hints: OFF', ko: '안내: 꺼짐', ja: 'ヒント: OFF', 'zh-TW': '提示:關', 'zh-CN': '提示:关' },
   'gun.pistol': { en: 'Pistol', ko: '권총', ja: 'ピストル', 'zh-TW': '手槍', 'zh-CN': '手枪' },
   'gun.rifle': { en: 'Rifle', ko: '라이플', ja: 'ライフル', 'zh-TW': '步槍', 'zh-CN': '步枪' },
   'gun.shotgun': { en: 'Shotgun', ko: '샷건', ja: 'ショットガン', 'zh-TW': '霰彈槍', 'zh-CN': '霰弹枪' },
@@ -177,19 +179,29 @@ export async function applyLang(): Promise<void> {
   document.documentElement.style.setProperty('--font', fontFamily);
   const f = FONTS[lang];
   if (!f.css) {
-    await waitFont("64px 'Do Hyeon'");
+    await waitFont("64px 'Do Hyeon'", usedText());
     return;
   }
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = `https://fonts.googleapis.com/css2?family=${f.css}&display=swap`;
   document.head.appendChild(link);
-  await waitFont(`64px ${f.family}`);
+  await waitFont(`64px ${f.family}`, usedText());
 }
 
-async function waitFont(spec: string): Promise<void> {
+/**
+ * 이 언어로 화면에 쓸 수 있는 글자 전부 (문구 표 + 숫자·기호). 한글·한자 웹폰트는 글자 묶음(unicode-range)별로
+ * 따로 받아지므로, 일부만 받으면 3D 라벨(캔버스)이 안 받은 글자를 기본 글꼴로 구움 (예: '최고'의 '고'만 다른 글꼴).
+ */
+function usedText(): string {
+  const set = new Set<string>('0123456789.,·×+-/%()!?:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzKMBT');
+  for (const e of Object.values(STRINGS) as Entry[]) for (const ch of e[lang] || e.en) set.add(ch);
+  return [...set].join('');
+}
+
+async function waitFont(spec: string, text: string): Promise<void> {
   try {
-    await Promise.race([document.fonts.load(spec, '가あ字A'), new Promise((r) => setTimeout(r, 2500))]);
+    await Promise.race([document.fonts.load(spec, text), new Promise((r) => setTimeout(r, 3500))]);
   } catch { /* 글꼴 실패: 기본 글꼴 */ }
 }
 
