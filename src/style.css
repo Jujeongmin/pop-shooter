@@ -1,3 +1,11 @@
+/* Do Hyeon (OFL, public/fonts/DoHyeon-OFL.txt): 한 파일 전체(한글 2,437자). 원본에 없는 · – — ≈ 는 비슷한 글자로 연결해 넣음 (tools: 글꼴 패치) */
+@font-face {
+  font-family: 'Do Hyeon';
+  src: url('/fonts/DoHyeon-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
 html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe3ff; touch-action: none; user-select: none; -webkit-user-select: none; }
 #app { position: fixed; inset: 0; }
 #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
