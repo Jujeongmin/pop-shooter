@@ -51,6 +51,11 @@ const INFO_INTERVAL_MS = 500;
 const FIND_ATTEMPTS = 3;
 
 const INFO_KEYS = ['c', 'g', 'r', 'pw', 's'] as const;
+/** 서버가 나를 숨긴 것(x ≠ 0)을 끊김으로 보기 전 hello 뒤 대기 (ms): hello 직후 푸시는 아직 예전 상태일 수 있음 */
+const SELF_HIDDEN_GRACE_MS = 2000;
+
+const r1 = (v: number): number => Math.round(v * 10) / 10;
+const r2 = (v: number): number => Math.round(v * 100) / 100;
 
 export class LobbyHub {
   status: HubSession = 'idle';
@@ -87,8 +92,13 @@ export class LobbyHub {
     onDisconnect: (r: string) => this.dropped(r),
     onRoomDisconnect: (r: string) => this.dropped(r),
   };
+  private helloAt = 0;
   private readonly onPageHide = (): void => {
     if (this.inHubRoom) this.api.hubBye();
+  };
+  /** bfcache 복원: pagehide 때 hubBye로 숨겨졌으니 다시 입장 */
+  private readonly onPageShow = (e: PageTransitionEvent): void => {
+    if (e.persisted) this.dropped('pageshow', true);
   };
 
   private readonly client: NetClient;
@@ -100,6 +110,7 @@ export class LobbyHub {
     this.api = new LobbyApi(client);
     client.listeners.add(this.listener);
     addEventListener('pagehide', this.onPageHide);
+    addEventListener('pageshow', this.onPageShow);
   }
 
   get active(): boolean {
@@ -183,8 +194,6 @@ export class LobbyHub {
     this.sendTimer += dt * 1000;
     if (this.sendTimer < HUB_TIMING.sendIntervalMs) return;
     this.sendTimer = 0;
-    const r2 = (v: number) => Math.round(v * 100) / 100;
-    const r1 = (v: number) => Math.round(v * 10) / 10;
     const x = r2(local.x);
     const z = r2(local.z);
     const yaw = r2(local.yaw);
@@ -217,6 +226,7 @@ export class LobbyHub {
     void this.stop();
     this.client.listeners.delete(this.listener);
     removeEventListener('pagehide', this.onPageHide);
+    removeEventListener('pageshow', this.onPageShow);
   }
 
   // ---------------- 보이는 정보 ----------------
@@ -241,7 +251,10 @@ export class LobbyHub {
     this.api
       .hubInfo(p)
       .then((r) => {
-        if (!r.ok) this.client.addLog('warn', `hubInfo 거절: ${r.reason ?? '-'}`);
+        if (r.ok) return;
+        this.client.addLog('warn', `hubInfo 거절: ${r.reason ?? '-'}`);
+        // 서버가 나를 광장 멤버로 안 봄 (끊김 처리됨 등) → 다시 입장 (hubFind → hello)
+        if (r.reason === 'not_joined' && token === this.token) this.dropped('not_joined', true);
       })
       .catch((e) => {
         // 못 보냈으면 다음에 다시 (같은 세션일 때만)
@@ -293,6 +306,7 @@ export class LobbyHub {
           this.roomId = found.roomId;
           this.max = hello.max;
           this.status = 'online';
+          this.helloAt = performance.now();
           this.retry = 0;
           this.hasLast = false;
           this.sendTimer = HUB_TIMING.sendIntervalMs;
@@ -328,7 +342,15 @@ export class LobbyHub {
     const seen = this.seen;
     seen.clear();
     for (const u of states) {
-      if (!u || typeof u.account !== 'string' || u.account === me) continue;
+      if (!u || typeof u.account !== 'string') continue;
+      if (u.account === me) {
+        // 서버가 나를 숨김(끊김 처리 등)인데 나는 접속 중이라고 생각함 → 다시 hello하지 않으면 영영 안 보임
+        if (u.x !== 0 && this.status === 'online' && now - this.helloAt >= SELF_HIDDEN_GRACE_MS) {
+          this.dropped('self_hidden', true);
+          return;
+        }
+        continue;
+      }
       if (u.x !== 0 || !Array.isArray(u.p) || typeof u.c !== 'string') continue;
       seen.add(u.account);
       const nick = typeof u.n === 'string' ? u.n : '';
@@ -360,12 +382,16 @@ export class LobbyHub {
   }
 
   /** 실제 끊김 (SDK 알림, 의도적인 퇴장은 오지 않음) → 정리 후 다시 입장 (hubFind → hello) */
-  private dropped(reason: string): void {
+  /**
+   * leave = true: 연결은 살아 있고 룸에도 있지만 서버가 나를 숨김(self_hidden·not_joined·bfcache 복원) → 룸을 정식으로 나간 뒤 다시 입장
+   */
+  private dropped(reason: string, leave = false): void {
     if (!this.wanted || (this.status !== 'online' && this.status !== 'connecting' && this.status !== 'reconnecting')) return;
     if (this.client.currentRoomId && !isHubRoom(this.client.currentRoomId)) return;
     this.client.addLog('warn', `광장 연결 끊김 (${reason || '-'}) → 다시 입장`);
     this.token++;
-    this.client.dropRoom();
+    if (leave) this.leaveHubRoom();
+    else this.client.dropRoom();
     this.clearPeers();
     this.status = 'disconnected';
     this.scheduleRetry();

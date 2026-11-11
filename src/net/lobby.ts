@@ -18,12 +18,19 @@ export interface Lobby {
   readonly peers: LobbyPeers;
 }
 
-function infoOf(s: GameState, status: HubStatus): HubInfo {
-  return { c: s.char, g: s.gun, r: s.rebirths, pw: damagePerShot(s), s: status };
+/** 상태 → 보이는 정보 (out에 씀: 상태 변경마다 새 객체 안 만듦) */
+function infoOf(s: GameState, status: HubStatus, out: HubInfo): HubInfo {
+  out.c = s.char;
+  out.g = s.gun;
+  out.r = s.rebirths;
+  out.pw = damagePerShot(s);
+  out.s = status;
+  return out;
 }
 
 export function startLobby(game: Game, net: NetClient, cloud: CloudSave, training: TrainingRange): Lobby | null {
-  if (!net.connected) return null;
+  // verse가 있으면 첫 연결이 실패했어도 시작 (LobbyHub가 연결·재시도 간격을 맡음). verse 없는 빌드는 멀티 없음
+  if (!net.hasVerse) return null;
   try {
     const peers = new LobbyPeers({ assets: game.assets, parent: game.hub.root, targets: game.hub.targets });
     const hub = new LobbyHub(net, {
@@ -33,7 +40,8 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
     });
     const statusNow = (): HubStatus => (game.mode === 'battle' ? 'battle' : training.active ? 'training' : 'hub');
     let status = statusNow();
-    game.onStateChange((s) => hub.setInfo(infoOf(s, status)));
+    const info: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub' };
+    game.onStateChange((s) => hub.setInfo(infoOf(s, status, info)));
     cloud.onSaved.add((saved) => {
       const s = saved as unknown as GameState;
       if (typeof s.rebirths === 'number') hub.savedCovers(s.rebirths, damagePerShot(s));
@@ -68,7 +76,7 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
         warned = true;
       }
     });
-    hub.start(HUB_WORLD, infoOf(game.state, status));
+    hub.start(HUB_WORLD, infoOf(game.state, status, info));
     return { hub, peers };
   } catch (e) {
     console.warn('[lobby] 시작 실패 (혼자 모드)', e);

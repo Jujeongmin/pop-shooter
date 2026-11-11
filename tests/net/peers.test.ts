@@ -72,3 +72,21 @@ test('battle spot is in front of the portal and stable per account', () => {
     assert.ok(u >= 0 && u < 1);
   }
 });
+
+test('a peer who reloads and rejoins (inherited old packet, seq restarts at 1) is not frozen', () => {
+  const b = new HubBuffer();
+  // hubHello가 물려준 예전 패킷: 순번 900, 보낸 시각 400000 (예전 페이지 시계)
+  b.push(pkt(900, 400_000, 2, 2), 10_000);
+  // 새 페이지: 순번 1, 보낸 시각 5000부터
+  b.push(pkt(1, 5000, 3, 2, 6, 0, 1), 10_200);
+  assert.equal(b.lastSeq, 1);
+  b.push(pkt(2, 5166, 4, 2, 6, 0, 1), 10_366);
+  assert.equal(b.size, 2);
+  const s = out();
+  assert.ok(b.sample(10_283, s));
+  assert.ok(s.x > 3 && s.x < 4, String(s.x));
+  // 같은 세션에서 늦게 온 예전 패킷 (시각이 조금 작음)은 여전히 버림
+  b.push(pkt(1, 5000, 9, 9), 10_400);
+  assert.equal(b.size, 2);
+  assert.equal(b.lastSeq, 2);
+});

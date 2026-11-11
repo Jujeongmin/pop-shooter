@@ -56,7 +56,6 @@ const STRINGS = {
   'result.toHub': { en: 'Back to town', ko: '광장으로', ja: '広場へ', 'zh-TW': '回到廣場', 'zh-CN': '回到广场' },
 
   'peer.player': { en: 'Player', ko: '플레이어', ja: 'プレイヤー', 'zh-TW': '玩家', 'zh-CN': '玩家' },
-  'peer.rebirth': { en: 'Rebirth {n}', ko: '환생 {n}', ja: '転生 {n}', 'zh-TW': '轉生 {n}', 'zh-CN': '转生 {n}' },
   'peer.atk': { en: 'ATK {n}', ko: '공격력 {n}', ja: '攻撃力 {n}', 'zh-TW': '攻擊力 {n}', 'zh-CN': '攻击力 {n}' },
   'peer.battle': { en: 'In battle', ko: '전투 중', ja: 'バトル中', 'zh-TW': '戰鬥中', 'zh-CN': '战斗中' },
 

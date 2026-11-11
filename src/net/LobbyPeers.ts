@@ -1,7 +1,7 @@
 // 광장의 다른 플레이어 그리기: LobbyHub가 준 보간 버퍼 → 아바타(캐릭터 + 든 총) 위치·자세 + 머리 위 이름표.
 // pop-battle src/net/LobbyPeers.ts를 복사해 고침 (2026-11-11): 이 게임 Avatar(player/Avatar.ts) 재사용, 이름표는 3D 글자 스프라이트(캔버스 텍스처).
 // 충돌 없음: 나·서로를 밀거나 막지 않고 겹쳐도 됨 (사용자 2026-11-11). 이동 콜라이더에 넣지 않음.
-// 이름표 = 닉네임 / 환생 N · 공격력. 계정 id는 절대 화면에 내지 않음 (닉네임 없으면 '플레이어').
+// 이름표 = 닉네임 / 공격력 (환생 횟수는 넣지 않음, 사용자 2026-11-11). 계정 id는 절대 화면에 내지 않음 (닉네임 없으면 '플레이어').
 // 상태: 훈련 중이면 사격장 과녁을 쏘는 연출(전용 HitFx 풀, 고정 개수), 전투 중이면 포털 앞에 서 있고 이름표에 '전투 중'.
 // 모두 광장 root 아래 → 내가 전투 중이면 광장과 함께 숨음 (그동안은 갱신도 건너뜀).
 //
@@ -37,7 +37,8 @@ interface Item {
   avatar: Avatar;
   char: CharId;
   gun: number;
-  label: THREE.Sprite;
+  /** 머리 위 이름표 (나가면 null) */
+  label: THREE.Sprite | null;
   labelText: string;
   readonly pose: AvatarPose & { pos: THREE.Vector3; velocity: THREE.Vector3 };
   readonly aim: THREE.Vector3;
@@ -50,9 +51,11 @@ interface Item {
 
 /** 남의 훈련 발사 연출 빈도 (초당, 실제 발사 속도와 무관한 고정값 — 가볍게) */
 const PEER_SHOTS_PER_SEC = 2.5;
-/** 이름표: 머리 위 높이(m), 글자 높이(m) */
-const LABEL_LIFT = 0.45;
-const LABEL_HEIGHT = 0.62;
+/** 이름표: 머리 위 높이(m), 판 높이(m) — 작게 (사용자 2026-11-11) */
+const LABEL_LIFT = 0.3;
+const LABEL_HEIGHT = 0.4;
+/** 안 받은 글자 묶음(한글 웹폰트 unicode-range)을 기다리는 최대 시간 (ms). 넘으면 지금 글꼴 그대로 */
+const GLYPH_WAIT_MS = 2500;
 
 const _muzzle = new THREE.Vector3();
 const _hit = new THREE.Vector3();
@@ -64,11 +67,28 @@ export function peerName(nick: string): string {
   return !n || n === NICK_PLACEHOLDER ? t('peer.player') : n;
 }
 
-/** 이름표 둘째 줄: 환생 N · 공격력 (· 전투 중) */
-export function peerStats(peer: Pick<HubPeer, 'rebirths' | 'power' | 'status'>): string {
-  const parts = [t('peer.rebirth', { n: peer.rebirths }), t('peer.atk', { n: formatNum(peer.power) })];
-  if (peer.status === 'battle') parts.push(t('peer.battle'));
-  return parts.join(' · ');
+/** 이름표 둘째 줄: 공격력 (· 전투 중) */
+export function peerStats(peer: Pick<HubPeer, 'power' | 'status'>): string {
+  const atk = t('peer.atk', { n: formatNum(peer.power) });
+  return peer.status === 'battle' ? `${atk} · ${t('peer.battle')}` : atk;
+}
+
+/** 이 글자들이 이름표 글꼴로 이미 받아져 있는지 (아니면 캔버스가 다른 글꼴로 구움) */
+function glyphsReady(text: string): boolean {
+  try {
+    return document.fonts.check(`56px ${fontFamily}`, text);
+  } catch {
+    return true;
+  }
+}
+
+/** 글자 묶음 받기 (시간 제한). 끝나면 resolve (실패해도) */
+function loadGlyphs(text: string): Promise<void> {
+  let id = 0;
+  return Promise.race([
+    document.fonts.load(`56px ${fontFamily}`, text).then(() => undefined, () => undefined),
+    new Promise<void>((r) => { id = window.setTimeout(r, GLYPH_WAIT_MS); }),
+  ]).finally(() => clearTimeout(id));
 }
 
 /** 두 줄 이름표 스프라이트 (캔버스 텍스처 소유 → disposePlate) */
@@ -113,6 +133,8 @@ function disposePlate(s: THREE.Sprite): void {
 
 export class LobbyPeers {
   private readonly items = new Map<string, Item>();
+  /** 매 프레임 순회용 (items와 같은 내용) */
+  private readonly list: Item[] = [];
   /** 남의 발사 연출 전용 (내 훈련 연출 풀을 빼앗지 않게). 광장 root 아래 */
   private readonly fx: HitFx;
   private disposed = false;
@@ -132,16 +154,13 @@ export class LobbyPeers {
     if (this.disposed || this.items.has(peer.account)) return;
     const char = peer.char as CharId;
     const avatar = this.makeAvatar(char, peer.gun);
-    const labelText = this.plateKey(peer);
-    const label = makePlate(peerName(peer.nick), peerStats(peer), peer.status === 'battle');
-    this.ctx.parent.add(label);
     const item: Item = {
       peer,
       avatar,
       char,
       gun: peer.gun,
-      label,
-      labelText,
+      label: null,
+      labelText: '',
       pose: { pos: new THREE.Vector3(), yaw: 0, velocity: new THREE.Vector3(), aimAt: null, kick: 0 },
       aim: new THREE.Vector3(),
       s: { x: 0, z: 0, yaw: 0, vx: 0, vz: 0, f: 0 },
@@ -150,6 +169,8 @@ export class LobbyPeers {
       kick: 0,
     };
     this.items.set(peer.account, item);
+    this.list.push(item);
+    this.setPlate(item);
   }
 
   /** 닉네임·캐릭터·총·환생·공격력·상태 변경 */
@@ -167,21 +188,18 @@ export class LobbyPeers {
       item.avatar.setGun(GUNS[peer.gun] ?? GUNS[0]!);
       item.gun = peer.gun;
     }
-    const key = this.plateKey(peer);
-    if (key !== item.labelText) {
-      disposePlate(item.label);
-      item.label = makePlate(peerName(peer.nick), peerStats(peer), peer.status === 'battle');
-      item.labelText = key;
-      this.ctx.parent.add(item.label);
-    }
+    this.setPlate(item);
   }
 
   remove(account: string): void {
     const item = this.items.get(account);
     if (!item) return;
     this.items.delete(account);
+    const i = this.list.indexOf(item);
+    if (i >= 0) this.list.splice(i, 1);
     this.releaseAvatar(item.avatar);
-    disposePlate(item.label);
+    if (item.label) disposePlate(item.label);
+    item.label = null;
   }
 
   clear(): void {
@@ -195,7 +213,12 @@ export class LobbyPeers {
     if (this.items.size === 0) return;
     const renderTime = performance.now() - HUB_TIMING.interpDelayMs;
     const targets = this.ctx.targets;
-    for (const item of this.items.values()) {
+    // 고정 배열 index 순회 (매 프레임 반복자 객체 없음)
+    const list = this.list;
+    for (let li = 0; li < list.length; li++) {
+      const item = list[li]!;
+      const label = item.label;
+      if (!label) continue;
       const p = item.pose;
       const s = item.s;
       const status = item.peer.status;
@@ -208,7 +231,7 @@ export class LobbyPeers {
       } else {
         if (!item.peer.buffer.sample(renderTime, s)) {
           item.avatar.root.visible = false;
-          item.label.visible = false;
+          label.visible = false;
           continue;
         }
         p.pos.set(s.x, 0, s.z);
@@ -216,7 +239,7 @@ export class LobbyPeers {
         p.yaw = s.yaw;
       }
       item.avatar.root.visible = true;
-      item.label.visible = true;
+      label.visible = true;
       // 훈련 중 + 서 있음(비트 2): 과녁을 돌아가며 쏘는 연출
       const firing = status === 'training' && (s.f & 2) !== 0 && s.vx * s.vx + s.vz * s.vz < 0.04 && targets.length > 0;
       if (firing) {
@@ -238,7 +261,7 @@ export class LobbyPeers {
       item.kick = Math.max(0, item.kick - dt * 0.6);
       p.kick = item.kick;
       item.avatar.update(dt, p);
-      item.label.position.set(p.pos.x, item.avatar.headTop() + LABEL_LIFT, p.pos.z);
+      label.position.set(p.pos.x, item.avatar.headTop() + LABEL_LIFT, p.pos.z);
     }
   }
 
@@ -248,9 +271,31 @@ export class LobbyPeers {
     this.fx.dispose();
   }
 
-  /** 이름표 다시 그릴지 판단용 (보이는 글자 + 전투 색) */
-  private plateKey(peer: HubPeer): string {
-    return `${peerName(peer.nick)}\n${peerStats(peer)}`;
+  /**
+   * 이름표를 지금 값으로 (글자가 바뀔 때만 다시 만들고 이전 것 해제). 글꼴에 안 받은 글자(한글 웹폰트 글자 묶음)가 있으면
+   * 일단 지금 글꼴로 그리고, 글자 묶음을 받은 뒤 같은 글자면 다시 그림 (기본 글꼴로 구워진 채 남지 않게)
+   */
+  private setPlate(item: Item, force = false): void {
+    const name = peerName(item.peer.nick);
+    const stats = peerStats(item.peer);
+    const key = `${name}\n${stats}`;
+    if (!force && key === item.labelText && item.label) return;
+    const old = item.label;
+    const sprite = makePlate(name, stats, item.peer.status === 'battle');
+    if (old) {
+      sprite.position.copy(old.position);
+      sprite.visible = old.visible;
+      disposePlate(old);
+    } else sprite.visible = false;
+    item.label = sprite;
+    item.labelText = key;
+    this.ctx.parent.add(sprite);
+    if (force || glyphsReady(key)) return;
+    void loadGlyphs(key).then(() => {
+      // 그사이 나갔거나 글자가 바뀌었으면 그쪽이 이미 다시 그림
+      if (this.disposed || this.items.get(item.peer.account) !== item || item.labelText !== key) return;
+      this.setPlate(item, true);
+    });
   }
 
   private makeAvatar(char: CharId, gun: number): Avatar {

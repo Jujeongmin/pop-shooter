@@ -42,6 +42,8 @@ export class HubBuffer {
   private offset: number | null = null;
   private lastRelax = 0;
   lastSeq = -1;
+  /** 마지막으로 받은 패킷의 보낸 시각 (보낸 쪽 performance.now) */
+  private lastSendT = -Infinity;
   /** 외삽 최대 시간 (ms, pop-battle 로비 값) */
   maxExtrapolateMs = 150;
   /** 이 거리(m)보다 크게 움직이면 보간하지 않고 바로 이동 (순간이동: 시설 스냅·전투 복귀) */
@@ -62,13 +64,17 @@ export class HubBuffer {
     this.n = 0;
     this.offset = null;
     this.lastSeq = -1;
+    this.lastSendT = -Infinity;
   }
 
   /** 패킷 넣기 (now = 받은 로컬 시각 ms). 순번이 같거나 작으면 버림, 아주 작아지면(보낸 쪽 새로고침) 처음부터 */
   push(p: HubPacket, now: number): void {
-    if (this.lastSeq >= 0 && p[0] < this.lastSeq - 1000) this.clear();
+    // 보낸 쪽이 새로 시작함 (새로고침 뒤 같은 룸에 다시 들어옴: hubHello가 예전 위치 패킷(큰 순번·큰 시각)을 물려받고,
+    // 새 페이지는 순번 1·작은 시각부터) → 버퍼를 비우고 받음. 늦게 온 예전 패킷(시각이 조금 작음)은 그대로 버림
+    if (this.lastSeq >= 0 && (p[0] < this.lastSeq - 1000 || p[1] < this.lastSendT - 2000)) this.clear();
     if (p[0] <= this.lastSeq) return;
     this.lastSeq = p[0];
+    this.lastSendT = p[1];
     const off = now - p[1];
     // 오프셋 = 관측된 최소 지연. 시계 차이 변화에 따라가게 1초마다 0.5ms씩 늦춤 (pop-battle 그대로)
     if (this.offset === null || off < this.offset) this.offset = off;
