@@ -5,7 +5,7 @@ import { addCoins, coinPerShot, shotsPerSec } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
 import { TapLimiter } from '../sim/tapLimiter.ts';
-import { ZoneRing } from '../fx/ZoneRing';
+import { ZoneEntry } from '../core/ZoneEntry';
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES } from '../world/facilities';
@@ -13,11 +13,6 @@ import { RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES } from '../world/facilities
 /** 지금 있는 광장 월드 (계획 1 = 월드 1) */
 const HUB_WORLD = 1;
 const FLUSH_SEC = 0.25;
-/** 들어오면 사격 자리로 폴짝 빨려 들어가는 시간·높이, 착지 뒤 이동 잠금 */
-const SNAP_SEC = 0.38;
-const SNAP_HOP = 0.9;
-/** 착지 클립(landHold 0.3초)이 끝날 때까지 */
-const LAND_LOCK = 0.35;
 
 const _muzzle = new THREE.Vector3();
 const _aim = new THREE.Vector3();
@@ -42,11 +37,7 @@ export class TrainingRange {
   private kick = 0;
   private readonly wobble: number[];
   private hiddenAt = 0;
-  private readonly ring: ZoneRing;
-  /** 자리로 빨려 들어가는 중이면 0..SNAP_SEC, 아니면 −1 */
-  private snapT = -1;
-  private readonly snapFrom = new THREE.Vector3();
-  private readonly callout: ZoneCallout;
+  private readonly zone: ZoneEntry;
   /** 디버그·검증: 지금까지 인정한 탭 수 */
   tapsAccepted = 0;
 
@@ -54,11 +45,16 @@ export class TrainingRange {
     this.game = game;
     this.fx = fx;
     this.float = float;
-    this.callout = callout;
     this.wobble = game.hub.targets.map(() => 0);
-    const zone = WORLD1_FACILITIES.find((f) => f.id === 'range')!;
-    this.ring = new ZoneRing(zone.x, zone.z, zone.radius, '#4fb3ff');
-    game.stage.scene.add(this.ring.root);
+    this.zone = new ZoneEntry(game, callout, WORLD1_FACILITIES.find((f) => f.id === 'range')!, {
+      color: '#4fb3ff',
+      flash: 'rgba(79, 179, 255, 0.85)',
+      spot: RANGE_SPOT,
+      face: RANGE_TARGET,
+      text: { title: '사격장 훈련 중!', big: '화면을 탭하면 더 빨리 쏴요!', hand: true },
+    });
+    // 착지하자마자 한 발
+    this.zone.onLanded = () => this.fire(false);
     game.facilityActions.range = () => this.start();
     game.facilityLeave.range = () => this.stop();
     game.onTick((dt) => this.update(dt));
@@ -72,12 +68,7 @@ export class TrainingRange {
     this.active = true;
     this.game.tapHandler = (taps) => { for (let i = 0; i < taps.length; i++) this.tap(); };
     this.shotAcc = 0;
-    this.ring.setInside(true);
-    this.game.cam.focus = 1;
-    // 사격 자리로 폴짝 → 착지(land)에서 연출이 터짐
-    this.snapFrom.copy(this.game.pos);
-    this.snapT = 0;
-    this.game.moveLock = SNAP_SEC + LAND_LOCK;
+    this.zone.enter();
   }
 
   stop(): void {
@@ -87,40 +78,7 @@ export class TrainingRange {
     this.game.tapHandler = null;
     this.game.pose.aimAt = null;
     this.game.pose.kick = 0;
-    this.game.pose.grounded = true;
-    this.game.pos.y = 0;
-    this.snapT = -1;
-    this.ring.setInside(false);
-    this.game.cam.focus = 0;
-    this.callout.hide();
-  }
-
-  /** 사격 자리 착지 (착지 클립) + 링 튕김 + 화면 번쩍 + 흔들림 + 문구 + 첫 발 */
-  private land(): void {
-    const g = this.game;
-    g.pos.y = 0;
-    g.pose.grounded = true;
-    this.ring.burst();
-    g.cam.shake(0.08);
-    this.callout.flash('rgba(79, 179, 255, 0.85)');
-    this.callout.show({ title: '사격장 훈련 중!', big: '화면을 탭하면 더 빨리 쏴요!', hand: true });
-    this.fire(false);
-  }
-
-  private updateSnap(dt: number): void {
-    const g = this.game;
-    this.snapT += dt;
-    const k = Math.min(1, this.snapT / SNAP_SEC);
-    const e = 1 - (1 - k) ** 3;
-    g.pos.x = this.snapFrom.x + (RANGE_SPOT.x - this.snapFrom.x) * e;
-    g.pos.z = this.snapFrom.z + (RANGE_SPOT.z - this.snapFrom.z) * e;
-    g.pos.y = Math.sin(Math.PI * k) * SNAP_HOP;
-    g.yaw = Math.atan2(RANGE_TARGET.x - g.pos.x, RANGE_TARGET.z - g.pos.z);
-    g.pose.grounded = false;
-    if (k >= 1) {
-      this.snapT = -1;
-      this.land();
-    }
+    this.zone.leave();
   }
 
   private tap(): void {
@@ -156,7 +114,7 @@ export class TrainingRange {
     this.clock += dt;
     this.fx.update(dt);
     this.float.update(dt);
-    this.ring.update(dt);
+    this.zone.update(dt);
     const g = this.game;
     g.hub.targets.forEach((t, i) => {
       const w = this.wobble[i]!;
@@ -165,7 +123,7 @@ export class TrainingRange {
       t.rotation.x = -Math.sin(w * Math.PI * 2) * 0.25 * w;
     });
     if (!this.active) return;
-    if (this.snapT >= 0) { this.updateSnap(dt); return; }
+    if (this.zone.snapping) return;
     // 걷는 중엔 쏘지 않음 (판 밖으로 나가면 facilityLeave가 stop)
     if (g.velocity.lengthSq() > 0.04) {
       g.pose.aimAt = null;

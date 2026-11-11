@@ -6,7 +6,7 @@ import { GUNS } from '../sim/guns.ts';
 import type { GameState } from '../sim/state.ts';
 import { AutoSaver } from '../save/localSave';
 import { Hud } from '../ui/Hud';
-import { gateIndex, HUB_SPAWN, nearestFacility, type Facility } from '../world/facilities';
+import { HUB_SPAWN, nearestFacility, type Facility } from '../world/facilities';
 import type { BrickName, KitModel } from '../world/kit';
 import { moveWithColliders } from '../world/movement';
 import { World1Hub } from '../world/World1Hub';
@@ -19,7 +19,7 @@ const RADIUS = 0.4;
 const _dir = new THREE.Vector3();
 
 export type GameMode = 'hub' | 'training' | 'battle';
-export type FacilityKind = 'range' | 'upgrade' | 'guns' | 'altar' | 'gate';
+export type FacilityKind = Facility['id'];
 export type MenuKind = 'character' | 'settings';
 
 /** 광장 이동 · 카메라 · (뒤 Task) 훈련·전투 흐름 */
@@ -43,8 +43,8 @@ export class Game {
   private readonly tickers: ((dt: number) => void)[] = [];
   /** 탭 처리 (훈련 구역·전투 = 추가 발사). 없으면 탭 무시. 이동은 조이스틱·키보드 */
   tapHandler: ((taps: Tap[]) => void) | null = null;
-  /** 시설 사용 (뒤 Task가 등록: 훈련·업그레이드 창·총 상점·환생·스테이지 문) */
-  readonly facilityActions: Partial<Record<FacilityKind, (f: Facility, stage: number | null) => void>> = {};
+  /** 시설 사용 (뒤 Task가 등록: 훈련·업그레이드 창·총 상점·환생·포털) */
+  readonly facilityActions: Partial<Record<FacilityKind, (f: Facility) => void>> = {};
   /** 시설 구역에서 나갈 때 (창 닫기·훈련 끝) */
   readonly facilityLeave: Partial<Record<FacilityKind, (f: Facility) => void>> = {};
   readonly menuActions: Partial<Record<MenuKind, () => void>> = {};
@@ -66,7 +66,7 @@ export class Game {
     this.cam = new FollowCamera(stage.camera);
     this.hub = new World1Hub(kit);
     stage.scene.add(this.hub.root);
-    this.hub.setGateStates(state.bestStage);
+    this.hub.setBest(state.bestStage);
     this.avatar = new Avatar(assets, state.char, GUNS[state.gun]!);
     stage.scene.add(this.avatar.root);
     stage.onFrame((dt) => this.frame(dt));
@@ -80,17 +80,13 @@ export class Game {
     this.stateListeners.push(fn);
   }
 
-  private kindOf(f: Facility): FacilityKind {
-    return gateIndex(f.id) !== null ? 'gate' : (f.id as FacilityKind);
-  }
-
   /** 시설 구역에 들어가면 바로 동작 (버튼 없음) */
   private enterFacility(f: Facility): void {
-    this.facilityActions[this.kindOf(f)]?.(f, gateIndex(f.id));
+    this.facilityActions[f.id]?.(f);
   }
 
   private leaveFacility(f: Facility): void {
-    this.facilityLeave[this.kindOf(f)]?.(f);
+    this.facilityLeave[f.id]?.(f);
   }
 
   /** 순간이동 (전투에서 돌아올 때 등): 도착한 곳의 시설은 다시 발동하지 않음 */
@@ -119,6 +115,7 @@ export class Game {
       }
     }
     if (this.tapHandler && taps.length) this.tapHandler(taps);
+    this.hub.update(dt);
     for (const t of this.tickers) t(dt);
     this.hud.update(this.state);
     this.updateAvatar(dt);
@@ -159,11 +156,11 @@ export class Game {
     this.avatar.update(dt, { pos: this.pos, yaw: this.yaw, velocity: this.velocity, aimAt: this.pose.aimAt, kick: this.pose.kick, grounded: this.pose.grounded });
   }
 
-  /** 모든 상태 변경은 여기로: 문 색·창 갱신 알림. 중요한 변경(구매·클리어·환생)은 save=true로 즉시 저장 */
+  /** 모든 상태 변경은 여기로: 포털 기록·창 갱신 알림. 중요한 변경(구매·클리어·환생)은 save=true로 즉시 저장 */
   setState(next: GameState, save = false): void {
     const prevBest = this.state.bestStage;
     this.state = next;
-    if (next.bestStage !== prevBest) this.hub.setGateStates(next.bestStage);
+    if (next.bestStage !== prevBest) this.hub.setBest(next.bestStage);
     for (const l of this.stateListeners) l(next);
     if (save) this.saver.saveNow();
   }

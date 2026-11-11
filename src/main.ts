@@ -7,6 +7,7 @@ import { HitFx } from './fx/HitFx';
 import { loadSave } from './save/localSave';
 import { TrainingRange } from './training/TrainingRange';
 import { FloatText } from './ui/FloatText';
+import { PortalZone } from './stage/PortalZone';
 import { ZoneCallout } from './ui/ZoneCallout';
 import { loadBricks } from './world/kit';
 
@@ -17,9 +18,11 @@ async function boot(): Promise<void> {
   const game = new Game(stage, assets, kit, loadSave(Date.now()), ui);
   const fx = new HitFx(stage.scene);
   const float = new FloatText(ui, stage.camera);
-  const training = new TrainingRange(game, fx, float, new ZoneCallout(ui));
+  const callout = new ZoneCallout(ui);
+  const training = new TrainingRange(game, fx, float, callout);
+  const portal = new PortalZone(game, callout);
   stage.start();
-  if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training });
+  if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal });
 }
 
 boot().catch((e) => {

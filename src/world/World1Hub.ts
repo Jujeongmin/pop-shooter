@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { BrickBatch, BRICK_SCALE, type BrickName, type KitModel } from './kit';
 import { disposeLabel, makeLabel } from './labels';
 import type { Collider } from './movement';
-import { HUB_BOUNDS, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
+import { BALANCE } from '../sim/balance.ts';
+import { stageLabel } from '../sim/stages.ts';
+import { HUB_BOUNDS, PORTAL_GATE, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
 
-export type GateState = 'locked' | 'open' | 'cleared';
-
-const GATE_COLOR: Record<GateState, string> = { locked: '#b8bccb', open: '#ffd34d', cleared: '#7fd78a' };
+/** 이 광장 월드의 스테이지 수 (포털 기록은 월드 1 안에서만) */
+const PER_WORLD = BALANCE.stage.perWorld;
 
 /**
  * 월드 1 광장 "장난감 마을": 팝배틀 브릭 키트 + 임시 도형 시설.
@@ -21,7 +22,8 @@ export class World1Hub {
   readonly targets: THREE.Object3D[] = [];
   private readonly owned: { dispose(): void }[] = [];
   private readonly labels: THREE.Sprite[] = [];
-  private readonly gateTops: THREE.Mesh[] = [];
+  private swirl: THREE.Mesh | null = null;
+  private bestLabel: THREE.Sprite | null = null;
   private readonly mats = new Map<string, THREE.MeshStandardMaterial>();
 
   constructor(kit: Record<BrickName, KitModel>) {
@@ -31,7 +33,7 @@ export class World1Hub {
     this.root.add(bricks.build(kit));
     this.buildRange();
     this.buildFacilities();
-    this.buildGates();
+    this.buildPortal();
   }
 
   private mat(color: string): THREE.MeshStandardMaterial {
@@ -174,38 +176,59 @@ export class World1Hub {
     this.label('환생 제단', al.x, 3, al.z + 1.6);
   }
 
-  private buildGates(): void {
-    const pillar = new THREE.CylinderGeometry(0.3, 0.3, 3, 12);
-    const topGeo = new THREE.BoxGeometry(3.2, 0.6, 0.6);
-    this.owned.push(pillar, topGeo);
-    for (const g of this.facilities.filter((x) => x.id.startsWith('gate'))) {
-      const gz = g.z - 1.4;
-      for (const dx of [-1.3, 1.3]) {
-        const p = new THREE.Mesh(pillar, this.mat('#ffffff'));
-        p.position.set(g.x + dx, 1.5, gz);
-        p.castShadow = true;
-        this.root.add(p);
-        this.colliders.push({ kind: 'circle', x: g.x + dx, z: gz, r: 0.35 });
+  /** 월드 포털: 받침 + 세운 고리 + 안쪽 소용돌이(돌아감) + 위에 최고 기록 */
+  private buildPortal(): void {
+    const g = PORTAL_GATE;
+    this.mesh(new THREE.CylinderGeometry(3.2, 3.5, 0.3, 40), '#ffe9b8', g.x, 0.15, g.z).castShadow = false;
+    const ring = this.mesh(new THREE.TorusGeometry(2.2, 0.32, 16, 48), '#ffd34d', g.x, 2.6, g.z);
+    ring.castShadow = true;
+    // 소용돌이 텍스처 (캔버스 한 번, 직접 소유)
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const ctx = c.getContext('2d')!;
+    const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.35, '#b9a6ff');
+    grad.addColorStop(1, '#6b5bd6');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 6;
+    for (let k = 0; k < 4; k++) {
+      ctx.beginPath();
+      for (let t = 0; t < 1; t += 0.02) {
+        const a = k * Math.PI / 2 + t * Math.PI * 2.2;
+        const r = 6 + t * 58;
+        ctx[t === 0 ? 'moveTo' : 'lineTo'](64 + Math.cos(a) * r, 64 + Math.sin(a) * r);
       }
-      // 문 위 색은 상태마다 바뀌므로 문마다 material 따로 (직접 소유)
-      const topMat = new THREE.MeshStandardMaterial({ color: GATE_COLOR.locked, roughness: 0.5 });
-      this.owned.push(topMat);
-      const top = new THREE.Mesh(topGeo, topMat);
-      top.position.set(g.x, 3.2, gz);
-      top.castShadow = true;
-      this.root.add(top);
-      this.gateTops.push(top);
-      this.label(g.label, g.x, 4.3, gz, 1);
+      ctx.stroke();
     }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const swirlMat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
+    this.owned.push(tex, swirlMat);
+    this.swirl = this.mesh(new THREE.CircleGeometry(2.05, 48), '', g.x, 2.6, g.z, swirlMat);
+    this.swirl.castShadow = false;
+    for (const dx of [-2.2, 2.2]) this.colliders.push({ kind: 'circle', x: g.x + dx, z: g.z, r: 0.45 });
+    this.colliders.push({ kind: 'box', x: g.x, z: g.z, hx: 2, hz: 0.25 });
+    this.label('월드 1 포털', g.x, 5.6, g.z, 1.1);
   }
 
-  /** 문 색: 잠김 회색 / 도전 가능 노랑 / 클리어 초록 */
-  setGateStates(bestStage: number): void {
-    this.gateTops.forEach((top, i) => {
-      const n = i + 1;
-      const st: GateState = n <= bestStage ? 'cleared' : n === bestStage + 1 ? 'open' : 'locked';
-      (top.material as THREE.MeshStandardMaterial).color.set(GATE_COLOR[st]);
-    });
+  /** 포털 위 최고 기록 (바뀔 때만 다시 그림) */
+  setBest(bestStage: number): void {
+    const text = bestStage <= 0 ? '최고 기록 없음' : `최고 기록 ${stageLabel(Math.min(bestStage, PER_WORLD))}`;
+    if (this.bestLabel?.userData.text === text) return;
+    if (this.bestLabel) {
+      this.bestLabel.removeFromParent();
+      disposeLabel(this.bestLabel);
+      this.labels.splice(this.labels.indexOf(this.bestLabel), 1);
+    }
+    this.bestLabel = this.label(text, PORTAL_GATE.x, 4.7, PORTAL_GATE.z, 0.8);
+    this.bestLabel.userData.text = text;
+  }
+
+  update(dt: number): void {
+    if (this.swirl) this.swirl.rotation.z -= dt * 1.6;
   }
 
   dispose(): void {

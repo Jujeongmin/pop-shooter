@@ -30,7 +30,8 @@ test('nearestFacility', () => {
   const f = WORLD1_FACILITIES[0]!;
   assert.equal(nearestFacility(f.x, f.z, WORLD1_FACILITIES)!.id, f.id);
   assert.equal(nearestFacility(9999, 9999, WORLD1_FACILITIES), null);
-  const gates = WORLD1_FACILITIES.filter((x) => x.id.startsWith('gate'));
-  assert.equal(gates.length, 10);
+  // 스테이지 입구는 월드마다 포털 하나 (연속 도전)
+  assert.equal(WORLD1_FACILITIES.filter((x) => x.id === 'portal').length, 1);
+  assert.ok(!WORLD1_FACILITIES.some((x) => x.id.startsWith('gate')));
   for (const id of ['range', 'upgrade', 'guns', 'altar']) assert.ok(WORLD1_FACILITIES.some((x) => x.id === id));
 });
