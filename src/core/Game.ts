@@ -15,6 +15,7 @@ import type { BrickName, KitModel } from '../world/kit';
 import { moveWithColliders } from '../world/movement';
 import { World1Hub } from '../world/World1Hub';
 import { Controls, type Tap } from './Controls';
+import { t } from '../i18n/i18n';
 import type { Stage3D } from './Stage3D';
 
 /** 이동 속도 (m/s): 사용자 요청으로 4.8 × 1.2 */
@@ -22,6 +23,7 @@ export const MOVE_SPEED = 5.76;
 const RADIUS = 0.4;
 
 const _dir = new THREE.Vector3();
+const _look = { x: 0, y: 0 };
 
 export type GameMode = 'hub' | 'training' | 'battle';
 export type FacilityKind = Facility['id'];
@@ -31,6 +33,8 @@ export type MenuKind = 'settings';
 export class Game {
   state: GameState;
   mode: GameMode = 'hub';
+  /** 전투 동안 맡겨 둔 광장 시점 */
+  private readonly hubView = { yaw: 0, pitch: 0 };
   readonly stage: Stage3D;
   readonly assets: Assets;
   readonly controls: Controls;
@@ -67,6 +71,18 @@ export class Game {
     this.state = state;
     this.ui = ui;
     this.controls = new Controls(stage.renderer.domElement, ui);
+    // PC 마우스 잠금 중: 가운데 점 + "Tab: 마우스 풀기"
+    const cross = document.createElement('div');
+    cross.className = 'lock-cross';
+    const hint = document.createElement('div');
+    hint.className = 'lock-hint';
+    hint.textContent = t('ctl.unlock');
+    ui.append(cross, hint);
+    this.controls.onLockChange = (on) => {
+      cross.classList.toggle('on', on);
+      hint.classList.toggle('on', on);
+      hint.textContent = t('ctl.unlock');
+    };
     this.hud = new Hud(ui, { menu: (m) => this.menuActions[m]?.() });
     this.saver = new AutoSaver(() => this.state, save.account, save.cloud);
     this.saver.start();
@@ -141,6 +157,16 @@ export class Game {
   }
 
   setMode(mode: GameMode): void {
+    // 전투는 정해진 각도(보스 정면)로 보고, 광장으로 돌아오면 돌려 둔 시점 그대로
+    if (mode !== 'hub' && this.mode === 'hub') {
+      this.hubView.yaw = this.cam.yaw;
+      this.hubView.pitch = this.cam.pitch;
+      this.cam.yaw = 0;
+      this.cam.pitch = 0;
+    } else if (mode === 'hub' && this.mode !== 'hub') {
+      this.cam.yaw = this.hubView.yaw;
+      this.cam.pitch = this.hubView.pitch;
+    }
     this.mode = mode;
     this.controls.setJoystickEnabled(mode === 'hub');
     this.controls.drainTaps();
@@ -148,6 +174,8 @@ export class Game {
 
   private frame(dt: number): void {
     const taps = this.controls.drainTaps();
+    const look = this.controls.drainLook(_look);
+    if (this.mode === 'hub' && (look.x !== 0 || look.y !== 0)) this.cam.turn(look.x, look.y);
     if (this.mode === 'hub') {
       this.updateMove(dt);
       const prev = this.near;

@@ -31,6 +31,8 @@ export class Panel {
   }
 
   open(): void {
+    // PC 마우스 잠금 중이면 풀어서 창 버튼을 누를 수 있게
+    if (document.pointerLockElement) document.exitPointerLock?.();
     clearTimeout(this.closeTimer);
     this.root.hidden = false;
     this.root.classList.remove('out', 'in');

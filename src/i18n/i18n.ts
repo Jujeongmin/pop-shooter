@@ -115,6 +115,7 @@ const STRINGS = {
   'g.portal': { en: 'Strong enough for {s}! Enter the portal', ko: '지금 공격력이면 {s} 클리어 가능! 포털로 가요', ja: '今なら{s}をクリアできる! ポータルへ', 'zh-TW': '現在可以通關{s}! 進入傳送門', 'zh-CN': '现在可以通关{s}! 进入传送门' },
   'g.altar': { en: 'Rebirth is ready! Go to the Rebirth Altar', ko: '환생할 수 있어요! 환생 제단으로 가요', ja: '転生できる! 転生の祭壇へ', 'zh-TW': '可以轉生了! 去轉生祭壇', 'zh-CN': '可以转生了! 去转生祭坛' },
   'g.close': { en: 'Close', ko: '닫기', ja: '閉じる', 'zh-TW': '關閉', 'zh-CN': '关闭' },
+  'ctl.unlock': { en: 'Tab: free mouse', ko: 'Tab: 마우스 풀기', ja: 'Tab: マウス解除', 'zh-TW': 'Tab:釋放滑鼠', 'zh-CN': 'Tab:释放鼠标' },
   'settings.guideOn': { en: 'Hints: ON', ko: '안내: 켜짐', ja: 'ヒント: ON', 'zh-TW': '提示:開', 'zh-CN': '提示:开' },
   'settings.guideOff': { en: 'Hints: OFF', ko: '안내: 꺼짐', ja: 'ヒント: OFF', 'zh-TW': '提示:關', 'zh-CN': '提示:关' },
   'nick.title': { en: 'Choose a nickname', ko: '닉네임을 정해요', ja: 'ニックネームを決めよう', 'zh-TW': '設定暱稱', 'zh-CN': '设定昵称' },

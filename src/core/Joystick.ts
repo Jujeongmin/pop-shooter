@@ -1,4 +1,4 @@
-/** 떠다니는 조이스틱 (마우스·터치): 화면 어디든 누른 곳에 뜸. 가운데 DEAD_PX 안은 0 (짧은 탭이 걸음으로 새지 않게) */
+/** 떠다니는 조이스틱 (터치): 이동 칸 안에서 누른 곳에 뜸. 모바일에선 안 쓸 때 쉬는 자리에 흐리게 보임. 가운데 DEAD_PX 안은 0 (짧은 탭이 걸음으로 새지 않게) */
 const DEAD_PX = 10;
 
 export class Joystick {
@@ -12,6 +12,7 @@ export class Joystick {
   y = 0;
   /** 누른 뒤 가장 멀리 끈 거리(px): 거의 안 끌었으면 탭으로 침 */
   maxDrag = 0;
+  private restAt: { x: number; y: number } | null = null;
 
   constructor(parent: HTMLElement) {
     this.el = document.createElement('div');
@@ -39,6 +40,7 @@ export class Joystick {
     this.el.style.left = `${this.ox}px`;
     this.el.style.top = `${this.oy}px`;
     this.el.classList.add('on');
+    this.el.classList.remove('rest');
     this.knob.style.transform = 'translate(-50%, -50%)';
   }
 
@@ -59,5 +61,25 @@ export class Joystick {
     this.id = null;
     this.x = this.y = 0;
     this.el.classList.remove('on');
+    this.showRest();
+  }
+
+  /** 쉬는 자리 (모바일 이동 칸 안내) */
+  rest(x: number, y: number): void {
+    this.restAt = { x, y };
+    if (!this.active) this.showRest();
+  }
+
+  hideRest(): void {
+    this.restAt = null;
+    this.el.classList.remove('rest');
+  }
+
+  private showRest(): void {
+    if (!this.restAt) return;
+    this.el.style.left = `${this.restAt.x}px`;
+    this.el.style.top = `${this.restAt.y}px`;
+    this.knob.style.transform = 'translate(-50%, -50%)';
+    this.el.classList.add('rest');
   }
 }
