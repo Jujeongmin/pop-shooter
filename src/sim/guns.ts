@@ -1,5 +1,4 @@
 import { BALANCE } from './balance.ts';
-import { stageHp } from './stages.ts';
 
 export type GunModel = 'pistol' | 'rifle' | 'shotgun' | 'sniper';
 
@@ -32,14 +31,7 @@ export function gunMult(i: number): number {
   return BALANCE.gun.dmgStep ** i;
 }
 
-/** 총 가격 기준 스테이지: 월드 1은 2·4·6번, 월드 2~4는 앞 월드 대장·2·4·6번 (그 무렵 살 만한 값) */
-export function gunRefStage(i: number): number {
-  const w = Math.floor(i / BALANCE.gun.perWorld);
-  const j = i % BALANCE.gun.perWorld;
-  return w * BALANCE.stage.perWorld + 2 * j;
-}
-
-/** 0번(시작 권총) 무료, 나머지 = 기준 스테이지 체력 × priceMult */
+/** 0번(시작 권총) 무료, i번 = priceBase × priceGrowth^(i−1) */
 export function gunPrice(i: number): number {
-  return i <= 0 ? 0 : stageHp(gunRefStage(i)) * BALANCE.gun.priceMult;
+  return i <= 0 ? 0 : BALANCE.gun.priceBase * BALANCE.gun.priceGrowth ** (i - 1);
 }

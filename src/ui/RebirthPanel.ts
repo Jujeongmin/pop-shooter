@@ -3,11 +3,11 @@ import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
-import { canRebirth, doRebirth, rebirthReqLevel } from '../sim/actions.ts';
+import { canRebirth, doRebirth, rebirthReq } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
-import { formatMult } from '../sim/format.ts';
+import { formatMult, formatNum } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
-import { rebirthMult } from '../sim/stats.ts';
+import { rebirthMult } from '../sim/training.ts';
 import { WORLD1_FACILITIES } from '../world/facilities';
 import { button, el } from './dom';
 import type { FloatText } from './FloatText';
@@ -60,7 +60,7 @@ export class RebirthPanel {
     const b = this.panel.body;
     b.replaceChildren();
     const can = canRebirth(s);
-    const need = rebirthReqLevel(s);
+    const need = rebirthReq(s);
     const next = s.tokens + 1;
     const card = el('div', 'reb-mult');
     card.append(icon('reb', 'big'), el('div', 'reb-mult-l', t('reb.mult')));
@@ -76,17 +76,17 @@ export class RebirthPanel {
       return d;
     };
     lists.append(li(t('reb.reset'), t('reb.resetList'), 'reset'), li(t('reb.keep'), t('reb.keepList'), 'keep'));
-    // 조건: 공격력 레벨 진행 막대 (지금 / 필요), 위에 환생 횟수
+    // 조건: 공격 훈련 진행 막대 (지금 / 필요), 위에 환생 횟수
     const price = el('div', 'reb-price');
     const pv = el('span', 'reb-price-v');
-    pv.append(icon('bullet'), el('span', '', `Lv ${Math.min(s.atkLv, need)} / ${need}`));
+    pv.append(icon('bullet'), el('span', '', `${formatNum(Math.min(s.trAtk, need))} / ${formatNum(need)}`));
     price.append(el('span', 'reb-price-l', t('reb.need', { n: s.rebirths })), pv);
     const bar = el('div', 'reb-bar');
     const fill = el('div', 'reb-fill');
-    fill.style.transform = `scaleX(${Math.min(1, s.atkLv / need)})`;
+    fill.style.transform = `scaleX(${Math.min(1, s.trAtk / need)})`;
     bar.append(fill);
     price.append(bar);
-    const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: need - s.atkLv }));
+    const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: formatNum(need - s.trAtk) }));
     b.append(card, gems, lists, price, tip);
     if (!this.confirming || !can) {
       const go = button(t('reb.go'), () => { this.confirming = true; this.render(); }, 'btn big reb-go');

@@ -4,13 +4,12 @@ import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t, type StrKey } from '../i18n/i18n';
 import { formatNum } from '../sim/format.ts';
-import { bulkCost, maxAffordable, spdMaxLevel, type StatKind } from '../sim/stats.ts';
-import { buyAtk, buySpd, damagePerShot, shotsPerSec } from '../sim/actions.ts';
+import { highestWorld } from '../sim/actions.ts';
 import type { GameState } from '../sim/state.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { stageLabel } from '../sim/stages.ts';
 import {
-  buyGear, buyMachine, GEAR, gearUnlocked, gainPerShot, hasGear, machineAffordable, machineCost, machineLv, MENTORS, TRAIN_KINDS, trainCap, type TrainKind,
+  buyGear, buyMachine, GEAR, gearPrice, gearUnlocked, gainPerShot, hasGear, machineAffordable, machineCost, machineLv, MENTORS, TRAIN_KINDS, type TrainKind,
 } from '../sim/training.ts';
 import { WORLD1_FACILITIES } from '../world/facilities';
 import { button, el, setText } from './dom';
@@ -20,23 +19,14 @@ import { bump, Panel } from './Panel';
 import type { ZoneCallout } from './ZoneCallout';
 
 type Unit = 1 | 10 | 'max';
-type Tab = 'stats' | 'mach' | 'gear' | 'mentor';
-const TABS: readonly Tab[] = ['stats', 'mach', 'gear', 'mentor'];
+type Tab = 'mach' | 'gear' | 'mentor';
+const TABS: readonly Tab[] = ['mach', 'gear', 'mentor'];
 const UNIT_KEY = 'pop-shooter.buyUnit';
 const TAB_KEY = 'pop-shooter.upTab';
 const MACH_ICON: Record<TrainKind, IconName> = { atk: 'target', spd: 'rapid', coin: 'cointarget' };
 export const GEAR_ICON: Record<TrainKind, IconName> = { atk: 'gloves', spd: 'goggles', coin: 'piggy' };
 const _at = new THREE.Vector3();
 
-interface Row {
-  kind: StatKind;
-  root: HTMLDivElement;
-  lv: HTMLSpanElement;
-  val: HTMLDivElement;
-  btn: HTMLButtonElement;
-  cost: HTMLSpanElement;
-  n: HTMLSpanElement;
-}
 interface MachRow { kind: TrainKind; root: HTMLDivElement; lv: HTMLSpanElement; val: HTMLDivElement; btn: HTMLButtonElement; cost: HTMLSpanElement; n: HTMLSpanElement }
 interface GearRow { i: number; root: HTMLDivElement; btn: HTMLButtonElement; cost: HTMLSpanElement; n: HTMLSpanElement }
 interface MentorRow { i: number; root: HTMLDivElement; status: HTMLDivElement }
@@ -48,35 +38,20 @@ export function pct(v: number): string {
   return v.toFixed(v >= 1 ? 2 : 3).replace(/\.?0+$/, '');
 }
 
-/** 이번에 살 개수와 비용 (못 사면 n = 0) */
-export function plan(kind: StatKind, s: GameState, unit: Unit): { n: number; cost: number; maxed: boolean } {
-  const lv = kind === 'atk' ? s.atkLv : s.spdLv;
-  const maxed = kind === 'spd' && lv >= spdMaxLevel();
-  if (maxed) return { n: 0, cost: Infinity, maxed };
-  if (unit === 'max') {
-    const m = maxAffordable(kind, lv, s.coins);
-    // 하나도 못 사면 1개 가격을 보여 줌
-    return m.n > 0 ? { ...m, maxed } : { n: 0, cost: bulkCost(kind, lv, 1), maxed };
-  }
-  const n = kind === 'spd' ? Math.min(unit, spdMaxLevel() - lv) : unit;
-  const cost = bulkCost(kind, lv, n);
-  return { n: cost <= s.coins ? n : 0, cost, maxed };
-}
-
 /** 이번에 올릴 기계 레벨 수와 비용 */
 export function planMachine(k: TrainKind, s: GameState, unit: Unit): { n: number; cost: number } {
   const lv = machineLv(s, k);
   if (unit === 'max') {
-    const m = machineAffordable(k, lv, s.coins);
-    return m.n > 0 ? m : { n: 0, cost: machineCost(k, lv, 1) };
+    const m = machineAffordable(lv, s.coins);
+    return m.n > 0 ? m : { n: 0, cost: machineCost(lv, 1) };
   }
-  const cost = machineCost(k, lv, unit);
+  const cost = machineCost(lv, unit);
   return { n: cost <= s.coins ? unit : 0, cost };
 }
 
 /**
- * 업그레이드 기계: 구역에 들어가면 폴짝 + 아래 창, 나가면 닫힘. 탭 4개 (포키 +1 MMA Fighter 방식):
- * 능력치(공격력·초당 발사 레벨) / 훈련 기계(한 발 훈련량·한도) / 장비(종류별 ×1.45, 한 번 구매) / 멘토(스테이지 기록으로 영입, 보기만).
+ * 업그레이드: 구역에 들어가면 폴짝 + 아래 창, 나가면 닫힘. 탭 3개 (2026-11-11 성장 개편, 골드로 사는 건 배율만):
+ * 훈련 기구(한 발 훈련량 ×machineStep, 레벨) / 장비(종류별 ×gearMult, 한 번 구매) / 멘토(스테이지 기록으로 영입, 보기만).
  * 구매 단위 [×1 | ×10 | 최대]와 고른 탭은 기기에 기억. 비용·개수는 sim 함수 그대로.
  */
 export class UpgradePanel {
@@ -84,7 +59,6 @@ export class UpgradePanel {
   private readonly panel: Panel;
   private readonly float: FloatText;
   private readonly zone: ZoneEntry;
-  private readonly rows: Row[];
   private readonly segBtns = new Map<Unit, HTMLButtonElement>();
   private unit: Unit;
   private tab: Tab;
@@ -123,7 +97,6 @@ export class UpgradePanel {
     }
     this.panel.body.append(tabs, seg, ...this.sections.values());
     seg.hidden = this.tab === 'gear' || this.tab === 'mentor';
-    this.rows = [this.row('atk', 'bullet', t('stat.atk'), t('up.atkDesc')), this.row('spd', 'timer', t('stat.sps'), t('up.spsDesc'))];
     this.sections.get('mach')!.append(el('div', 'up-hint', t('tr.hint')));
     for (const k of TRAIN_KINDS) this.machRows.push(this.machRow(k));
     GEAR.forEach((_, i) => this.gearRows.push(this.gearRow(i)));
@@ -152,21 +125,6 @@ export class UpgradePanel {
     c.append(icon('coin'), cost);
     btn.replaceChildren(c, n);
     return { btn, cost, n };
-  }
-
-  private row(kind: StatKind, ic: IconName, name: string, desc: string): Row {
-    const root = el('div', 'up-row');
-    const mid = el('div', 'up-mid');
-    const title = el('div', 'up-name');
-    const lv = el('span', 'up-lv');
-    title.append(el('span', '', name), lv);
-    const val = el('div', 'up-val');
-    val.title = desc;
-    mid.append(title, val);
-    const b = this.buyBtn(() => this.buy(kind));
-    root.append(icon(ic), mid, b.btn);
-    this.sections.get('stats')!.append(root);
-    return { kind, root, lv, val, ...b };
   }
 
   private machRow(kind: TrainKind): MachRow {
@@ -216,8 +174,8 @@ export class UpgradePanel {
   private loadTab(): Tab {
     try {
       const v = localStorage.getItem(TAB_KEY) as Tab | null;
-      return v && TABS.includes(v) ? v : 'stats';
-    } catch { return 'stats'; }
+      return v && TABS.includes(v) ? v : 'mach';
+    } catch { return 'mach'; }
   }
 
   private setUnit(u: Unit): void {
@@ -245,16 +203,6 @@ export class UpgradePanel {
     this.refresh();
   }
 
-  private buy(kind: StatKind): void {
-    const g = this.game;
-    const p = plan(kind, g.state, this.unit);
-    if (p.n <= 0) return;
-    const next = kind === 'atk' ? buyAtk(g.state, p.n) : buySpd(g.state, p.n);
-    if (!next) return;
-    g.setState(next, true);
-    this.celebrate(this.rows.find((x) => x.kind === kind)!.root, p.n > 1 ? `${t('up.levelUp')} +${p.n}` : t('up.levelUp'));
-  }
-
   private buyMach(k: TrainKind): void {
     const g = this.game;
     const p = planMachine(k, g.state, this.unit);
@@ -277,8 +225,7 @@ export class UpgradePanel {
     const s = this.game.state;
     if (this.tab === 'mach') this.refreshMach(s);
     else if (this.tab === 'gear') this.refreshGear(s);
-    else if (this.tab === 'mentor') this.refreshMentor(s);
-    else this.refreshStats(s);
+    else this.refreshMentor(s);
   }
 
   private refreshMach(s: GameState): void {
@@ -287,11 +234,14 @@ export class UpgradePanel {
       const p = planMachine(r.kind, s, this.unit);
       const show = p.n > 0 ? p.n : this.unit === 'max' ? 1 : this.unit;
       const after: GameState = r.kind === 'atk' ? { ...s, mAtk: lv + show } : r.kind === 'spd' ? { ...s, mSpd: lv + show } : { ...s, mCoin: lv + show };
+      const w = highestWorld(s);
+      const unit = r.kind === 'atk' ? '' : '%';
+      const gv = (x: GameState): string => (r.kind === 'atk' ? formatNum(gainPerShot(x, r.kind, w)) : pct(gainPerShot(x, r.kind, w)));
       setText(r.lv, t('up.lv', { n: lv }));
       r.val.replaceChildren(
-        el('span', '', t('mach.desc', { s: t(`tr.${r.kind}`), g: pct(gainPerShot(s, r.kind)), c: pct(trainCap(s, r.kind)) })),
+        el('span', '', t('mach.desc', { s: t(`tr.${r.kind}`), g: `${gv(s)}${unit}` })),
         el('br'),
-        el('b', '', `→ +${pct(gainPerShot(after, r.kind))}% · ${pct(trainCap(after, r.kind))}%`),
+        el('b', '', `→ +${gv(after)}${unit}`),
       );
       setText(r.cost, formatNum(p.cost));
       setText(r.n, `+${show}`);
@@ -309,8 +259,8 @@ export class UpgradePanel {
       setText(r.n, '');
       if (owned) { setText(r.cost, t('gear.owned')); r.btn.disabled = true; continue; }
       if (!open) { setText(r.cost, t('gear.need', { st: stageLabel(g.needStage) })); r.btn.disabled = true; continue; }
-      setText(r.cost, formatNum(g.price));
-      r.btn.disabled = !(g.price <= s.coins);
+      setText(r.cost, formatNum(gearPrice(r.i)));
+      r.btn.disabled = !(gearPrice(r.i) <= s.coins);
     }
   }
 
@@ -323,28 +273,5 @@ export class UpgradePanel {
     }
   }
 
-  private refreshStats(s: GameState): void {
-    for (const r of this.rows) {
-      const lv = r.kind === 'atk' ? s.atkLv : s.spdLv;
-      const p = plan(r.kind, s, this.unit);
-      setText(r.lv, t('up.lv', { n: lv }));
-      const show = p.n > 0 ? p.n : this.unit === 'max' ? 1 : this.unit;
-      // HUD와 같은 값(총·환생·훈련 배율 포함)으로 보여 줌
-      const now = r.kind === 'atk' ? damagePerShot(s) : shotsPerSec(s);
-      const after = r.kind === 'atk' ? damagePerShot({ ...s, atkLv: lv + show }) : shotsPerSec({ ...s, spdLv: Math.min(spdMaxLevel(), lv + show) });
-      const fmt = (v: number): string => (r.kind === 'atk' ? formatNum(v) : v.toFixed(2).replace(/\.?0+$/, ''));
-      if (p.maxed) {
-        r.val.replaceChildren(el('span', '', fmt(now)));
-        setText(r.cost, t('up.maxed'));
-        setText(r.n, '');
-        r.btn.disabled = true;
-        continue;
-      }
-      r.val.replaceChildren(el('span', '', `${fmt(now)} → `), el('b', '', fmt(after)));
-      setText(r.cost, formatNum(p.cost));
-      setText(r.n, `+${show}`);
-      r.btn.disabled = p.n <= 0;
-    }
-  }
 }
 

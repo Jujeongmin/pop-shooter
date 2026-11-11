@@ -5,7 +5,7 @@ import { disposeLabel, makeLabel } from './labels';
 import type { Collider } from './movement';
 import { BALANCE } from '../sim/balance.ts';
 import { stageLabel } from '../sim/stages.ts';
-import { HUB_BOUNDS, PORTAL_GATE, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
+import { HUB_BOUNDS, PORTAL_GATE, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
 
 /** 이 광장 월드의 스테이지 수 (포털 기록은 월드 1 안에서만) */
 const PER_WORLD = BALANCE.stage.perWorld;
@@ -192,14 +192,16 @@ export class World1Hub {
 
   /** 사격장: 파란 매트 + 과녁 3개 */
   private buildRange(): void {
-    this.mesh(new THREE.BoxGeometry(6, 0.08, 4), '#7cc4ff', RANGE_SPOT.x, 0.04, RANGE_SPOT.z).castShadow = false;
+    // 줄마다 발판 색 (공격 빨강 / 연사 파랑 / 코인 금색)
+    for (const lane of RANGE_LANES) this.mesh(new THREE.BoxGeometry(1.9, 0.08, 4), lane.mat, lane.x, 0.04, RANGE_SPOT.z).castShadow = false;
     this.mesh(new THREE.BoxGeometry(6, 0.06, 10), '#e8f4ff', RANGE_SPOT.x, 0.03, (RANGE_SPOT.z + RANGE_TARGET.z) / 2 - 1).castShadow = false;
     const post = new THREE.CylinderGeometry(0.08, 0.08, 1.2, 8);
     this.owned.push(post);
     const discs = [0, 1, 2, 3].map((k) => new THREE.CylinderGeometry(0.7 - k * 0.16, 0.7 - k * 0.16, 0.12 + k * 0.02, 28));
     this.owned.push(...discs);
-    const ringColors = ['#ffffff', '#ff6b6b', '#ffffff', '#ff6b6b'];
     for (let i = -1; i <= 1; i++) {
+      const lane = RANGE_LANES[i + 1]!;
+      const ringColors = ['#ffffff', lane.color, '#ffffff', lane.color];
       const t = new THREE.Group();
       t.position.set(RANGE_TARGET.x + i * 2, 0, RANGE_TARGET.z);
       const p = new THREE.Mesh(post, this.mat('#c98a5a'));
@@ -218,6 +220,7 @@ export class World1Hub {
       this.colliders.push({ kind: 'circle', x: t.position.x, z: t.position.z, r: 0.5 });
     }
     this.label(t('fac.range'), RANGE_SPOT.x - 3.4, 3, RANGE_SPOT.z - 2, 0.8);
+    for (const lane of RANGE_LANES) this.label(t(lane.id === 'range' ? 'fac.rangeAtk' : lane.id === 'rangeSpd' ? 'fac.rangeSpd' : 'fac.rangeCoin'), lane.x, 2.6, RANGE_TARGET.z, 0.55);
   }
 
   /** 업그레이드 기계 · 총 상점 · 환생 제단 (임시 도형) */

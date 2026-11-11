@@ -3,25 +3,10 @@ import assert from 'node:assert/strict';
 import { BALANCE } from '../../src/sim/balance.ts';
 import { newState } from '../../src/sim/state.ts';
 import {
-  buyAtk, buyNextGun, buySpd, canAttempt, clearStage, coinPerShot, damagePerShot, maxDps, autoDps, shotsPerSec, worldUnlocked,
+  buyNextGun, canAttempt, clearStage, goldMult, damagePerShot, maxDps, autoDps, shotsPerSec, worldUnlocked,
 } from '../../src/sim/actions.ts';
 import { firstClearCoins, replayCoins } from '../../src/sim/stages.ts';
 import { TapLimiter } from '../../src/sim/tapLimiter.ts';
-import { spdMaxLevel } from '../../src/sim/stats.ts';
-
-test('buyAtk spends and levels', () => {
-  const s = { ...newState(0), coins: 1000 };
-  const r = buyAtk(s, 3)!;
-  assert.equal(r.atkLv, 3);
-  assert.ok(r.coins < 1000);
-  assert.equal(s.atkLv, 0);
-  assert.equal(buyAtk({ ...newState(0), coins: 0 }, 1), null);
-});
-
-test('buySpd stops at max level', () => {
-  const s = { ...newState(0), coins: 1e300, spdLv: spdMaxLevel() };
-  assert.equal(buySpd(s, 1), null);
-});
 
 test('gun needs world unlocked', () => {
   const rich = { ...newState(0), coins: 1e30, gun: 3 };
@@ -57,8 +42,11 @@ test('damage and coins', () => {
   assert.equal(damagePerShot(s), 4);
   assert.equal(autoDps(s), damagePerShot(s) * shotsPerSec(s));
   assert.equal(maxDps(s), damagePerShot(s) * (shotsPerSec(s) + BALANCE.tap.maxPerSec));
-  assert.equal(coinPerShot(s, 2, 0), 4 * BALANCE.range.multByWorld[1]);
-  assert.equal(coinPerShot({ ...s, boostUntil: 100 }, 1, 50), 4 * BALANCE.boost.coinMult);
+  assert.equal(goldMult(s, 0), 1);
+  assert.equal(goldMult({ ...s, trCoin: 50 }, 0), 1.5);
+  assert.equal(goldMult({ ...s, boostUntil: 100 }, 50), BALANCE.boost.coinMult);
+  // 첫 클리어 골드에 코인 훈련 배율이 붙음
+  assert.equal(clearStage({ ...s, trCoin: 100 }, 1).coins, firstClearCoins(1) * 2);
   assert.ok(worldUnlocked(s, 1) && !worldUnlocked(s, 2));
 });
 

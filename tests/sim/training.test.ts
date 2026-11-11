@@ -1,70 +1,55 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { BALANCE } from '../../src/sim/balance.ts';
 import { newState } from '../../src/sim/state.ts';
-import { damagePerShot, doRebirth, rebirthReqLevel, shotsPerSec } from '../../src/sim/actions.ts';
-import { checkSave } from '../../src/sim/econ.ts';
-import { normalizeState } from '../../src/sim/normalize.ts';
-import { buyGear, buyMachine, gainPerShot, GEAR, machineAffordable, machineCost, mentorCount, train, trainCap } from '../../src/sim/training.ts';
+import { damagePerShot, goldMult, shotsPerSec } from '../../src/sim/actions.ts';
+import {
+  buyGear, buyMachine, gainPerShot, GEAR, gearPrice, machineAffordable, machineCost, mentorCount, rebirthMult, spdMaxed, stationMult, train,
+} from '../../src/sim/training.ts';
 
-const PREM = { gems: 0, passMult: 1, boostUntil: 0, paid: [] };
-
-test('train fills up to the cap and boosts damage, shots, coins', () => {
+test('each station trains only its own stat, without a cap', () => {
   const s = newState(0);
-  const a = train(s, 100);
-  assert.ok(a.trAtk > 0 && a.trSpd > 0 && a.trCoin > 0);
+  const a = train(s, 'atk', 100, 1);
+  assert.equal(a.trAtk, 100 * BALANCE.train.gain.atk);
+  assert.equal(a.trSpd, 0);
+  assert.equal(a.trCoin, 0);
   assert.ok(damagePerShot(a) > damagePerShot(s));
-  assert.ok(shotsPerSec(a) > shotsPerSec(s));
-  const full = train(s, 1e9);
-  assert.equal(full.trAtk, trainCap(s, 'atk'));
-  assert.equal(full.trSpd, trainCap(s, 'spd'));
-  assert.equal(train(full, 1e9).trAtk, full.trAtk);
-  assert.equal(train(s, -5), s);
-  assert.equal(train(s, NaN), s);
+  const big = train(s, 'atk', 1e12, 1);
+  assert.ok(train(big, 'atk', 1e12, 1).trAtk > big.trAtk, 'no cap on attack');
+  const sp = train(s, 'spd', 100, 1);
+  assert.ok(shotsPerSec(sp) > shotsPerSec(s) && sp.trAtk === 0);
+  const co = train(s, 'coin', 100, 1);
+  assert.ok(goldMult(co, 0) > goldMult(s, 0) && co.trAtk === 0);
+  assert.equal(train(s, 'atk', -5, 1), s);
+  assert.equal(train(s, 'atk', NaN, 1), s);
 });
 
-test('machines raise speed and cap, gear multiplies, mentors from stage record', () => {
-  const s = { ...newState(0), coins: 1e12 };
+test('fire-rate training stops at 12 shots per second', () => {
+  const s = train(newState(0), 'spd', 1e9, 1);
+  assert.ok(spdMaxed(s));
+  assert.equal(s.trSpd, BALANCE.train.spdMax);
+  assert.equal(shotsPerSec(s), 12);
+});
+
+test('better station, machines, gear, mentors and rebirths train faster', () => {
+  const s = { ...newState(0), coins: 1e30 };
+  const base = gainPerShot(s, 'atk', 1);
+  assert.equal(gainPerShot(s, 'atk', 2), base * stationMult(2));
   const m = buyMachine(s, 'atk', 5)!;
   assert.equal(m.mAtk, 5);
-  assert.equal(m.coins, s.coins - machineCost('atk', 0, 5));
-  assert.ok(gainPerShot(m, 'atk') > gainPerShot(s, 'atk'));
-  assert.ok(trainCap(m, 'atk') > trainCap(s, 'atk'));
+  assert.equal(m.coins, s.coins - machineCost(0, 5));
+  assert.ok(gainPerShot(m, 'atk', 1) > base);
+  assert.equal(gainPerShot(m, 'spd', 1), gainPerShot(s, 'spd', 1), 'attack machine only');
   assert.equal(buyMachine({ ...s, coins: 0 }, 'atk', 1), null);
   const g = buyGear(s, 0)!;
-  assert.ok(gainPerShot(g, GEAR[0]!.kind) > gainPerShot(s, GEAR[0]!.kind));
+  assert.equal(g.coins, s.coins - gearPrice(0));
+  assert.ok(gainPerShot(g, GEAR[0]!.kind, 1) > gainPerShot(s, GEAR[0]!.kind, 1));
   assert.equal(buyGear(g, 0), null, 'once only');
   const locked = GEAR.findIndex((x) => x.needStage > 0);
   assert.equal(buyGear(s, locked), null, 'locked by stage');
   assert.equal(mentorCount(0), 0);
-  assert.ok(mentorCount(40) >= 3);
-  const af = machineAffordable('spd', 3, 1e6);
-  assert.ok(machineCost('spd', 3, af.n) <= 1e6 && machineCost('spd', 3, af.n + 1) > 1e6);
-});
-
-test('rebirth resets training, machines and gear', () => {
-  let s = { ...newState(0), coins: 1e15 };
-  s = buyGear(buyMachine(s, 'coin', 3)!, 0)!;
-  s = train({ ...s, atkLv: rebirthReqLevel(s) }, 1000);
-  const r = doRebirth(s)!;
-  assert.deepEqual([r.trAtk, r.trSpd, r.trCoin, r.mAtk, r.mSpd, r.mCoin, r.gear], [0, 0, 0, 0, 0, 0, 0]);
-});
-
-test('normalize keeps training fields in range', () => {
-  const n = normalizeState({ trAtk: 50, trSpd: 1e9, trCoin: -3, mAtk: 4.7, gear: 1e9 }, 0);
-  assert.equal(n.trAtk, 50);
-  assert.ok(n.trSpd <= 100);
-  assert.equal(n.trCoin, 0);
-  assert.equal(n.mAtk, 4);
-  assert.ok(n.gear < 2 ** GEAR.length);
-});
-
-test('server check clamps training beyond what the time allows', () => {
-  const prev = { ...newState(0), coins: 1e6 };
-  const honest = train(prev, 30 * 4);
-  const ok = checkSave(prev, honest, 30, PREM, 0);
-  assert.ok(ok.ok && !ok.clamped);
-  const cheat = { ...prev, trAtk: 1e6 };
-  const r = checkSave(prev, cheat, 30, PREM, 0);
-  assert.ok(r.ok && r.clamped);
-  if (r.ok) assert.ok(r.state.trAtk <= trainCap(prev, 'atk') * 1.001);
+  assert.ok(gainPerShot({ ...s, bestStage: 40 }, 'atk', 1) > base);
+  assert.equal(gainPerShot({ ...s, tokens: 2 }, 'atk', 1), base * rebirthMult(2));
+  const af = machineAffordable(3, 1e6);
+  assert.ok(machineCost(3, af.n) <= 1e6 && machineCost(3, af.n + 1) > 1e6);
 });

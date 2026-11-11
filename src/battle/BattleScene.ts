@@ -352,7 +352,7 @@ export class BattleScene {
   private finish(): void {
     const run = this.run!;
     const g = this.game;
-    const res = finishRun(g.state, run.cleared);
+    const res = finishRun(g.state, run.cleared, Date.now());
     const prevBest = g.state.bestStage;
     g.setState(res.state, true);
     audio.play(run.cleared.length > 0 ? 'win' : 'lose');

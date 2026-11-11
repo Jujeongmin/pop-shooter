@@ -1,9 +1,9 @@
 import { t } from '../i18n/i18n';
-import { autoDps, damagePerShot, shotsPerSec } from '../sim/actions.ts';
+import { autoDps, damagePerShot, rebirthReq, shotsPerSec } from '../sim/actions.ts';
+import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
-import { rebirthMult } from '../sim/stats.ts';
 import type { GameState } from '../sim/state.ts';
-import { TRAIN_KINDS, trainCap, trainValue, type TrainKind } from '../sim/training.ts';
+import { rebirthMult, TRAIN_KINDS, trainValue, type TrainKind } from '../sim/training.ts';
 import { pct } from './UpgradePanel';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
@@ -21,7 +21,7 @@ export class Hud {
   private readonly atk: HTMLSpanElement;
   private readonly sps: HTMLSpanElement;
   private readonly dps: HTMLSpanElement;
-  /** 훈련 막대 (공격·연사·코인): 채움 = 훈련치 / 한도 */
+  /** 훈련 (공격·연사·코인): 공격 막대 = 환생까지, 연사 막대 = 최대(초당 12발)까지, 코인 = 숫자만 (한도 없음) */
   private readonly bars = new Map<TrainKind, { fill: HTMLDivElement; v: HTMLSpanElement }>();
 
   constructor(parent: HTMLElement, actions: HudActions) {
@@ -85,10 +85,13 @@ export class Hud {
     setText(this.dps, formatNum(autoDps(s)));
     for (const [k, b] of this.bars) {
       const v = trainValue(s, k);
-      const cap = trainCap(s, k);
-      b.fill.style.transform = `scaleX(${cap > 0 ? Math.min(1, v / cap) : 0})`;
-      b.fill.classList.toggle('full', v >= cap * 0.999);
-      setText(b.v, `+${pct(v)}%`);
+      const goal = k === 'atk' ? rebirthReq(s) : k === 'spd' ? BALANCE.train.spdMax : 0;
+      b.fill.parentElement!.hidden = goal <= 0;
+      if (goal > 0) {
+        b.fill.style.transform = `scaleX(${Math.min(1, v / goal)})`;
+        b.fill.classList.toggle('full', v >= goal);
+      }
+      setText(b.v, k === 'atk' ? `+${formatNum(v)}` : `+${pct(v)}%`);
     }
   }
 

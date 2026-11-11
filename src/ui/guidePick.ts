@@ -1,19 +1,17 @@
-import { bulkCost } from '../sim/stats.ts';
-import { canRebirth, damagePerShot, shotsPerSec, worldUnlocked } from '../sim/actions.ts';
+import { canRebirth, damagePerShot, shotsPerSec } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
-import { gunPrice, GUNS } from '../sim/guns.ts';
 import { stageHp, stageTime } from '../sim/stages.ts';
 import type { GameState } from '../sim/state.ts';
 
 /** 안내가 가리키는 곳 (시설 id와 같음) */
-export type GuideKind = 'altar' | 'portal' | 'guns' | 'upgrade' | 'range';
+export type GuideKind = 'altar' | 'portal' | 'upgrade' | 'range';
 
 /** 전투 판단에 넣는 탭 속도 (보통 플레이어가 치는 정도) */
 const GUIDE_TAPS = 3;
-/** 업그레이드 안내: 공격력을 이만큼 한 번에 살 수 있을 때 (조금 모였을 때마다 끌고 가지 않게) */
-const UPGRADE_BATCH = 5;
 /** 이 광장(월드 1)의 마지막 스테이지 */
 const HUB_LAST_STAGE = BALANCE.stage.perWorld;
+/** 튜토리얼 끝 표시 (state.tutorial) */
+export const TUTORIAL_DONE = 99;
 
 /** 지금 공격력으로 다음 스테이지를 깰 수 있는지 (자동 + 보통 탭) */
 export function canBeatNext(s: GameState): boolean {
@@ -22,15 +20,23 @@ export function canBeatNext(s: GameState): boolean {
   return damagePerShot(s) * (shotsPerSec(s) + GUIDE_TAPS) * stageTime(next) >= stageHp(next);
 }
 
+/** 골드로 뭔가 산 적이 있음 (기구·장비·총) — 튜토리얼 마지막 단계 끝 */
+export function boughtAnything(s: GameState): boolean {
+  return s.mAtk + s.mSpd + s.mCoin > 0 || s.gear !== 0 || s.gun > 0;
+}
+
+export function tutorialFinished(s: GameState): boolean {
+  return s.tutorial >= TUTORIAL_DONE || (s.bestStage >= 1 && boughtAnything(s));
+}
+
 /**
- * 상황 안내 (정해진 순서가 아니라 지금 할 만한 것 하나): 환생 가능 → 다음 스테이지 깰 수 있음 → 새 총 살 수 있음
- * → 공격력 여러 단계 살 수 있음 → (훈련 중이 아니면) 사격장. 훈련 중이고 할 게 없으면 안내 없음.
+ * 안내 (사용자 2026-11-11): 처음 한 번만 훈련장 → 포탈(1-1) → 골드로 강화. 끝나면 안내 없음,
+ * 그 뒤로는 환생할 수 있을 때만 환생 제단.
  */
-export function pickGuide(s: GameState, training: boolean): GuideKind | null {
-  if (canRebirth(s)) return 'altar';
-  if (canBeatNext(s)) return 'portal';
-  const g = GUNS[s.gun + 1];
-  if (g && worldUnlocked(s, g.world) && gunPrice(g.index) <= s.coins) return 'guns';
-  if (bulkCost('atk', s.atkLv, UPGRADE_BATCH) <= s.coins) return 'upgrade';
-  return training ? null : 'range';
+export function pickGuide(s: GameState): GuideKind | null {
+  if (!tutorialFinished(s)) {
+    if (s.bestStage < 1) return canBeatNext(s) ? 'portal' : 'range';
+    return 'upgrade';
+  }
+  return canRebirth(s) ? 'altar' : null;
 }

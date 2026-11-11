@@ -75,14 +75,14 @@ export interface RunReward {
   unlockedChars: CharId[];
 }
 
-/** 깬 스테이지만큼 보상: 처음 깬 것 = 첫 클리어 보상, 이미 깬 것 = 재도전 보상 */
-export function finishRun(s: GameState, cleared: readonly number[]): RunReward {
+/** 깬 스테이지만큼 보상: 처음 깬 것 = 첫 클리어 보상, 이미 깬 것 = 재도전 보상 (× 코인 훈련, now면 부스트) */
+export function finishRun(s: GameState, cleared: readonly number[], now = 0): RunReward {
   let state = s;
   let coins = 0;
   const firstClears: number[] = [];
   const unlockedChars: CharId[] = [];
   for (const st of cleared) {
-    const r = clearStage(state, st);
+    const r = clearStage(state, st, now);
     state = r.state;
     coins += r.coins;
     if (r.firstClear) firstClears.push(st);

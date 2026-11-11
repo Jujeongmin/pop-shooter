@@ -8,8 +8,8 @@ import { firstClearCoins, replayCoins, stageHp, stageTime } from '../../src/sim/
 
 /** dps가 stage s까지는 깨고 s+1은 못 깨는 공격력 레벨 찾기 */
 function stateBeating(maxStage: number) {
-  for (let lv = 0; lv < 2000; lv++) {
-    const s = { ...newState(0), atkLv: lv };
+  for (let i = 0; i < 4000; i++) {
+    const s = { ...newState(0), trAtk: 1.02 ** i - 1 };
     const d = damagePerShot(s) * shotsPerSec(s);
     const ok = (st: number) => d * stageTime(st) >= stageHp(st) + damagePerShot(s);
     if (ok(maxStage) && !ok(maxStage + 1)) return s;
@@ -33,14 +33,14 @@ test('run continues stage to stage until it fails', () => {
 });
 
 test('run ends with world clear after boss', () => {
-  const r = startRun({ ...newState(0), atkLv: 900 }, 1);
+  const r = startRun({ ...newState(0), trAtk: 1e40 }, 1);
   play(r);
   assert.equal(r.done, 'worldClear');
   assert.deepEqual(r.cleared, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 });
 
 test('each stage gets a fresh timer and a short gap', () => {
-  const r = startRun({ ...newState(0), atkLv: 900 }, 1);
+  const r = startRun({ ...newState(0), trAtk: 1e40 }, 1);
   stepRun(r, 1);
   assert.equal(r.cleared.length, 1);
   assert.ok(r.gap > 0 && r.gap <= RUN_GAP_SEC);
@@ -66,7 +66,7 @@ test('finishRun pays first clears and replays', () => {
 test('world runs start at world first stage and need unlock', () => {
   assert.ok(canStartRun(newState(0), 1));
   assert.ok(!canStartRun(newState(0), 2));
-  const s = { ...newState(0), bestStage: 10, atkLv: 900 };
+  const s = { ...newState(0), bestStage: 10, trAtk: 1e40 };
   assert.ok(canStartRun(s, 2));
   assert.equal(startRun(s, 2).stage, 11);
 });

@@ -3,7 +3,7 @@ import { t } from '../i18n/i18n';
 import { addCoins } from '../sim/actions.ts';
 import { formatNum } from '../sim/format.ts';
 import { offlineReward } from '../sim/offline.ts';
-import { train } from '../sim/training.ts';
+import { gainPerShot, train } from '../sim/training.ts';
 import { button, el } from './dom';
 import { icon } from './icons';
 
@@ -18,12 +18,13 @@ export function durationText(sec: number): string {
 
 /**
  * 오프라인 보상: 게임 시작 때 한 번. offlineReward(저장된 lastSeen 기준)가 있으면 "자리 비운 동안" 창 → [받기].
- * 받으면 코인 추가 + 즉시 저장(lastSeen 갱신). 광고 2배 버튼은 계획 2.
+ * 받으면 골드 + 공격 훈련(가장 높은 월드 훈련장) + 즉시 저장(lastSeen 갱신). 광고 2배 버튼은 계획 3.
  * 창이 떠 있는 동안: 저장 보류(받기 전에 닫아도 다음에 다시 받게), 이동 잠금. 창을 띄웠으면 true.
  */
 export function showOfflineReward(game: Game, ui: HTMLElement, now: number): boolean {
   const r = offlineReward(game.state, now);
-  if (r.seconds < MIN_SEC || !(r.coins > 0)) return false;
+  if (r.seconds < MIN_SEC || !(r.coins > 0 || r.shots > 0)) return false;
+  const atkGain = gainPerShot(game.state, 'atk', r.world) * r.shots;
   game.saver.hold = true;
   const wrap = el('div', 'result-wrap ui-on in');
   // 창이 열린 동안 키보드로도 못 움직이게 (moveLock을 계속 0보다 크게, 닫히면 아무것도 안 함)
@@ -32,12 +33,13 @@ export function showOfflineReward(game: Game, ui: HTMLElement, now: number): boo
   const card = el('div', 'result-card');
   card.append(el('div', 'result-title', t('off.title')), el('div', 'result-tip', t('off.body', { t: durationText(r.seconds) })));
   const coin = el('div', 'result-coins');
-  coin.append(icon('coin', 'big'), el('span', '', `+${formatNum(r.coins)}`));
+  if (r.coins > 0) coin.append(icon('coin', 'big'), el('span', '', `+${formatNum(r.coins)}`));
+  coin.append(icon('bullet', 'big'), el('span', '', `+${formatNum(atkGain)}`));
   card.append(coin, button(t('off.claim'), () => {
     if (!wrap.isConnected) return;
     wrap.remove();
     game.saver.hold = false;
-    game.setState(train(addCoins(game.state, r.coins), r.shots), true);
+    game.setState(train(addCoins(game.state, r.coins), 'atk', r.shots, r.world), true);
   }, 'btn big'));
   wrap.append(card);
   ui.append(wrap);

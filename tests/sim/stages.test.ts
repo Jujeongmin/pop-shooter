@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BALANCE, STAGE_COUNT } from '../../src/sim/balance.ts';
 import { firstClearCoins, isBoss, replayCoins, stageHp, stageLabel, stageTime, worldOf } from '../../src/sim/stages.ts';
-import { STAGE_HP } from '../../src/sim/stageTable.ts';
 
 test('stages', () => {
   assert.equal(stageLabel(10), '1-10');
@@ -12,19 +11,18 @@ test('stages', () => {
   assert.ok(isBoss(30) && !isBoss(31));
   assert.equal(stageTime(10), BALANCE.stage.timeBoss);
   assert.equal(stageTime(9), BALANCE.stage.timeNormal);
-  assert.equal(firstClearCoins(3), stageHp(3) * BALANCE.stage.firstClearCoinMult);
-  assert.equal(replayCoins(3), stageHp(3) * BALANCE.stage.replayCoinMult);
+  assert.equal(stageHp(1), BALANCE.stage.firstHp);
 });
 
-test('hp table from fitter', () => {
-  assert.equal(STAGE_HP.length, STAGE_COUNT);
-  // 1-1 = firstHp에서 ×firstRamp로 늘다가 표에 닿으면 표 (작은 쪽)
-  for (let s = 1; s <= STAGE_COUNT; s++) assert.equal(stageHp(s), Math.min(STAGE_HP[s - 1]! * BALANCE.worldHpMult[worldOf(s) - 1]!, BALANCE.stage.firstHp * BALANCE.stage.firstRamp ** (s - 1)));
-  for (let s = 2; s <= STAGE_COUNT; s++) assert.ok(stageHp(s) > stageHp(s - 1), `stage ${s} hp must grow`);
-  for (const s of STAGE_HP) assert.ok(Number.isFinite(s) && s > 0);
+test('hp grows inside a world and from world start to world start (a new world may start below the last boss)', () => {
+  for (let s = 2; s <= STAGE_COUNT; s++) if (worldOf(s) === worldOf(s - 1)) assert.ok(stageHp(s) > stageHp(s - 1), `stage ${s} hp must grow`);
+  for (let w = 2; w <= BALANCE.stage.worlds; w++) assert.ok(stageHp((w - 1) * 10 + 1) > stageHp((w - 2) * 10 + 1), `world ${w} start`);
+  for (let s = 1; s <= STAGE_COUNT; s++) assert.ok(Number.isFinite(stageHp(s)) && stageHp(s) > 0);
 });
 
-test('1-1 is a fixed easy first win (300 hp), table starts at 1-2', () => {
-  assert.equal(stageHp(1), 300);
-  assert.ok(stageHp(2) > stageHp(1));
+test('gold grows slower than hp, replay smaller than first clear', () => {
+  assert.equal(firstClearCoins(1), BALANCE.stage.goldBase);
+  assert.equal(firstClearCoins(10), BALANCE.stage.goldBase * BALANCE.stage.goldGrowth ** 9 * BALANCE.stage.bossGold);
+  assert.equal(replayCoins(3), firstClearCoins(3) * BALANCE.stage.replayMult);
+  assert.ok(firstClearCoins(30) / firstClearCoins(20) < stageHp(30) / stageHp(20));
 });

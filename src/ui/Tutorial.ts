@@ -4,7 +4,7 @@ import { t, type StrKey } from '../i18n/i18n';
 import { stageLabel } from '../sim/stages.ts';
 import { WORLD1_FACILITIES } from '../world/facilities';
 import { button, el, setText } from './dom';
-import { pickGuide, type GuideKind } from './guidePick';
+import { pickGuide, TUTORIAL_DONE, tutorialFinished, type GuideKind } from './guidePick';
 import { icon } from './icons';
 
 const _to = new THREE.Vector3();
@@ -16,7 +16,7 @@ const HOLD_SEC = 2.5;
 /** 안내 켜기·끄기 (기기 설정) */
 const KEY = 'pop-shooter.guide';
 
-const TEXT: Record<GuideKind, StrKey> = { altar: 'g.altar', portal: 'g.portal', guns: 'g.guns', upgrade: 'g.upgrade', range: 'g.range' };
+const TEXT: Record<GuideKind, StrKey> = { altar: 'g.altar', portal: 'g.portal', upgrade: 'g.upgrade', range: 'g.range' };
 
 export function guideEnabled(): boolean {
   try { return localStorage.getItem(KEY) !== 'off'; } catch { return true; }
@@ -27,8 +27,8 @@ export function setGuideEnabled(on: boolean): void {
 }
 
 /**
- * 상황 안내 (정해진 순서가 아님): 지금 할 만한 것 하나를 위쪽 한 줄 + 바닥 화살표 + 목표 위 화살표로 가리킴.
- * 판단은 guidePick (환생 가능 → 다음 스테이지 깰 수 있음 → 새 총 → 공격력 여러 단계 → 사격장). 목표에 들어가 있으면 숨김.
+ * 안내 (사용자 2026-11-11): 처음 한 번 훈련장 → 포탈(1-1) → 골드로 강화, 끝나면 안내 없음, 그 뒤로는 환생할 수 있을 때만 환생 제단.
+ * 위쪽 한 줄 + 바닥 화살표 + 목표 위 화살표로 가리킴 (판단 guidePick). 목표에 들어가 있으면 숨김.
  * [닫기]는 지금 안내만 닫음(상황이 바뀌면 다시 뜸). 설정에서 아예 끌 수 있음.
  * 소유: 화살표 geometry·material (게임 내내 씀).
  */
@@ -118,7 +118,9 @@ export class Tutorial {
     this.checkT += dt;
     if (this.checkT >= CHECK_SEC) {
       this.checkT = 0;
-      const next = pickGuide(g.state, g.near?.id === 'range');
+      // 튜토리얼 끝을 저장해 둠 (다시 켜도 처음 안내가 안 나오게)
+      if (g.state.tutorial < TUTORIAL_DONE && tutorialFinished(g.state)) g.setState({ ...g.state, tutorial: TUTORIAL_DONE }, true);
+      const next = pickGuide(g.state);
       if (next !== this.dismissed) this.dismissed = null;
       const want = next === this.dismissed ? null : next;
       // 바뀐 지 얼마 안 됐으면 유지 (단, 할 일이 없어진 경우는 바로 내림)

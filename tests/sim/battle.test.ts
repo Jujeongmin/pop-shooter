@@ -5,7 +5,7 @@ import { startBattle, stepBattle, tapBattle } from '../../src/sim/battle.ts';
 import { stageHp } from '../../src/sim/stages.ts';
 
 test('battle win and lose by dps', () => {
-  const strong = { ...newState(0), atkLv: 200 };
+  const strong = { ...newState(0), trAtk: 1e30 };
   const b = startBattle(strong, 1);
   while (!b.done) stepBattle(b, 0.1);
   assert.equal(b.done, 'win');
@@ -25,7 +25,7 @@ test('auto shots follow shots per sec', () => {
 });
 
 test('tap adds a shot and can finish', () => {
-  const b = startBattle({ ...newState(0), atkLv: 60 }, 1);
+  const b = startBattle({ ...newState(0), trAtk: 40 }, 1);
   const need = Math.ceil(b.maxHp / b.dmg);
   for (let i = 0; i < need - 1; i++) tapBattle(b);
   assert.equal(b.done, null);
