@@ -17,10 +17,12 @@ export interface ZoneEntryOptions {
   flash: string;
   /** 폴짝 뛰어 내려앉을 자리 (없으면 구역 중심) */
   spot?: { x: number; z: number };
+  /** 카메라: focus(1 = 당김, 음수 = 뒤로), lookUp(음수면 캐릭터가 화면 위쪽에: 아래 창이 가리지 않게) */
+  cam?: { focus: number; lookUp: number };
   /** 착지 뒤 바라볼 곳 */
   face: { x: number; z: number };
-  /** 착지 때 가운데 문구 (함수면 착지 순간 값으로) */
-  text: CalloutText | (() => CalloutText);
+  /** 착지 때 가운데 문구 (함수면 착지 순간 값으로, null이면 문구 없음: 창이 뜨는 시설) */
+  text: CalloutText | (() => CalloutText) | null;
 }
 
 /**
@@ -59,7 +61,8 @@ export class ZoneEntry {
     if (this.inside) return;
     this.inside = true;
     this.ring.setInside(true);
-    this.game.cam.focus = 1;
+    this.game.cam.focus = this.opt.cam?.focus ?? 1;
+    this.game.cam.lookUp = this.opt.cam?.lookUp ?? 0;
     this.from.copy(this.game.pos);
     this.snapT = 0;
     this.game.moveLock = SNAP_SEC + LAND_LOCK;
@@ -74,6 +77,7 @@ export class ZoneEntry {
     this.snapT = -1;
     this.ring.setInside(false);
     g.cam.focus = 0;
+    g.cam.lookUp = 0;
     this.callout.hide();
     this.onLeave?.();
   }
@@ -103,7 +107,7 @@ export class ZoneEntry {
     g.cam.shake(0.08);
     this.callout.flash(this.opt.flash);
     const t = this.opt.text;
-    this.callout.show(typeof t === 'function' ? t() : t);
+    if (t) this.callout.show(typeof t === 'function' ? t() : t);
     this.onLanded?.();
   }
 

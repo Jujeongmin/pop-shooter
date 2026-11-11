@@ -15,6 +15,8 @@ import { ZoneCallout } from './ui/ZoneCallout';
 import { loadBricks } from './world/kit';
 import { applyLang } from './i18n/i18n';
 import { SettingsPanel } from './ui/SettingsPanel';
+import { UpgradePanel } from './ui/UpgradePanel';
+import { GunPanel } from './ui/GunPanel';
 
 async function boot(): Promise<void> {
   const ui = document.getElementById('ui')!;
@@ -36,6 +38,8 @@ async function boot(): Promise<void> {
     portal.release();
     battle.start(1);
   }, 700);
+  new UpgradePanel(game, ui, callout, float);
+  new GunPanel(game, ui, callout, float);
   const settings = new SettingsPanel(ui);
   game.menuActions.settings = () => settings.open();
   stage.start();
