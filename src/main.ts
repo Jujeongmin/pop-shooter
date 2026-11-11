@@ -78,6 +78,8 @@ async function boot(): Promise<void> {
   game.hub.root.add(board.root);
   game.hub.colliders.push(board.collider);
   cloud.onSaved.add(() => board.refreshSoon());
+  // 광장 구조물이 다 생긴 뒤: 카메라를 가리면 반투명이 될 대상 등록
+  game.occlusion.register(game.hub.root);
   const settings = new SettingsPanel(ui, guide, nickPanel);
   game.menuActions.settings = () => settings.open();
   stage.start();

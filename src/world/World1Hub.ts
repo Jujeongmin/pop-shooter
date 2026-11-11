@@ -9,6 +9,9 @@ import { HUB_BOUNDS, PORTAL_GATE, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, t
 
 /** 이 광장 월드의 스테이지 수 (포털 기록은 월드 1 안에서만) */
 const PER_WORLD = BALANCE.stage.perWorld;
+/** 3D 이름표가 흐려지기 시작·사라지는 카메라 거리(m) */
+const LABEL_FAR = 11;
+const LABEL_NEAR = 7;
 
 /**
  * 월드 1 광장 "장난감 마을": 팝배틀 브릭 키트 + 임시 도형 시설.
@@ -305,8 +308,16 @@ export class World1Hub {
     this.bestLabel.userData.text = text;
   }
 
-  update(dt: number): void {
+  update(dt: number, camPos?: THREE.Vector3): void {
     if (this.swirl) this.swirl.rotation.z -= dt * 1.6;
+    // 3D 이름표: 카메라에 가까우면 흐리게 (가까이서 화면을 꽉 채우지 않게). LABEL_NEAR 안은 안 보임, LABEL_FAR 밖은 그대로
+    if (!camPos) return;
+    for (const l of this.labels) {
+      const d = l.position.distanceTo(camPos);
+      const a = Math.min(1, Math.max(0, (d - LABEL_NEAR) / (LABEL_FAR - LABEL_NEAR)));
+      l.material.opacity = a;
+      l.visible = a > 0.01;
+    }
   }
 
   dispose(): void {

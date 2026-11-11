@@ -1,3 +1,4 @@
+import { OcclusionFader } from '../fx/OcclusionFader';
 import * as THREE from 'three';
 import type { Assets } from '../assets/loadAssets';
 import { FollowCamera } from '../camera/FollowCamera';
@@ -55,6 +56,8 @@ export class Game {
   readonly ui: HTMLElement;
   readonly hud: Hud;
   readonly saver: AutoSaver;
+  /** 카메라와 나 사이를 가리는 광장 구조물 반투명 (main이 광장을 다 만든 뒤 register) */
+  readonly occlusion = new OcclusionFader();
 
   constructor(stage: Stage3D, assets: Assets, kit: Record<BrickName, KitModel>, state: GameState, ui: HTMLElement, save: { account: string | null; cloud: CloudSave | null } = { account: null, cloud: null }) {
     this.stage = stage;
@@ -127,11 +130,13 @@ export class Game {
       }
     }
     if (this.tapHandler && taps.length) this.tapHandler(taps);
-    this.hub.update(dt);
+    this.hub.update(dt, this.stage.camera.position);
     for (const t of this.tickers) t(dt);
     this.hud.update(this.state);
     this.updateAvatar(dt);
     this.cam.update(dt, this.pos);
+    // 카메라와 나 사이 구조물 반투명 (광장에서만)
+    this.occlusion.update(dt, this.stage.camera, this.pos, this.mode === 'hub');
   }
 
   private updateMove(dt: number): void {

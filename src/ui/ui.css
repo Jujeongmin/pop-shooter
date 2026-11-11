@@ -229,3 +229,14 @@
 .nick-input { font: inherit; font-size: 22px; color: var(--ink); width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: 14px; border: 3px solid #c9d2ea; background: #fff; text-align: center; outline: none; }
 .nick-input:focus { border-color: var(--yellow); }
 .nick-err { min-height: 20px; color: #e0414f; font-size: 15px; text-align: center; }
+
+/* 가림 줄이기 (사용자 2026-11-11): 안내 줄은 짧게 한 줄. 좁은 세로 화면은 위 재화 칸 아래, 가로로 짧은 화면은 아래 가운데 */
+.tut-bar { max-width: min(560px, calc(100vw - 24px)); }
+.tut-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 760px) and (min-height: 461px) { .tut-bar { top: 56px; left: auto; right: 12px; transform: none; max-width: calc(100vw - 190px); } .tut-bar.pop { animation: zone-pop-plain .4s cubic-bezier(.2, 1.8, .4, 1) both; } .tut-text { white-space: normal; } }
+@media (max-height: 460px) {
+  .tut-bar { top: auto; bottom: 12px; }
+  .hud-stats { top: 50px; padding: 4px 8px; min-width: 104px; }
+  .stat { font-size: 12px; line-height: 1.45; }
+  .stat-l .ico { width: 14px; height: 14px; }
+}
