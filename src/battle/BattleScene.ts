@@ -7,7 +7,6 @@ import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
 import { finishRun, startRun, stepRun, tapRun, type Run } from '../sim/run.ts';
 import { isBoss, stageHp, stageLabel, stageTime } from '../sim/stages.ts';
-import { CHAR_IDS } from '../sim/state.ts';
 import { TapLimiter } from '../sim/tapLimiter.ts';
 import { CHARACTERS } from '../config/characters';
 import type { BattleHud } from '../ui/BattleHud';
@@ -15,12 +14,7 @@ import type { FloatText } from '../ui/FloatText';
 import type { ResultCard } from '../ui/ResultCard';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { PORTAL_SPOT } from '../world/facilities';
-import { Boss } from './Boss';
 import { ToyBoss } from './ToyBoss';
-
-/** 시안 비교: 주소에 ?toyboss 붙이면 태엽 로봇 보스 */
-const USE_TOY = typeof location !== 'undefined' && new URLSearchParams(location.search).has('toyboss');
-type AnyBoss = Boss | ToyBoss;
 
 /** 전투 무대 위치 (광장은 숨김) */
 const PLAYER_AT = { x: 0, z: 6 };
@@ -50,9 +44,9 @@ export class BattleScene {
   private readonly owned: { dispose(): void }[] = [];
   private readonly limiter = new TapLimiter(BALANCE.tap.maxPerSec);
   private run: Run | null = null;
-  private boss: AnyBoss | null = null;
+  private boss: ToyBoss | null = null;
   /** 쓰러지는 중인 이전 보스 */
-  private dying: AnyBoss | null = null;
+  private dying: ToyBoss | null = null;
   private clock = 0;
   private kick = 0;
   private dmgAcc = 0;
@@ -138,8 +132,11 @@ export class BattleScene {
 
   private spawnBoss(): void {
     const run = this.run!;
-    const src = this.game.assets.characters[CHAR_IDS[(run.stage - 1) % CHAR_IDS.length]!];
-    this.boss = USE_TOY ? new ToyBoss(run.stage) : new Boss(src, run.stage);
+    this.boss = new ToyBoss(run.stage);
+    // 큰 보스일수록 카메라를 뒤·위로 (대장 머리·왕관이 잘리지 않게)
+    const extra = Math.max(0, this.boss.height - 2.4);
+    this.game.cam.focus = -1.2 - extra * 0.28;
+    this.game.cam.lookUp = extra * 0.35;
     this.boss.root.position.set(BOSS_AT.x, 0, BOSS_AT.z);
     this.boss.root.rotation.y = 0;
     this.arena.add(this.boss.root);
@@ -268,6 +265,7 @@ export class BattleScene {
     g.pose.aimAt = null;
     g.pose.kick = 0;
     g.cam.focus = 0;
+    g.cam.lookUp = 0;
     g.hud.setVisible(true);
     g.setMode('hub');
     g.placeAt(PORTAL_SPOT.x, PORTAL_SPOT.z + 3.2, Math.PI);

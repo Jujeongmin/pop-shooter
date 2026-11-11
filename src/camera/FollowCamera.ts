@@ -11,6 +11,9 @@ export class FollowCamera {
   /** 0 = 평소, 1 = 구역 집중 (조금 당겨짐). focus 목표로 부드럽게 따라감 */
   focus = 0;
   private focusNow = 0;
+  /** 바라보는 높이 올리기(m): 큰 보스 볼 때 */
+  lookUp = 0;
+  private lookUpNow = 0;
   private shakeAmp = 0;
   private shakeT = 0;
   private readonly cam: THREE.PerspectiveCamera;
@@ -49,7 +52,8 @@ export class FollowCamera {
       this.cam.position.y += Math.sin(this.shakeT * 47 + 1) * this.shakeAmp;
       this.shakeAmp *= Math.exp(-dt * 9);
     }
-    _look.set(target.x, target.y + 1, target.z);
+    this.lookUpNow += (this.lookUp - this.lookUpNow) * (1 - Math.exp(-dt * 5));
+    _look.set(target.x, target.y + 1 + this.lookUpNow, target.z);
     this.cam.lookAt(_look);
   }
 }
