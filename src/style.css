@@ -1,7 +1,7 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe3ff; touch-action: none; user-select: none; -webkit-user-select: none; }
 #app { position: fixed; inset: 0; }
 #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-#ui { position: absolute; inset: 0; pointer-events: none; font-family: 'Jua', system-ui, sans-serif; color: #2b3a67; }
+#ui { position: absolute; inset: 0; pointer-events: none; font-family: 'Do Hyeon', system-ui, sans-serif; color: #2b3a67; }
 .joy { position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; background: rgba(255,255,255,.28); border: 3px solid rgba(255,255,255,.7); display: none; pointer-events: none; }
 .joy.on { display: block; }
 .joy-knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; border-radius: 50%; background: #fff; box-shadow: 0 3px 0 rgba(43,58,103,.25); transform: translate(-50%, -50%); }

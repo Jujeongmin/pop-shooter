@@ -153,17 +153,17 @@ export function gunName(world: number, model: 'pistol' | 'rifle' | 'shotgun' | '
   return t(`gun.w${Math.min(4, Math.max(1, world))}` as StrKey, { g: t(`gun.${model}` as StrKey) });
 }
 
-/** 언어별 글꼴 (Jua는 한글·영문만 있음 → 일본어·중국어는 둥근 글꼴 따로) */
+/** 언어별 글꼴 (Do Hyeon은 한글·영문만 있음 (Jua는 'ㅋ' 등이 깨져 보여 바꿈, 사용자 2026-11-11) → 일본어·중국어는 둥근 글꼴 따로) */
 const FONTS: Record<Lang, { family: string; css: string | null }> = {
-  en: { family: "'Jua'", css: null },
-  ko: { family: "'Jua'", css: null },
+  en: { family: "'Do Hyeon'", css: null },
+  ko: { family: "'Do Hyeon'", css: null },
   ja: { family: "'M PLUS Rounded 1c'", css: 'M+PLUS+Rounded+1c:wght@800' },
   'zh-TW': { family: "'Noto Sans TC'", css: 'Noto+Sans+TC:wght@800' },
   'zh-CN': { family: "'ZCOOL KuaiLe'", css: 'ZCOOL+KuaiLe' },
 };
 
 /** 화면 글꼴 이름 (3D 라벨 캔버스도 같이 씀) */
-export const fontFamily = `${FONTS[lang].family}, 'Jua', system-ui, sans-serif`;
+export const fontFamily = `${FONTS[lang].family}, 'Do Hyeon', system-ui, sans-serif`;
 
 /** html lang·글꼴 적용. 일본어·중국어 글꼴을 다 받을 때까지 기다림 (3D 라벨이 기본 글꼴로 구워지지 않게, 최대 2.5초) */
 export async function applyLang(): Promise<void> {
@@ -171,7 +171,7 @@ export async function applyLang(): Promise<void> {
   document.documentElement.style.setProperty('--font', fontFamily);
   const f = FONTS[lang];
   if (!f.css) {
-    await waitFont("64px 'Jua'");
+    await waitFont("64px 'Do Hyeon'");
     return;
   }
   const link = document.createElement('link');

@@ -1,7 +1,7 @@
 :root {
   --ink: #2b3a67; --ink2: #5d6a92; --paper: #fffaf0; --blue: #7cc4ff; --yellow: #ffd34d; --orange: #ff8a5b; --pink: #ff9ec4;
   --line: rgba(43, 58, 103, .14);
-  --font: 'Jua', system-ui, 'Malgun Gothic', sans-serif;
+  --font: 'Do Hyeon', system-ui, 'Malgun Gothic', sans-serif;
 }
 /* display:flex 같은 규칙이 hidden 속성을 덮지 않게 */
 #ui [hidden] { display: none !important; }
@@ -108,7 +108,7 @@
 .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
 .lang-btn { font-size: 16px; padding: 10px 8px; }
 .lang-btn.on { background: var(--yellow); box-shadow: 0 3px 0 #e0a92a; }
-/* 언어 이름은 그 언어 글꼴로 (Jua에 없는 한자·가나) */
+/* 언어 이름은 그 언어 글꼴로 (Do Hyeon에 없는 한자·가나) */
 .lang-btn:lang(ja), .lang-btn:lang(zh-TW), .lang-btn:lang(zh-CN) { font-family: system-ui, sans-serif; font-weight: 700; }
 
 /* 시설 창 (아래 시트) */
