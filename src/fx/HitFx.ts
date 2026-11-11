@@ -36,7 +36,8 @@ export class HitFx {
   private nextHit = 0;
   private readonly root = new THREE.Group();
 
-  constructor(scene: THREE.Scene) {
+  /** parent: 붙일 곳 (장면, 또는 광장 root — 광장과 함께 숨김) */
+  constructor(scene: THREE.Object3D) {
     this.flash.visible = false;
     this.root.add(this.flash);
     for (let i = 0; i < POOL; i++) {

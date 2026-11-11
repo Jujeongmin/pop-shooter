@@ -9,6 +9,7 @@ import { HitFx } from './fx/HitFx';
 import { pickSave } from './save/localSave';
 import { CloudSave } from './platform/CloudSave';
 import { NetClient } from './net/NetClient';
+import { startLobby } from './net/lobby';
 import { TrainingRange } from './training/TrainingRange';
 import { FloatText } from './ui/FloatText';
 import { BattleScene } from './battle/BattleScene';
@@ -74,6 +75,9 @@ async function boot(): Promise<void> {
   // 고른 저장을 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기).
   // 오프라인 보상 창이 떠 있으면 [받기] 때 저장 (먼저 저장하면 lastSeen이 갱신돼 받기 전에 페이지를 닫으면 보상이 사라짐)
   if (!showOfflineReward(game, ui, save.now)) game.saver.saveNow();
+  // 광장 멀티 (서버에 연결됐을 때만, 실패해도 혼자 게임은 그대로)
+  const lobby = startLobby(game, net, cloud, training);
+  if (import.meta.env.DEV) Object.assign(window, { __hub: lobby });
   if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud, __net: net, __audio: audio });
 }
 

@@ -22,6 +22,9 @@ export class CloudSave {
   private writing: Promise<unknown> | null = null;
   private pending: Record<string, unknown> | null = null;
 
+  /** 서버 저장 성공 알림 (광장: 서버가 저장값으로 환생·공격력 상한을 쓰므로 저장 뒤 보이는 정보를 다시 보냄) */
+  readonly onSaved = new Set<(save: Record<string, unknown>) => void>();
+
   /** 광장과 함께 쓰는 연결 */
   readonly net: NetClient;
 
@@ -59,7 +62,12 @@ export class CloudSave {
       while (this.pending) {
         const s = this.pending;
         this.pending = null;
-        try { await this.net.call('saveWrite', [s], CALL_TIMEOUT_MS); } catch { /* 다음 저장 때 다시 */ }
+        let ok = false;
+        try {
+          const r = await this.net.call<{ ok?: boolean } | null>('saveWrite', [s], CALL_TIMEOUT_MS);
+          ok = !!r && r.ok !== false;
+        } catch { /* 다음 저장 때 다시 */ }
+        if (ok) for (const fn of this.onSaved) { try { fn(s); } catch { /* 알림 실패는 저장과 무관 */ } }
       }
       this.writing = null;
     };

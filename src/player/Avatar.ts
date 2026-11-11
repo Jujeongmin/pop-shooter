@@ -101,6 +101,11 @@ export class Avatar {
     this.avatar.update(f);
   }
 
+  /** 머리 꼭대기 높이 (월드 y, 마지막 update 기준) — 이름표 자리 */
+  headTop(): number {
+    return this.avatar.headCenter.y + this.avatar.headRadius;
+  }
+
   getMuzzle(out: THREE.Vector3): void {
     this.avatar.getMuzzle(out);
   }
