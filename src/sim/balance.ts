@@ -1,14 +1,15 @@
 /**
  * 밸런스 상수 한곳. 스펙 4.3~4.6의 초기값에서 출발해 tools/sim/simulate.ts 결과로 조정한다.
  * 테스트는 이 값을 읽으므로 숫자를 바꿔도 깨지지 않는다.
+ * 보스 체력은 공식이 아니라 표(stageTable.ts) — `npm run sim -- --fit`이 목표 시간(TARGET_MIN)에 맞춰 만든다.
  */
 export const BALANCE = {
   atk: { baseCost: 10, costGrowth: 1.12, doubleEvery: 25 },
   spd: { baseCost: 25, costGrowth: 1.25, step: 0.25, cap: 12 },
   tap: { maxPerSec: 8 },
-  gun: { count: 16, perWorld: 4, dmgStep: 2.5, basePrice: 100, priceStep: 6 },
+  gun: { count: 16, perWorld: 4, dmgStep: 2.5, priceMult: 8 },
   stage: {
-    perWorld: 10, worlds: 4, baseHp: 60, hpGrowth: 1.6, bossMult: 3,
+    perWorld: 10, worlds: 4,
     timeNormal: 20, timeBoss: 30, firstClearCoinMult: 2, replayCoinMult: 0.3,
   },
   rebirth: { unlockStage: 10, tokenOffset: 5, tokenDiv: 2, multPerToken: 0.5 },
@@ -19,3 +20,7 @@ export const BALANCE = {
 } as const;
 
 export const STAGE_COUNT = BALANCE.stage.perWorld * BALANCE.stage.worlds;
+
+/** 스테이지 첫 클리어 목표 누적 시간(분). 월드 끝 = 60 / 180 / 360 / 630분 (스펙 4.7). 탭 3회/초, 광고·VX 없는 플레이 기준 */
+export const WORLD_END_MIN = [60, 180, 360, 630] as const;
+export const FIRST_STAGE_MIN = 1.5;

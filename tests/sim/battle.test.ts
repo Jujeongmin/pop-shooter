@@ -25,8 +25,11 @@ test('auto shots follow shots per sec', () => {
 });
 
 test('tap adds a shot and can finish', () => {
-  const b = startBattle(newState(0), 1);
-  for (let i = 0; i < 60; i++) tapBattle(b);
+  const b = startBattle({ ...newState(0), atkLv: 60 }, 1);
+  const need = Math.ceil(b.maxHp / b.dmg);
+  for (let i = 0; i < need - 1; i++) tapBattle(b);
+  assert.equal(b.done, null);
+  tapBattle(b);
   assert.equal(b.done, 'win');
   tapBattle(b);
   assert.equal(b.hp, 0);

@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BALANCE } from '../../src/sim/balance.ts';
 import { atkCost, atkValue, bulkCost, maxAffordable, spdMaxLevel, spdValue, rebirthMult } from '../../src/sim/stats.ts';
-import { GUNS, gunMult, gunPrice } from '../../src/sim/guns.ts';
+import { GUNS, gunMult, gunPrice, gunRefStage } from '../../src/sim/guns.ts';
+import { stageHp } from '../../src/sim/stages.ts';
 
 test('atk doubles every doubleEvery levels', () => {
   const d = BALANCE.atk.doubleEvery;
@@ -44,7 +45,8 @@ test('rebirthMult', () => {
 test('guns', () => {
   assert.equal(GUNS.length, 16);
   assert.equal(gunPrice(0), 0);
-  assert.equal(gunPrice(1), BALANCE.gun.basePrice);
+  assert.deepEqual([1, 2, 3, 4, 5, 8, 15].map(gunRefStage), [2, 4, 6, 10, 12, 20, 36]);
+  assert.equal(gunPrice(5), stageHp(12) * BALANCE.gun.priceMult);
   assert.equal(GUNS[4]!.world, 2);
   assert.ok(gunMult(15) > gunMult(14));
   assert.equal(gunMult(0), 1);
