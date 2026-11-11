@@ -4,24 +4,29 @@
 
 /** 광장 인스턴스 정원 */
 export const HUB_MAX_PLAYERS = 8;
-/** 월드 수 (balance.ts stage.worlds). 지금 열린 광장은 월드 1이지만 룸 id에는 월드 번호를 둠 */
+/** 월드 수 (balance.ts stage.worlds). 룸 id에는 월드 번호를 둠 */
 export const HUB_WORLDS = 4;
+/** 지금 광장이 열린 월드 (서버가 이 밖의 월드 룸은 광장으로 치지 않음 → 장부 문서·룸이 마구 생기지 않게). 월드를 열 때 여기에 추가 */
+export const HUB_OPEN_WORLDS: readonly number[] = [1];
 
 export function hubRoomId(world: number, n: number): string {
   return `w${world}-${n}`;
 }
 
-export function isHubRoom(roomId: string | null | undefined): boolean {
-  return typeof roomId === 'string' && /^w[1-9]-\d{1,4}$/.test(roomId);
-}
-
-/** 광장 룸의 월드 번호 (광장 룸이 아니면 0) */
-export function hubWorldOf(roomId: string | null | undefined): number {
-  return isHubRoom(roomId) ? Number(roomId!.slice(1, roomId!.indexOf('-'))) : 0;
-}
-
 export function isHubWorld(v: unknown): v is number {
-  return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= HUB_WORLDS;
+  return typeof v === 'number' && Number.isInteger(v) && HUB_OPEN_WORLDS.includes(v);
+}
+
+/** 광장 룸의 월드 번호 (열린 월드의 광장 룸이 아니면 0) */
+export function hubWorldOf(roomId: string | null | undefined): number {
+  if (typeof roomId !== 'string') return 0;
+  const m = /^w(\d)-\d{1,4}$/.exec(roomId);
+  const w = m ? Number(m[1]) : 0;
+  return isHubWorld(w) ? w : 0;
+}
+
+export function isHubRoom(roomId: string | null | undefined): boolean {
+  return hubWorldOf(roomId) > 0;
 }
 
 export const HUB_TIMING = {
@@ -37,6 +42,11 @@ export const HUB_TIMING = {
   reserveMs: 20_000,
   /** 끊김 재접속 대기 (SDK 유예와 같은 30초) */
   graceMs: 30_000,
+  /**
+   * hubHello 뒤 이 시간 안에 온 onRoomLeave는 지난 세션의 늦은 알림으로 보고 장부를 지우지 않음
+   * (나감 → 바로 다시 배정·입장·hello 뒤에 앞 퇴장 알림이 늦게 와서 새 자리를 지우는 것 방지). 진짜 퇴장은 hubBye가 바로 지움
+   */
+  leaveRaceMs: 2000,
   /** 이동이 이 시간 넘게 계속 거절되면 다음 패킷은 위치를 다시 맞춤 (정상 이동이 영영 막히지 않게) */
   resyncMs: 3000,
 } as const;
@@ -95,7 +105,7 @@ export interface HubInfo {
   g: number;
   /** 환생 횟수 */
   r: number;
-  /** 공격력 (표시용, 유한한 수 ≥ 0) */
+  /** 공격력 (표시용, 유한한 수 ≥ 0) = sim/actions damagePerShot (HUD·업그레이드 창과 같은 '한 발 피해'). 서버는 저장값으로 계산한 값을 상한으로 씀 */
   pw: number;
   /** 상태 */
   s: HubStatus;
@@ -109,7 +119,7 @@ export interface HubUserState extends Partial<HubInfo> {
   p?: HubPacket;
   /** 서버가 패킷을 받은 시각 (ms) */
   t?: number;
-  /** 1 = 나감·끊김 (30초 유예 중에도 바로 숨김) */
+  /** 숨김: 0 = 보임, 1 = 끊김 (30초 유예 중에도 바로 숨김), 2 = 정상 퇴장 (hubBye). 다시 보이려면 hubHello (hubMove로는 안 바뀜) */
   x?: number;
 }
 

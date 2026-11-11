@@ -197,7 +197,13 @@ export class NetClient {
     // 다른 룸의 구독이 남아 있으면 먼저 해제 (같은 콜백이 두 번 걸리거나 새 구독이 풀리지 않게)
     for (const off of this.offs.splice(0)) off();
     this.roomEpoch++;
-    await s.joinRoom(roomId);
+    try {
+      await s.joinRoom(roomId);
+    } catch (e) {
+      // 실패하면 어느 룸에도 없는 것으로 (SDK는 이전 룸 연결을 이미 끊었음)
+      this.roomId = null;
+      throw e;
+    }
     this.roomId = roomId;
     this.roomEpoch++;
     this.addLog('info', `룸 입장 ${roomId}`);
@@ -214,6 +220,7 @@ export class NetClient {
     for (const off of this.offs.splice(0)) off();
     this.roomEpoch++;
     if (this.roomId && this.server) {
+      // SDK 2.0.1 leaveRoom()은 동기(void, 내부 disconnectRs) → 돌려받는 promise 없음, 던지는 것만 잡음
       try { this.server.leaveRoom(); } catch (e) { this.addLog('warn', `leaveRoom: ${errText(e)}`); }
       this.addLog('info', `룸 퇴장 ${this.roomId}`);
     }

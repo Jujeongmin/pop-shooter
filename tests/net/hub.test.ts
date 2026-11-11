@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HUB_AREA, HUB_CHARS, HUB_GUN_COUNT, HUB_MOVE, HUB_SNAPS, HUB_WORLDS, hubMoveOk, hubRoomId, hubWorldOf, isHubRoom, sanitizeHubField, sanitizeHubPacket, type HubPacket } from '../../src/net/shared/hub.ts';
+import { HUB_AREA, HUB_CHARS, HUB_GUN_COUNT, HUB_MOVE, HUB_SNAPS, HUB_WORLDS, HUB_OPEN_WORLDS, isHubWorld, hubMoveOk, hubRoomId, hubWorldOf, isHubRoom, sanitizeHubField, sanitizeHubPacket, type HubPacket } from '../../src/net/shared/hub.ts';
 import { HUB_BOUNDS, HUB_SPAWN, PORTAL_SPOT, WORLD1_FACILITIES } from '../../src/world/facilities.ts';
 import { CHAR_IDS } from '../../src/sim/state.ts';
 import { BALANCE } from '../../src/sim/balance.ts';
@@ -23,9 +23,12 @@ test('shared hub constants match the game config', () => {
 test('room ids carry the world number', () => {
   assert.equal(hubRoomId(1, 3), 'w1-3');
   assert.ok(isHubRoom('w1-1'));
-  assert.ok(isHubRoom('w4-9999'));
-  for (const bad of ['lb-1', 'w0-1', 'w1-', 'w1-12345', 'pb-abc', '__no_room__', null, undefined]) assert.ok(!isHubRoom(bad), String(bad));
-  assert.equal(hubWorldOf('w2-7'), 2);
+  assert.ok(isHubRoom('w1-9999'));
+  for (const bad of ['lb-1', 'w0-1', 'w2-1', 'w4-9999', 'w1-', 'w1-12345', 'pb-abc', '__no_room__', null, undefined]) assert.ok(!isHubRoom(bad), String(bad));
+  assert.equal(hubWorldOf('w1-7'), 1);
+  assert.equal(hubWorldOf('w2-7'), 0); // 닫힌 월드
+  assert.deepEqual(HUB_OPEN_WORLDS, [1]);
+  assert.ok(isHubWorld(1) && !isHubWorld(2) && !isHubWorld(0));
   assert.equal(hubWorldOf('lb-1'), 0);
 });
 

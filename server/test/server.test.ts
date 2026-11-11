@@ -3,6 +3,11 @@
  * 하네스는 실제 네트워크 없이 같은 isolated-vm 런타임에서 훅·함수를 부름 → 푸시·지연은 여기서 검증되지 않음.
  */
 import { checkNickname, safeDisplayNick } from '../../src/net/shared/nickFilter.ts';
+import { normalizeState } from '../../src/sim/normalize.ts';
+import { damagePerShot } from '../../src/sim/actions.ts';
+
+/** 환생 3번·공격력 레벨 40·총 5인 저장 (보이는 환생·공격력 상한 검사용) */
+const BIG_SAVE = { v: 1, rebirths: 3, tokens: 3, atkLv: 40, gun: 5, char: 'blue', chars: ['blue'] };
 
 const HUB = 'w1-1';
 const OUT = '__no_room__';
@@ -22,9 +27,23 @@ function hubPkt(q: number, x: number, z: number): number[] {
 
 const INFO = { c: 'blue', g: 0, r: 0, pw: 10, s: 'hub' };
 
-/** 광장에 들어와 hubHello까지 한 계정들 */
+/** 장부에 예약을 직접 적음 (hubFind가 다른 룸을 고를 상황에서 특정 룸으로 넣을 때) */
+async function reserve(roomId: string, account: string): Promise<void> {
+  const key = 'hub_book_' + roomId.split('-')[0];
+  const book = (await $global.getGlobalState([key]))[key] || {};
+  book[roomId] = book[roomId] || {};
+  book[roomId][account] = { ...book[roomId][account], r: Date.now() };
+  await $global.updateGlobalState({ [key]: book });
+}
+
+async function book(): Promise<any> {
+  return (await $global.getGlobalState(['hub_book_w1'])).hub_book_w1 || {};
+}
+
+/** 광장에 들어와 hubHello까지 한 계정들 (예약 → 입장 → hello) */
 async function fillHub(server: any, roomId: string, accounts: string[]): Promise<void> {
   for (const a of accounts) {
+    await reserve(roomId, a);
     await server.simulateJoin(roomId, a);
     server.connect({ account: a, roomId });
     expect((await server.hubHello(INFO)).ok).toBe(true);
@@ -77,9 +96,9 @@ describe('account save', () => {
 // ---------------- 광장 (w1-N 룸, 정원 8) ----------------
 
 describe('hub rooms (find / join / capacity)', () => {
-  test('hubFind: world checked, same room for the same account, 8 per room, 9th goes to w1-2, other world has its own rooms', async (server) => {
+  test('hubFind: only open worlds, same room for the same account, 8 per room, 9th goes to w1-2', async (server) => {
     server.connect({ account: 'x', roomId: OUT });
-    for (const w of [0, 5, 1.5, '1', null]) expect((await server.hubFind(w)).reason).toBe('bad_world');
+    for (const w of [0, 2, 4, 5, 7, 1.5, '1', null]) expect((await server.hubFind(w)).reason).toBe('bad_world');
     for (const a of ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7', 'h8']) {
       server.connect({ account: a, roomId: OUT });
       expect((await server.hubFind(1)).roomId).toBe('w1-1');
@@ -88,7 +107,8 @@ describe('hub rooms (find / join / capacity)', () => {
     expect((await server.hubFind(1)).roomId).toBe('w1-1');
     server.connect({ account: 'h9', roomId: OUT });
     expect((await server.hubFind(1)).roomId).toBe('w1-2');
-    expect((await server.hubFind(2)).roomId).toBe('w2-1');
+    // 월드 2~4는 아직 닫힘 (HUB_OPEN_WORLDS = [1])
+    expect((await server.hubFind(2)).reason).toBe('bad_world');
   });
 
   test('20 reservations in a row never put more than 8 seats in one room', async (server) => {
@@ -105,9 +125,16 @@ describe('hub rooms (find / join / capacity)', () => {
 
   test('hubHello rejects the 9th user in one room; a member saying hello again is not rejected', async (server) => {
     await fillHub(server, HUB, ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8']);
+    await reserve(HUB, 'a9');
     await server.simulateJoin(HUB, 'a9');
     server.connect({ account: 'a9', roomId: HUB });
     expect((await server.hubHello(INFO)).reason).toBe('full');
+    // 정원 초과로 거절된 사람은 hubMove·hubInfo로도 나타나지 못함
+    spin(80);
+    server.connect({ account: 'a9', roomId: HUB });
+    await server.hubMove(hubPkt(1, 0, 5));
+    expect((await server.hubInfo({ g: 3 })).reason).toBe('not_joined');
+    expect((await hubUser(server, 'a9'))?.c).toBe(undefined);
     server.connect({ account: 'a2', roomId: HUB });
     const again = await server.hubHello(INFO);
     expect(again.ok).toBe(true);
@@ -118,7 +145,15 @@ describe('hub rooms (find / join / capacity)', () => {
     await fillHub(server, HUB, ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8']);
     server.connect({ account: 'q3', roomId: HUB });
     expect((await server.hubBye()).ok).toBe(true);
-    expect((await hubUser(server, 'q3')).x).toBe(1);
+    expect((await hubUser(server, 'q3')).x).toBe(2);
+    // hubBye 뒤에 늦게 도착한 위치·정보(throttle 스트림)는 다시 보이게 하지 않음
+    spin(80);
+    server.connect({ account: 'q3', roomId: HUB });
+    await server.hubMove(hubPkt(1, 0, 5));
+    expect((await server.hubInfo({ g: 2 })).reason).toBe('not_joined');
+    const q3 = await hubUser(server, 'q3');
+    expect(q3.x).toBe(2);
+    expect(q3.p[3]).toBe(6);
     server.connect({ account: 'new1', roomId: OUT });
     expect((await server.hubFind(1)).roomId).toBe('w1-1');
     await server.simulateJoin(HUB, 'new1');
@@ -130,6 +165,7 @@ describe('hub rooms (find / join / capacity)', () => {
 
   test('onRoomLeave frees the seat; a reservation is not counted as a member', async (server) => {
     await fillHub(server, HUB, ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8']);
+    spin(2100); // hello 직후의 퇴장 알림은 지난 세션 것으로 보고 무시함 (leaveRaceMs)
     await server.simulateLeave(HUB, 'l5');
     server.connect({ account: 'l9', roomId: OUT });
     expect((await server.hubFind(1)).roomId).toBe('w1-1');
@@ -171,8 +207,41 @@ describe('hub rooms (find / join / capacity)', () => {
     expect(book['w1-3']).toBe(undefined);
   });
 
+  test('hubHello needs a seat in the ledger for this room (no joining arbitrary rooms)', async (server) => {
+    // hubFind 없이 아무 번호 룸에 들어옴 → 거절, 장부 그대로
+    for (const roomId of ['w1-9999', HUB]) {
+      await server.simulateJoin(roomId, 'sneak');
+      server.connect({ account: 'sneak', roomId });
+      expect((await server.hubHello(INFO)).reason).toBe('no_reservation');
+    }
+    expect((await book())['w1-9999']).toBe(undefined);
+    // 다른 룸 예약으로는 이 룸에 못 들어옴
+    server.connect({ account: 'sneak', roomId: OUT });
+    expect((await server.hubFind(1)).roomId).toBe('w1-1');
+    await server.simulateJoin('w1-2', 'sneak');
+    server.connect({ account: 'sneak', roomId: 'w1-2' });
+    expect((await server.hubHello(INFO)).reason).toBe('no_reservation');
+    // 배정받은 룸은 됨
+    server.connect({ account: 'sneak', roomId: HUB });
+    expect((await server.hubHello(INFO)).ok).toBe(true);
+  });
+
+  test('a late onRoomLeave right after a quick rejoin keeps the new seat; a later one frees it', async (server) => {
+    await fillHub(server, HUB, ['rj']);
+    // 나감 → 다시 배정 → 입장 → hello, 그 뒤 앞 세션의 퇴장 알림이 늦게 옴
+    server.connect({ account: 'rj', roomId: OUT });
+    expect((await server.hubFind(1)).roomId).toBe(HUB);
+    server.connect({ account: 'rj', roomId: HUB });
+    expect((await server.hubHello(INFO)).ok).toBe(true);
+    await server.onRoomLeave(HUB, 'rj');
+    expect((await book())[HUB].rj.a > 0).toBe(true);
+    spin(2100);
+    await server.onRoomLeave(HUB, 'rj');
+    expect((await book())[HUB]).toBe(undefined);
+  });
+
   test('hub functions are rejected outside a hub room', async (server) => {
-    for (const roomId of [OUT, 'pb-abc123', 'lb-1', 'w0-1']) {
+    for (const roomId of [OUT, 'pb-abc123', 'lb-1', 'w0-1', 'w2-1', 'w7-1', 'w1-12345']) {
       server.connect({ account: 'o', roomId });
       expect((await server.hubHello(INFO)).reason).toBe('not_in_hub');
       expect((await server.hubInfo({ g: 1 })).reason).toBe('not_in_hub');
@@ -184,6 +253,7 @@ describe('hub rooms (find / join / capacity)', () => {
 
 describe('hub info (hello / info validation)', () => {
   test('hubHello: values checked, defaults filled, nickname only from the server, spawn stored', async (server) => {
+    await reserve(HUB, 'alice');
     await server.simulateJoin(HUB, 'alice');
     server.connect({ account: 'alice', roomId: HUB });
     expect((await server.hubHello({})).reason).toBe('bad_c');
@@ -212,11 +282,13 @@ describe('hub info (hello / info validation)', () => {
   test('hubInfo: changes only given fields; any bad field changes nothing', async (server) => {
     await fillHub(server, HUB, ['bob']);
     server.connect({ account: 'bob', roomId: HUB });
-    expect((await server.hubInfo({ g: 15, r: 3, pw: 1.5e30, s: 'training' })).ok).toBe(true);
+    await server.saveWrite(BIG_SAVE);
+    const cap = damagePerShot(normalizeState(BIG_SAVE, Date.now()));
+    expect((await server.hubInfo({ g: 15, r: 3, pw: cap / 2, s: 'training' })).ok).toBe(true);
     let u = await hubUser(server, 'bob');
     expect(u.g).toBe(15);
     expect(u.r).toBe(3);
-    expect(u.pw).toBe(1.5e30);
+    expect(u.pw).toBe(cap / 2);
     expect(u.s).toBe('training');
     expect(u.c).toBe('blue');
     server.connect({ account: 'bob', roomId: HUB });
@@ -231,6 +303,45 @@ describe('hub info (hello / info validation)', () => {
     expect((await hubUser(server, 'bob')).s).toBe('battle');
     server.connect({ account: 'bob', roomId: HUB });
     expect((await server.hubInfo(null)).ok).toBe(true);
+  });
+
+  test('visible rebirths and power are capped by the saved progress (hello and info)', async (server) => {
+    await reserve(HUB, 'cap');
+    await server.simulateJoin(HUB, 'cap');
+    server.connect({ account: 'cap', roomId: HUB });
+    // 저장 없음 → 새 판 기준 (환생 0, 기본 공격력)
+    const base = damagePerShot(normalizeState({}, Date.now()));
+    expect((await server.hubHello({ c: 'blue', r: 99, pw: 1e30 })).ok).toBe(true);
+    let u = await hubUser(server, 'cap');
+    expect(u.r).toBe(0);
+    expect(u.pw).toBe(base);
+    server.connect({ account: 'cap', roomId: HUB });
+    await server.saveWrite(BIG_SAVE);
+    const cap = damagePerShot(normalizeState(BIG_SAVE, Date.now()));
+    expect(cap > base).toBe(true);
+    expect((await server.hubInfo({ r: 1e6, pw: 1e300 })).ok).toBe(true);
+    u = await hubUser(server, 'cap');
+    expect(u.r).toBe(3);
+    expect(u.pw).toBe(cap);
+    // 저장보다 낮은 값은 그대로
+    server.connect({ account: 'cap', roomId: HUB });
+    await server.hubInfo({ r: 1, pw: 1 });
+    u = await hubUser(server, 'cap');
+    expect(u.r).toBe(1);
+    expect(u.pw).toBe(1);
+  });
+
+  test('hello again keeps the last accepted position (no jump back to spawn)', async (server) => {
+    await fillHub(server, HUB, ['pos']);
+    spin(80);
+    server.connect({ account: 'pos', roomId: HUB });
+    await server.hubMove(hubPkt(1, 1, 5));
+    server.connect({ account: 'pos', roomId: HUB });
+    expect((await server.hubHello({ c: 'red' })).ok).toBe(true);
+    const u = await hubUser(server, 'pos');
+    expect(u.p[2]).toBe(1);
+    expect(u.p[3]).toBe(5);
+    expect(u.c).toBe('red');
   });
 });
 
@@ -320,17 +431,33 @@ describe('hub move validation', () => {
     expect((await hubUser(server, 'sn')).p[3]).toBe(6);
   });
 
-  test('moving after a disconnect shows the user again; moves outside a hub room are ignored', async (server) => {
+  test('after a disconnect only a new hubHello shows the user again (moves do not); seat stays counted; moves outside a hub room are ignored', async (server) => {
     await fillHub(server, HUB, ['erin']);
     await server.simulateDisconnect(HUB, 'erin');
     expect((await hubUser(server, 'erin')).x).toBe(1);
+    expect((await book())[HUB].erin.d > 0).toBe(true);
     spin(80);
     server.connect({ account: 'erin', roomId: HUB });
     await server.hubMove(hubPkt(1, 0, 5.5));
+    let u = await hubUser(server, 'erin');
+    expect(u.x).toBe(1);
+    expect(u.p[3]).toBe(6);
+    // 재접속 뒤 hello (장부의 재접속 대기 자리 d로 들어옴) → 다시 보임, 장부는 접속(a)으로
+    server.connect({ account: 'erin', roomId: HUB });
+    const h = await server.hubHello(INFO);
+    expect(h.ok).toBe(true);
+    expect(h.count).toBe(1);
     expect((await hubUser(server, 'erin')).x).toBe(0);
-    server.connect({ account: 'erin', roomId: OUT });
-    await server.hubMove(hubPkt(2, 0, 5));
+    const e = (await book())[HUB].erin;
+    expect(e.a > 0 && e.d === undefined).toBe(true);
+    spin(80);
+    server.connect({ account: 'erin', roomId: HUB });
+    await server.hubMove(hubPkt(2, 0, 5.5));
     expect((await hubUser(server, 'erin')).p[3]).toBe(5.5);
+    server.connect({ account: 'erin', roomId: OUT });
+    await server.hubMove(hubPkt(3, 0, 5));
+    u = await hubUser(server, 'erin');
+    expect(u.p[3]).toBe(5.5);
   });
 });
 
@@ -368,6 +495,25 @@ describe('nickname storage (server final check)', () => {
     server.connect({ account: 'bob', roomId: OUT });
     spin(10_100);
     expect((await server.nickSet('bubu')).ok).toBe(true);
+  });
+
+  test('one account never owns more than one ps_nick row (first set, refused changes, renames)', async (server) => {
+    // 하네스의 $lock은 동시 대기를 못 해 실서버가 계정 락(nickacc)으로 줄 세운 결과와 같은 순차 호출로 불변식을 검사
+    const owned = async (acc: string) => (await $global.getCollectionItems('ps_nick', { filters: [{ field: 'acc', operator: '==', value: acc }] })).map((it: any) => it.key);
+    server.connect({ account: 'sq', roomId: OUT });
+    expect((await server.nickSet('Alpha')).ok).toBe(true);
+    expect((await server.nickSet('Beta')).reason).toBe('rate');
+    expect((await server.nickSet('Gamma')).reason).toBe('rate');
+    expect(await owned('sq')).toEqual(['alpha']);
+    spin(10_100);
+    expect((await server.nickSet('Delta')).ok).toBe(true);
+    expect(await owned('sq')).toEqual(['delta']);
+    // nickGet 등록부 고치기도 계정 락 안: 지금 이름만 등록, 줄이 늘지 않음
+    expect((await server.nickGet()).nick).toBe('Delta');
+    expect(await owned('sq')).toEqual(['delta']);
+    // 다른 계정은 풀린 이름을 쓸 수 있음
+    server.connect({ account: 'sq2', roomId: OUT });
+    expect((await server.nickSet('alpha')).ok).toBe(true);
   });
 
   test('rate limit (first set free, change within 10 s refused, same name fine)', async (server) => {

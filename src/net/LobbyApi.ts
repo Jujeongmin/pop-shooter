@@ -4,9 +4,11 @@ import type { NetClient } from './NetClient';
 import { HUB_TIMING, type HubInfo, type HubPacket, type HubUserState } from './shared/hub.ts';
 import type { NickFailReason } from './shared/nickFilter.ts';
 
+/** bad_world = 열리지 않은 월드 (HUB_OPEN_WORLDS) */
 export type HubFindResult = { ok: true; roomId: string; max: number } | { ok: false; reason: 'bad_world' };
-/** reason: not_in_hub · full · bad_c · bad_g · bad_r · bad_pw · bad_s */
+/** reason: not_in_hub · no_reservation(hubFind 없이 들어옴) · full · bad_c · bad_g · bad_r · bad_pw · bad_s. 재접속 뒤에는 hello를 다시 보내야 다시 보임 */
 export interface HubHelloResult { ok: boolean; reason?: string; max: number; count: number }
+/** reason: not_in_hub · not_joined(hello 전·끊김·hubBye 뒤) · bad_<칸>. 환생·공격력은 서버가 저장값으로 상한 */
 export interface HubInfoResult { ok: boolean; reason?: string }
 export type HubUser = HubUserState & { account: string };
 export interface NickGetResult { ok: true; nick: string | null; mustChange?: boolean }
