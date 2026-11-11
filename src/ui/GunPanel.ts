@@ -109,7 +109,7 @@ export class GunPanel {
           right.append(icon('lock'), el('span', '', t('shop.locked', { w: g.world - 1 })));
         } else if (g.index === s.gun + 1) {
           const price = gunPrice(g.index);
-          const b = button('', () => this.buy(row), 'btn buy');
+          const b = button('', () => this.buy(), 'btn buy');
           const c = el('span', 'cost');
           c.append(icon('coin'), el('span', '', formatNum(price)));
           b.append(c);
@@ -129,14 +129,16 @@ export class GunPanel {
     else body.scrollTop = scroll;
   }
 
-  private buy(row: HTMLElement): void {
+  private buy(): void {
     const g = this.game;
     const next = buyNextGun(g.state);
     if (!next) return;
     g.setState(next, true);
     audio.play('gunBuy');
     g.avatar.setGun(GUNS[next.gun]!);
-    bump(row);
+    // setState가 창을 다시 그려서 누른 줄은 떨어져 나감 → 새로 그린 장착 줄을 튕김
+    const row = this.panel.body.querySelector<HTMLElement>('.gun-row.equipped');
+    if (row) bump(row);
     this.callout.flash('rgba(255, 211, 77, 0.9)');
     g.cam.shake(0.05);
     g.avatar.getMuzzle(_at);

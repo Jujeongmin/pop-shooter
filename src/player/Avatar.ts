@@ -31,19 +31,17 @@ export class Avatar {
   readonly root: THREE.Object3D;
   private readonly avatar: PlayerAvatar;
   private readonly assets: Assets;
-  private gunObj: THREE.Object3D | null = null;
-  /** 이 아바타가 복제한 총 material (dispose 대상). 총 geometry·texture는 GLB 원본과 공유 */
-  private gunMats: THREE.Material[] = [];
+  /** 손에 든 총 (복제본). 재질 복제·해제는 PlayerAvatar가 함 (prepareWeapon·releaseWeapon). 총 geometry·texture는 GLB 원본과 공유 */
+  private gunObj: THREE.Object3D;
   private readonly frame: AvatarFrame;
   private airTime = 0;
 
   constructor(assets: Assets, char: CharId, gun: GunDef) {
     this.assets = assets;
     const src = assets.characters[char];
-    const first = this.makeGun(gun);
-    this.avatar = new PlayerAvatar(SkeletonUtils.clone(src.scene), src.clips, first.obj, WEAPONS[gun.model]!.mount, char);
-    this.gunObj = first.obj;
-    this.gunMats = first.mats;
+    this.gunObj = this.assets.guns[gun.model].clone(true);
+    this.avatar = new PlayerAvatar(SkeletonUtils.clone(src.scene), src.clips, this.gunObj, WEAPONS[gun.model]!.mount, char);
+    this.tintGun(gun);
     this.root = this.avatar.root;
     this.frame = {
       dt: 0, feet: new THREE.Vector3(), bodyYaw: 0, aimDir: new THREE.Vector3(0, 0, 1), pitch: 0,
@@ -53,28 +51,22 @@ export class Avatar {
     };
   }
 
-  private makeGun(gun: GunDef): { obj: THREE.Object3D; mats: THREE.Material[] } {
-    const obj = this.assets.guns[gun.model].clone(true);
+  /** 총 색: PlayerAvatar가 이미 복제한 재질(rifleMeshes)에 바로 칠함 (여기서 또 복제하지 않음) */
+  private tintGun(gun: GunDef): void {
     const tint = new THREE.Color(gun.tint);
-    const mats: THREE.Material[] = [];
-    obj.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      const m = (mesh.material as THREE.MeshStandardMaterial).clone();
+    for (const mesh of this.avatar.rifleMeshes) {
+      const m = mesh.material as THREE.MeshStandardMaterial;
       if (m.color) m.color.multiply(tint);
-      mesh.material = m;
-      mats.push(m);
-    });
-    return { obj, mats };
+    }
   }
 
   setGun(gun: GunDef): void {
-    const next = this.makeGun(gun);
-    this.avatar.setWeapon(next.obj, WEAPONS[gun.model]!.mount);
-    for (const m of this.gunMats) m.dispose();
-    this.gunObj?.removeFromParent();
-    this.gunObj = next.obj;
-    this.gunMats = next.mats;
+    const prev = this.gunObj;
+    this.gunObj = this.assets.guns[gun.model].clone(true);
+    this.avatar.setWeapon(this.gunObj, WEAPONS[gun.model]!.mount);
+    this.tintGun(gun);
+    // 예전 총은 다시 들지 않음 (다음 교체도 새 복제본) → 재질 해제
+    this.avatar.releaseWeapon(prev);
   }
 
   update(dt: number, p: AvatarPose): void {
@@ -114,8 +106,7 @@ export class Avatar {
   }
 
   dispose(): void {
+    // 총 재질도 PlayerAvatar.materials에 있어 같이 해제됨
     this.avatar.dispose();
-    for (const m of this.gunMats) m.dispose();
-    this.gunMats = [];
   }
 }

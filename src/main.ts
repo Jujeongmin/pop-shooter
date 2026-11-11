@@ -1,3 +1,5 @@
+// 맨 먼저: localStorage가 막힌 iframe에서도 SDK·저장 코드가 죽지 않게 메모리 저장소로 대신함 (지우지 말 것)
+import './storageFallback';
 import './style.css';
 import './ui/ui.css';
 import { loadAssets } from './assets/loadAssets';
@@ -41,9 +43,8 @@ async function boot(): Promise<void> {
   await fontReady;
   await cloudReady;
   const save = await pickSave(cloud);
-  const game = new Game(stage, assets, kit, save.state, ui, { account: save.account, cloud: cloud.online ? cloud : null });
-  // 고른 저장을 바로 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기)
-  game.saver.saveNow();
+  // 서버 저장을 실제로 읽었을 때만 서버에 씀 (읽기 실패한 채 쓰면 새 판·옛 사본으로 서버 저장을 덮음)
+  const game = new Game(stage, assets, kit, save.state, ui, { account: save.account, cloud: save.cloudOk ? cloud : null });
   const fx = new HitFx(stage.scene);
   const float = new FloatText(ui, stage.camera);
   const callout = new ZoneCallout(ui);
@@ -51,11 +52,12 @@ async function boot(): Promise<void> {
   const portal = new PortalZone(game, callout);
   const battle = new BattleScene(game, fx, float, new BattleHud(ui), new ResultCard(ui), callout);
   // 포털 착지 → 잠깐 보여 주고 전투로 (그 사이 걸어 나가면 취소)
+  // 착지 뒤에도 이동 잠금(LAND_LOCK 0.35초) + 입력 한 번 놓기가 있어 700ms면 걸어 나갈 틈이 없음 → 1.2초
   portal.onEnterRun = () => window.setTimeout(() => {
     if (!portal.inside || battle.active) return;
     portal.release();
     battle.start(1);
-  }, 700);
+  }, 1200);
   new UpgradePanel(game, ui, callout, float);
   new GunPanel(game, ui, callout, float);
   new RebirthPanel(game, ui, callout, float);
@@ -65,7 +67,9 @@ async function boot(): Promise<void> {
   new Tutorial(game, ui);
   stage.start();
   loading.done();
-  showOfflineReward(game, ui, save.now);
+  // 고른 저장을 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기).
+  // 오프라인 보상 창이 떠 있으면 [받기] 때 저장 (먼저 저장하면 lastSeen이 갱신돼 받기 전에 페이지를 닫으면 보상이 사라짐)
+  if (!showOfflineReward(game, ui, save.now)) game.saver.saveNow();
   if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud, __audio: audio });
 }
 

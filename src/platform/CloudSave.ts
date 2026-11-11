@@ -1,6 +1,7 @@
 // 계정 저장: Verse8 Agent8 SDK 래퍼 (서버 함수 saveLoad·saveWrite). 게임 객체는 모름.
 // SDK index는 React 훅까지 끌어오므로 클래스 파일만 import (pop-battle과 같은 방식).
-import { GameServer } from '@agent8/gameserver/dist/src/server/GameServer.js';
+// SDK는 connect 안에서 동적 import: 모듈 초기화가 던져도(localStorage 막힘 등) 게임 부팅은 계속 (기기 저장으로)
+import type { GameServer } from '@agent8/gameserver/dist/src/server/GameServer.js';
 
 const CONNECT_TIMEOUT_MS = 5000;
 const CALL_TIMEOUT_MS = 6000;
@@ -39,17 +40,21 @@ export class CloudSave {
   async connect(): Promise<boolean> {
     const verse = targetVerse();
     if (!verse) return false;
+    let s: GameServer | null = null;
     try {
-      const s = new GameServer({ verse });
+      const { GameServer: Server } = await import('@agent8/gameserver/dist/src/server/GameServer.js');
+      s = new Server({ verse });
       const ok = await withTimeout(s.connect(), CONNECT_TIMEOUT_MS);
-      if (!ok) return false;
-      this.server = s;
-      this.account = s.account || null;
-      this.online = !!this.account;
-      return this.online;
-    } catch {
-      return false;
-    }
+      if (ok && s.account) {
+        this.server = s;
+        this.account = s.account;
+        this.online = true;
+        return true;
+      }
+    } catch { /* 아래에서 정리 */ }
+    // 버린 연결은 끊음 (시간 초과 뒤 늦게 붙어 소켓이 남지 않게)
+    try { s?.disconnect().catch(() => { /* 이미 끊김 */ }); } catch { /* 이미 끊김 */ }
+    return false;
   }
 
   async load(): Promise<CloudLoad | null> {

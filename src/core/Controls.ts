@@ -28,6 +28,8 @@ export class Controls {
     window.addEventListener('pointermove', this.onMove);
     window.addEventListener('pointerup', this.onUp);
     window.addEventListener('pointercancel', this.onUp);
+    // iframe 밖에서 마우스를 떼면 pointerup이 안 옴 → 캡처를 잃으면 조이스틱 끝
+    target.addEventListener('lostpointercapture', this.onLost);
     target.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
@@ -36,12 +38,21 @@ export class Controls {
     if (e.type === 'keydown') { this.keys.add(e.code); this.touchMode = false; } else this.keys.delete(e.code);
   };
 
-  private readonly onBlur = (): void => this.keys.clear();
+  private readonly onBlur = (): void => {
+    this.keys.clear();
+    if (this.joy.active) this.joy.end();
+  };
+
+  private readonly onLost = (e: PointerEvent): void => {
+    if (this.joy.owns(e.pointerId)) this.joy.end();
+  };
 
   private readonly onDown = (e: PointerEvent): void => {
     this.touchMode = e.pointerType === 'touch';
     if (this.joystickEnabled && !this.joy.active) {
       this.joy.begin(e);
+      // 캡처: 창 밖으로 끌어도 move/up을 받고, 놓치면 lostpointercapture로 끝냄
+      try { this.target.setPointerCapture?.(e.pointerId); } catch { /* 캡처 못 해도 조이스틱은 동작 */ }
       return;
     }
     this.downs.set(e.pointerId, { x: e.clientX, y: e.clientY, dragging: false });
@@ -98,6 +109,7 @@ export class Controls {
     window.removeEventListener('pointermove', this.onMove);
     window.removeEventListener('pointerup', this.onUp);
     window.removeEventListener('pointercancel', this.onUp);
+    this.target.removeEventListener('lostpointercapture', this.onLost);
     this.joy.el.remove();
   }
 }

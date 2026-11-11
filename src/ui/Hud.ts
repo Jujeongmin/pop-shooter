@@ -54,7 +54,12 @@ export class Hud {
     parent.appendChild(this.root);
   }
 
+  /** 지난 프레임에 그린 상태 (같은 객체면 건너뜀: 상태는 바뀔 때마다 새 객체) */
+  private last: GameState | null = null;
+
   update(s: GameState): void {
+    if (s === this.last) return;
+    this.last = s;
     setText(this.coins, formatNum(s.coins));
     setText(this.gems, formatNum(s.gems));
     setText(this.mult, `×${formatMult(rebirthMult(s.tokens) * s.passMult)}`);

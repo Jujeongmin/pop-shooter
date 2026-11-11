@@ -251,6 +251,8 @@ export class BattleScene {
       this.hud.setMyHp(0);
       g.pose.dead = true;
       g.pose.aimAt = null;
+      // 날아가던 장난감이 공중에 멈춰 있지 않게 치움
+      for (const toy of this.toys) { toy.t = FLIGHT; toy.mesh.visible = false; }
       this.callout.show({ title: t('battle.timeUp'), big: t('battle.failed', { s: stageLabel(run.stage) }) });
       return;
     }

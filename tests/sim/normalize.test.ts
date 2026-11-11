@@ -19,7 +19,12 @@ test('loadSave corrupt', () => {
 
 test('normalize keeps valid save', () => {
   const s = { ...newState(100), coins: 1234.5, gems: 9, atkLv: 30, spdLv: 4, gun: 2, bestStage: 7, runBest: 7, chars: ['blue', 'red'], char: 'red', passMult: 4, tutorial: 99 };
-  assert.deepEqual(normalizeState(JSON.parse(JSON.stringify(s)), 5), s);
+  assert.deepEqual(normalizeState(JSON.parse(JSON.stringify(s)), 100), s);
+});
+
+test('normalize clamps future lastSeen to now', () => {
+  assert.equal(normalizeState({ v: 1, lastSeen: 9_999_999 }, 1000).lastSeen, 1000);
+  assert.equal(normalizeState({ v: 1, lastSeen: 400 }, 1000).lastSeen, 400);
 });
 
 test('normalize fixes chars and pass', () => {

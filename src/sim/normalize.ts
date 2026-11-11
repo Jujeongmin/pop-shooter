@@ -39,7 +39,8 @@ export function normalizeState(raw: unknown, now: number): GameState {
     tokens: int(r.tokens, 0, 1e12),
     passMult: PASS_MULTS.includes(r.passMult as number) ? (r.passMult as number) : 1,
     boostUntil: num(r.boostUntil, 0),
-    lastSeen: num(r.lastSeen, base.lastSeen),
+    // 미래 시각(기기 시계가 틀린 저장)은 지금으로: 안 그러면 '더 새 사본'으로 계속 이기고 오프라인 보상도 안 쌓임
+    lastSeen: num(r.lastSeen, base.lastSeen, now),
     char,
     chars: charList,
     tutorial: int(r.tutorial, 0, 99),

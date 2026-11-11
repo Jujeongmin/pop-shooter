@@ -1,13 +1,12 @@
 import type { CloudSave } from '../platform/CloudSave';
 import { normalizeState } from '../sim/normalize.ts';
 import { newState, type GameState } from '../sim/state.ts';
+import { chooseSave } from './chooseSave.ts';
 
 /** 기기 사본: 계정마다 따로 (계정 모를 때 = 손님 키). 원본은 서버 계정 저장 */
 const BASE = 'popshooter.save';
 const LAST_ACCOUNT = 'popshooter.lastAccount';
 const INTERVAL_MS = 30_000;
-/** 기기 사본이 서버보다 이만큼 이상 새것이면 (서버에 못 올린 진행) 사본을 씀 */
-const NEWER_MS = 5000;
 
 const keyFor = (account: string | null): string => (account ? `${BASE}.${account}` : BASE);
 
@@ -32,27 +31,32 @@ export function writeSave(s: GameState, account: string | null = null): void {
 
 /**
  * 시작할 때 쓸 저장 고르기.
- * - 서버 연결됨: 서버 저장이 원본. 단 기기 사본이 더 새것(오프라인 때 한 진행)이면 사본. 서버에 저장이 없는 첫 접속이면 손님 사본을 가져옴.
+ * - 서버 연결됨: chooseSave (서버 저장이 원본, 더 새 기기 사본, 첫 접속이면 손님 사본 가져옴). 서버 읽기 실패면 cloudOk = false.
  * - 서버 안 됨: 마지막 계정의 기기 사본 → 손님 사본 → 새 판.
  * now = 오프라인 보상 기준 시각 (서버 연결되면 서버 시각).
+ * cloudOk = 서버 저장을 읽었음 → 이때만 서버에 써도 됨.
  */
-export async function pickSave(cloud: CloudSave): Promise<{ state: GameState; now: number; account: string | null }> {
+export async function pickSave(cloud: CloudSave): Promise<{ state: GameState; now: number; account: string | null; cloudOk: boolean }> {
   if (cloud.online && cloud.account) {
     const acc = cloud.account;
     try { localStorage.setItem(LAST_ACCOUNT, acc); } catch { /* 기억 못 해도 됨 */ }
     const r = await cloud.load();
     const now = r?.now ?? Date.now();
     const local = loadLocal(acc, now);
-    if (r?.save) {
-      const server = normalizeState(r.save, now);
-      return { state: local && local.lastSeen > server.lastSeen + NEWER_MS ? local : server, now, account: acc };
+    const c = chooseSave(r, local, r && !r.save && !local ? loadLocal(null, now) : null, now);
+    if (c.source === 'guest') {
+      // 손님 사본을 이 계정 사본으로 옮기고 손님 키는 지움 (같은 기기의 다른 계정이 또 가져가지 않게).
+      // lastSeen은 그대로 둠 (오프라인 보상 기준)
+      try {
+        localStorage.setItem(keyFor(acc), JSON.stringify(c.state));
+        localStorage.removeItem(keyFor(null));
+      } catch { /* 못 옮기면 손님 사본을 그대로 둠 */ }
     }
-    if (r) return { state: local ?? loadLocal(null, now) ?? newState(now), now, account: acc };
-    return { state: local ?? newState(now), now, account: acc };
+    return { state: c.state, now, account: acc, cloudOk: c.cloudOk };
   }
   const now = Date.now();
   const acc = read(LAST_ACCOUNT);
-  return { state: loadLocal(acc, now) ?? loadLocal(null, now) ?? newState(now), now, account: acc };
+  return { state: loadLocal(acc, now) ?? loadLocal(null, now) ?? newState(now), now, account: acc, cloudOk: false };
 }
 
 /** 30초마다 + 탭 숨김·페이지 떠날 때 저장 (기기 사본 + 서버) */
@@ -61,6 +65,8 @@ export class AutoSaver {
   private readonly get: () => GameState;
   private readonly account: string | null;
   private readonly cloud: CloudSave | null;
+  /** true면 저장 안 함 (오프라인 보상 창이 떠 있는 동안: lastSeen이 갱신되면 받기 전에 닫을 때 보상이 사라짐) */
+  hold = false;
   private readonly onHide = (): void => { if (document.visibilityState === 'hidden') this.saveNow(); };
   private readonly onPageHide = (): void => this.saveNow();
 
@@ -77,6 +83,7 @@ export class AutoSaver {
   }
 
   saveNow(): void {
+    if (this.hold) return;
     const s = this.get();
     writeSave(s, this.account);
     this.cloud?.write(s as unknown as Record<string, unknown>);

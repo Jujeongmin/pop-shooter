@@ -333,6 +333,21 @@ export class PlayerAvatar {
     this.applyMount();
   }
 
+  /** 다시 들 일 없는 무기 모델 놓기: 복제한 재질 해제 + 캐시에서 지움 (총 교체마다 재질이 쌓이지 않게). 지오메트리는 GLB 원본과 공유라 둠 */
+  releaseWeapon(model: THREE.Object3D): void {
+    if (model === this.rifle) return;
+    const meshes = this.weaponMeshes.get(model);
+    if (!meshes) return;
+    for (const mesh of meshes) {
+      const mat = mesh.material as THREE.Material;
+      const i = this.materials.indexOf(mat);
+      if (i >= 0) this.materials.splice(i, 1);
+      mat.dispose();
+    }
+    this.weaponMeshes.delete(model);
+    model.removeFromParent();
+  }
+
   /** 디버그: 오른손·왼손 본(손목) 월드 위치 */
   getHandPositions(outRight: THREE.Vector3, outLeft: THREE.Vector3): void {
     this.bones.handR.getWorldPosition(outRight);
