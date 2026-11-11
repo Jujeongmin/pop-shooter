@@ -11,6 +11,8 @@ const W = 1024;
 const H = 720;
 /** 판 크기(m) */
 const BW = 5.2;
+/** 판 아래 높이(m): 따라가는 카메라에서 판 전체가 보이게 낮게 */
+const BASE_Y = 0.8;
 const BH = BW * (H / W);
 const REFRESH_MS = 30_000;
 const INK = '#2b3a67';
@@ -46,12 +48,12 @@ export class RankBoard {
     const planeMat = new THREE.MeshBasicMaterial({ map: this.tex });
     this.owned.push(this.tex, planeGeo, planeMat);
     const plane = new THREE.Mesh(planeGeo, planeMat);
-    plane.position.set(0, 1.6 + BH / 2, 0.08);
+    plane.position.set(0, BASE_Y + BH / 2, 0.08);
     this.root.add(plane);
     // 뒷판 + 장난감 블록 테두리 + 다리 두 개
     const back = new THREE.Mesh(new THREE.BoxGeometry(BW + 0.3, BH + 0.3, 0.14), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.6 }));
     this.owned.push(back.geometry, back.material as THREE.Material);
-    back.position.set(0, 1.6 + BH / 2, 0);
+    back.position.set(0, BASE_Y + BH / 2, 0);
     back.castShadow = true;
     this.root.add(back);
     const blockGeo = new THREE.BoxGeometry(0.5, 0.32, 0.3);
@@ -61,16 +63,16 @@ export class RankBoard {
     for (let i = 0; i < n; i++) {
       const bx = -BW / 2 - 0.05 + i * 0.52 + 0.25;
       const top = new THREE.Mesh(blockGeo, blockMats[i % BLOCKS.length]);
-      top.position.set(bx, 1.6 + BH + 0.28, 0.02);
+      top.position.set(bx, BASE_Y + BH + 0.28, 0.02);
       top.castShadow = true;
       this.root.add(top);
     }
-    const legGeo = new THREE.CylinderGeometry(0.12, 0.14, 1.75, 12);
+    const legGeo = new THREE.CylinderGeometry(0.12, 0.14, BASE_Y + 0.15, 12);
     const legMat = new THREE.MeshStandardMaterial({ color: '#c98a5a', roughness: 0.6 });
     this.owned.push(legGeo, legMat);
     for (const sx of [-1, 1]) {
       const leg = new THREE.Mesh(legGeo, legMat);
-      leg.position.set(sx * (BW / 2 - 0.4), 0.875, -0.05);
+      leg.position.set(sx * (BW / 2 - 0.4), (BASE_Y + 0.15) / 2, -0.05);
       leg.castShadow = true;
       this.root.add(leg);
     }
@@ -125,9 +127,9 @@ export class RankBoard {
     c.font = `56px ${fontFamily}`;
     c.fillText(t('rank.title', { w: 1 }), W / 2, 68);
     c.fillStyle = '#8a93b0';
-    c.font = `28px ${fontFamily}`;
+    c.font = `32px ${fontFamily}`;
     c.textAlign = 'right';
-    c.fillText(t('rank.cols'), W - 40, 140);
+    c.fillText(t('rank.cols'), W - 40, 142);
     const rows = b?.rows ?? [];
     if (!rows.length) {
       c.fillStyle = INK;
@@ -135,8 +137,8 @@ export class RankBoard {
       c.font = `46px ${fontFamily}`;
       c.fillText(t('rank.empty'), W / 2, H / 2);
     }
-    const top = 172;
-    const rowH = 46;
+    const top = 182;
+    const rowH = 50;
     rows.forEach((r, i) => {
       const y = top + i * rowH;
       if (r.me) {
@@ -157,10 +159,10 @@ export class RankBoard {
       c.font = `32px ${fontFamily}`;
       c.fillText(String(i + 1), 64, y + 1);
       c.textAlign = 'left';
-      c.font = `36px ${fontFamily}`;
+      c.font = `42px ${fontFamily}`;
       c.fillText(this.name(r), 104, y + 1, 470);
       c.textAlign = 'right';
-      c.font = `32px ${fontFamily}`;
+      c.font = `38px ${fontFamily}`;
       c.fillStyle = '#7c63e6';
       c.fillText(String(r.rb), 690, y + 1);
       c.fillStyle = INK;
@@ -171,7 +173,7 @@ export class RankBoard {
     // 아래: 내 순위
     c.fillStyle = INK;
     c.textAlign = 'center';
-    c.font = `36px ${fontFamily}`;
+    c.font = `42px ${fontFamily}`;
     const foot = b && b.myRank > 0 ? t('rank.mine', { n: b.myRank }) : b ? t('rank.none') : '';
     if (foot) c.fillText(foot, W / 2, H - 34);
     this.tex.needsUpdate = true;
