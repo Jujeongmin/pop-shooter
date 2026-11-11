@@ -2,29 +2,36 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BALANCE } from '../../src/sim/balance.ts';
 import { CHAR_IDS, newState, type CharId } from '../../src/sim/state.ts';
-import { canRebirth, charMult, damagePerShot, doRebirth, rebirthCost } from '../../src/sim/actions.ts';
+import { canRebirth, charMult, damagePerShot, doRebirth, rebirthReqLevel } from '../../src/sim/actions.ts';
+import { rebirthMult } from '../../src/sim/stats.ts';
 
-test('rebirth is bought with coins, any time', () => {
-  const s = { ...newState(0), coins: rebirthCost(newState(0)) - 1 };
-  assert.ok(!canRebirth(s));
-  assert.equal(doRebirth(s), null);
-  // 스테이지 조건 없음: 한 판도 안 깨도 코인만 있으면 됨
-  const rich = { ...newState(0), coins: rebirthCost(newState(0)) };
-  assert.ok(canRebirth(rich));
-  assert.equal(doRebirth(rich)!.tokens, 1);
+// 키보드 탈출 방식 (사용자 2026-11-11): 공격력 레벨이 기준에 닿으면 환생, 기준은 환생할수록 오름, 보상은 환생마다 정해진 배율
+
+test('rebirth unlocks at the required attack level (no coins, no stage needed)', () => {
+  const need = rebirthReqLevel(newState(0));
+  assert.ok(!canRebirth({ ...newState(0), atkLv: need - 1, coins: 1e30 }));
+  assert.equal(doRebirth({ ...newState(0), atkLv: need - 1 }), null);
+  assert.ok(canRebirth({ ...newState(0), atkLv: need }));
 });
 
-test('rebirth cost grows each rebirth', () => {
-  const a = rebirthCost({ ...newState(0), rebirths: 0 });
-  const b = rebirthCost({ ...newState(0), rebirths: 1 });
-  const c = rebirthCost({ ...newState(0), rebirths: 2 });
-  assert.equal(a, BALANCE.rebirth.costBase);
-  assert.ok(b > a && c > b);
-  assert.ok(Math.abs(b / a - BALANCE.rebirth.costGrowth) < 1e-9);
+test('required level rises with each rebirth', () => {
+  const lv = (n: number): number => rebirthReqLevel({ ...newState(0), rebirths: n });
+  assert.equal(lv(0), BALANCE.rebirth.reqBase);
+  assert.ok(lv(1) > lv(0) && lv(2) > lv(1));
 });
 
-test('doRebirth keeps', () => {
-  const s = { ...newState(0), bestStage: 15, runBest: 15, gems: 70, coins: 1e30, atkLv: 80, gun: 5, passMult: 8, chars: ['blue', 'yellow'] as CharId[] };
+test('each rebirth multiplies power by the same fixed factor', () => {
+  let s = { ...newState(0), atkLv: 9999 };
+  const mults: number[] = [rebirthMult(s.tokens)];
+  for (let i = 0; i < 3; i++) {
+    s = { ...doRebirth(s)!, atkLv: 9999 };
+    mults.push(rebirthMult(s.tokens));
+  }
+  for (let i = 1; i < mults.length; i++) assert.ok(Math.abs(mults[i]! / mults[i - 1]! - BALANCE.rebirth.multGrowth) < 1e-9);
+});
+
+test('doRebirth resets and keeps', () => {
+  const s = { ...newState(0), bestStage: 15, runBest: 15, gems: 70, coins: 5e6, atkLv: 500, gun: 5, passMult: 8, chars: ['blue', 'yellow'] as CharId[] };
   const r = doRebirth(s)!;
   assert.equal(r.bestStage, 15);
   assert.equal(r.gems, 70 + BALANCE.gems.perRebirth);
@@ -34,7 +41,7 @@ test('doRebirth keeps', () => {
   assert.equal(r.atkLv, 0);
   assert.equal(r.gun, 0);
   assert.equal(r.runBest, 0);
-  assert.equal(r.tokens, 5);
+  assert.equal(r.tokens, 1);
   assert.equal(r.rebirths, 1);
   assert.ok(damagePerShot(r) > damagePerShot({ ...newState(0), passMult: 8 }));
 });

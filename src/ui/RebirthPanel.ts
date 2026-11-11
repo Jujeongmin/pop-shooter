@@ -3,9 +3,9 @@ import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
-import { canRebirth, doRebirth, rebirthCost, rebirthTokens } from '../sim/actions.ts';
+import { canRebirth, doRebirth, rebirthReqLevel } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
-import { formatMult, formatNum } from '../sim/format.ts';
+import { formatMult } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
 import { rebirthMult } from '../sim/stats.ts';
 import { WORLD1_FACILITIES } from '../world/facilities';
@@ -21,7 +21,8 @@ const _at = new THREE.Vector3();
 const mult = (tokens: number, pass: number): string => `×${formatMult(rebirthMult(tokens) * pass)}`;
 
 /**
- * 환생 제단: 구역에 들어가면 폴짝 + 아래 창. 배율 지금 → 다음, 받는 팝젬, 초기화·유지 목록, 환생 가격(코인, 할 때마다 오름).
+ * 환생 제단 (키보드 탈출 방식): 구역에 들어가면 폴짝 + 아래 창. 배율 지금 → 다음(환생마다 ×multGrowth), 받는 팝젬,
+ * 초기화·유지 목록, 조건 = 공격력 레벨 진행 막대(환생할수록 필요 레벨이 오름).
  * [환생하기] → 한 번 더 확인 → 화면 하얗게 + 캐릭터 폴짝 + 상태 적용·즉시 저장.
  */
 export class RebirthPanel {
@@ -59,8 +60,8 @@ export class RebirthPanel {
     const b = this.panel.body;
     b.replaceChildren();
     const can = canRebirth(s);
-    const cost = rebirthCost(s);
-    const next = s.tokens + rebirthTokens(s);
+    const need = rebirthReqLevel(s);
+    const next = s.tokens + 1;
     const card = el('div', 'reb-mult');
     card.append(icon('reb', 'big'), el('div', 'reb-mult-l', t('reb.mult')));
     const v = el('div', 'reb-mult-v');
@@ -75,11 +76,17 @@ export class RebirthPanel {
       return d;
     };
     lists.append(li(t('reb.reset'), t('reb.resetList'), 'reset'), li(t('reb.keep'), t('reb.keepList'), 'keep'));
+    // 조건: 공격력 레벨 진행 막대 (지금 / 필요), 위에 환생 횟수
     const price = el('div', 'reb-price');
     const pv = el('span', 'reb-price-v');
-    pv.append(icon('coin'), el('span', '', formatNum(cost)));
-    price.append(el('span', 'reb-price-l', t('reb.cost')), pv);
-    const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: formatNum(cost - s.coins) }));
+    pv.append(icon('bullet'), el('span', '', `Lv ${Math.min(s.atkLv, need)} / ${need}`));
+    price.append(el('span', 'reb-price-l', t('reb.need', { n: s.rebirths })), pv);
+    const bar = el('div', 'reb-bar');
+    const fill = el('div', 'reb-fill');
+    fill.style.transform = `scaleX(${Math.min(1, s.atkLv / need)})`;
+    bar.append(fill);
+    price.append(bar);
+    const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: need - s.atkLv }));
     b.append(card, gems, lists, price, tip);
     if (!this.confirming || !can) {
       const go = button(t('reb.go'), () => { this.confirming = true; this.render(); }, 'btn big reb-go');

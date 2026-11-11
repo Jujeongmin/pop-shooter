@@ -39,7 +39,7 @@ test('maxAffordable huge coins', () => {
 
 test('rebirthMult', () => {
   assert.equal(rebirthMult(0), 1);
-  assert.equal(rebirthMult(4), 1 + 4 * BALANCE.rebirth.multPerToken);
+  assert.equal(rebirthMult(4), BALANCE.rebirth.multGrowth ** 4);
 });
 
 test('guns', () => {

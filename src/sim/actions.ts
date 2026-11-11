@@ -102,27 +102,22 @@ export function clearStage(s: GameState, stage: number): ClearResult {
   return { state: next, coins, firstClear, unlockedChar };
 }
 
-/** 다음 환생 가격 (코인) */
-export function rebirthCost(s: GameState): number {
-  return BALANCE.rebirth.costBase * BALANCE.rebirth.costGrowth ** s.rebirths;
+/** 다음 환생에 필요한 공격력 레벨 (환생할수록 오름) */
+export function rebirthReqLevel(s: GameState): number {
+  return BALANCE.rebirth.reqBase + BALANCE.rebirth.reqStep * s.rebirths;
 }
 
 export function canRebirth(s: GameState): boolean {
-  return s.coins >= rebirthCost(s);
+  return s.atkLv >= rebirthReqLevel(s);
 }
 
-export function rebirthTokens(s: GameState): number {
-  const r = BALANCE.rebirth;
-  return Math.max(1, Math.floor((s.runBest - r.tokenOffset) / r.tokenDiv));
-}
-
-/** 코인(가격 포함 전부)·스탯·총·이번 회차 기록 초기화. 유지: bestStage·팝젬·캐릭터·패스·부스트·튜토리얼 */
+/** 코인·스탯·총·이번 회차 기록 초기화, 토큰 +1 (배율 +multPerToken). 유지: bestStage·팝젬·캐릭터·패스·부스트·튜토리얼 */
 export function doRebirth(s: GameState): GameState | null {
   if (!canRebirth(s)) return null;
   return {
     ...s,
     coins: 0, atkLv: 0, spdLv: 0, gun: 0, runBest: 0,
-    tokens: s.tokens + rebirthTokens(s),
+    tokens: s.tokens + 1,
     rebirths: s.rebirths + 1,
     gems: s.gems + BALANCE.gems.perRebirth,
   };

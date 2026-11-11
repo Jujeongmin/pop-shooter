@@ -50,5 +50,5 @@ export function maxAffordable(kind: StatKind, lv: number, coins: number): { n: n
 }
 
 export function rebirthMult(tokens: number): number {
-  return 1 + BALANCE.rebirth.multPerToken * tokens;
+  return BALANCE.rebirth.multGrowth ** tokens;
 }
