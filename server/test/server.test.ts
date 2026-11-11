@@ -616,3 +616,39 @@ describe('nickname filter (shared client/server check)', () => {
     expect(safeDisplayNick(' 하늘빛 ')).toBe('하늘빛');
   });
 });
+
+// ---------------- 기록판 ----------------
+
+describe('rank board', () => {
+  test('saves become rows ordered by rebirths, then best stage, then power; my rank; no account ids', async (server) => {
+    const put = async (acc: string, rebirths: number, bestStage: number, atkLv: number) => {
+      server.connect({ account: acc });
+      await server.saveWrite({ v: 1, rebirths, tokens: rebirths, bestStage, runBest: 0, atkLv, char: 'blue', chars: ['blue'] });
+    };
+    await put('r1', 0, 5, 10);
+    await put('r2', 1, 2, 0);
+    await put('r3', 0, 5, 40);
+    await put('r4', 0, 0, 0);
+    server.connect({ account: 'r1' });
+    const b = await server.rankTop();
+    expect(b.ok).toBe(true);
+    expect(b.rows.length).toBe(3);
+    expect(b.rows[0].rb).toBe(1);
+    expect(b.rows[1].pw > b.rows[2].pw).toBe(true);
+    expect(b.myRank).toBe(3);
+    expect(b.rows[2].me).toBe(true);
+    expect(JSON.stringify(b).includes('"acc"')).toBe(false);
+    expect(JSON.stringify(b).includes('r1')).toBe(false);
+  });
+
+  test('saving again updates the same row (one per account) and picks up the nickname', async (server) => {
+    server.connect({ account: 'nk1' });
+    await server.saveWrite({ v: 1, bestStage: 1, char: 'blue', chars: ['blue'] });
+    expect((await server.nickSet('기록왕')).ok).toBe(true);
+    await server.saveWrite({ v: 1, bestStage: 3, char: 'blue', chars: ['blue'] });
+    const b = await server.rankTop();
+    expect(b.rows.length).toBe(1);
+    expect(b.rows[0].bs).toBe(3);
+    expect(b.rows[0].nick).toBe('기록왕');
+  });
+});

@@ -12,6 +12,7 @@ import { NetClient } from './net/NetClient';
 import { startLobby } from './net/lobby';
 import { LobbyApi } from './net/LobbyApi';
 import { NicknamePanel } from './ui/NicknamePanel';
+import { RankBoard } from './world/RankBoard';
 import { TrainingRange } from './training/TrainingRange';
 import { FloatText } from './ui/FloatText';
 import { BattleScene } from './battle/BattleScene';
@@ -70,7 +71,13 @@ async function boot(): Promise<void> {
   new RebirthPanel(game, ui, callout, float);
   new CharacterPanel(game, ui, callout);
   const guide = new Tutorial(game, ui);
-  const nickPanel = net.hasVerse ? new NicknamePanel(ui, net, new LobbyApi(net)) : null;
+  const lobbyApi = net.hasVerse ? new LobbyApi(net) : null;
+  const nickPanel = lobbyApi ? new NicknamePanel(ui, net, lobbyApi) : null;
+  // 광장 3D 기록판 (북동쪽, 남쪽=카메라 쪽을 봄). 내 저장 뒤 조금 있다가 갱신
+  const board = new RankBoard(8.5, -12.6, lobbyApi);
+  game.hub.root.add(board.root);
+  game.hub.colliders.push(board.collider);
+  cloud.onSaved.add(() => board.refreshSoon());
   const settings = new SettingsPanel(ui, guide, nickPanel);
   game.menuActions.settings = () => settings.open();
   stage.start();

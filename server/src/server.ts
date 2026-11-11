@@ -29,6 +29,7 @@ import {
   type HubPacket,
 } from '../../src/net/shared/hub.ts';
 import { checkNickname } from '../../src/net/shared/nickFilter.ts';
+import { RANK_COLLECTION, RANK_TOP, rankKey, type RankBoard, type RankRow } from '../../src/net/shared/rank.ts';
 
 /** 저장 한 건 최대 크기 (문서 1MB 한도보다 훨씬 작게) */
 const MAX_SAVE_CHARS = 20000;
@@ -204,8 +205,39 @@ export class Server {
     await $lock(`save:${account}`, async () => {
       const clean = normalizeState(raw, now);
       await $global.updateMyState({ save: { ...clean, lastSeen: now } });
+      // 기록판 한 줄 (계정마다 하나, 항목당 문서 하나라 커지지 않음). 실패해도 저장은 그대로
+      try {
+        const st = ((await $global.getMyState()) || {}) as { nick?: unknown };
+        const nk = checkNickname(st.nick);
+        const pw = damagePerShot(clean);
+        const row = { acc: account, nick: nk.ok ? nk.value : '', rb: clean.rebirths, bs: clean.bestStage, pw, c: clean.char, k: rankKey(clean.rebirths, clean.bestStage, pw), t: now };
+        const found = await $global.getCollectionItems(RANK_COLLECTION, { filters: [{ field: 'acc', operator: '==', value: account }], limit: 1 });
+        if (found[0]) await $global.updateCollectionItem(RANK_COLLECTION, { __id: found[0].__id, ...row });
+        else await $global.addCollectionItem(RANK_COLLECTION, row);
+      } catch { /* 기록판은 다음 저장 때 다시 */ }
     });
     return { ok: true, now };
+  }
+
+  /** 기록판: 상위 RANK_TOP (키 > 0) + 내 순위. 계정 id는 돌려주지 않음 (내 줄은 me 표시) */
+  async rankTop(): Promise<RankBoard> {
+    const me = $sender.account;
+    const toRow = (it: Record<string, unknown>): RankRow => ({
+      nick: typeof it.nick === 'string' && it.nick ? it.nick : null,
+      rb: Number(it.rb) || 0,
+      bs: Number(it.bs) || 0,
+      pw: Number(it.pw) || 0,
+      c: typeof it.c === 'string' ? it.c : 'blue',
+      ...(it.acc === me ? { me: true } : {}),
+    });
+    const [top, mineArr] = await Promise.all([
+      $global.getCollectionItems(RANK_COLLECTION, { filters: [{ field: 'k', operator: '>', value: 0 }], orderBy: [{ field: 'k', direction: 'desc' }], limit: RANK_TOP }),
+      $global.getCollectionItems(RANK_COLLECTION, { filters: [{ field: 'acc', operator: '==', value: me }], limit: 1 }),
+    ]);
+    const mineIt = mineArr[0] as Record<string, unknown> | undefined;
+    const myKey = Number(mineIt?.k) || 0;
+    const myRank = myKey > 0 ? (await $global.countCollectionItems(RANK_COLLECTION, { filters: [{ field: 'k', operator: '>', value: myKey }] })) + 1 : 0;
+    return { ok: true, rows: (top as Record<string, unknown>[]).map(toRow), myRank, mine: mineIt ? toRow(mineIt) : null };
   }
 
   // ---------------- 광장 (w<월드>-<번호> 룸) ----------------

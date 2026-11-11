@@ -3,6 +3,7 @@
 import type { NetClient } from './NetClient';
 import { HUB_TIMING, type HubInfo, type HubPacket, type HubUserState } from './shared/hub.ts';
 import type { NickFailReason } from './shared/nickFilter.ts';
+import type { RankBoard } from './shared/rank.ts';
 
 /** bad_world = 열리지 않은 월드 (HUB_OPEN_WORLDS) */
 export type HubFindResult = { ok: true; roomId: string; max: number } | { ok: false; reason: 'bad_world' };
@@ -50,6 +51,11 @@ export class LobbyApi {
   /** 광장에서 나감 (응답 기다리지 않음: 탭 닫힘·전환 중에도 보냄). 이어서 net.leaveRoom */
   hubBye(): void {
     this.net.fire('hubBye');
+  }
+
+  /** 기록판 상위 + 내 순위 (계정 id 없음) */
+  rankTop(): Promise<RankBoard> {
+    return this.net.call('rankTop');
   }
 
   nickGet(): Promise<NickGetResult> {
