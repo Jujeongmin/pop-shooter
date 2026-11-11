@@ -1,0 +1,42 @@
+# 계획 1 진행 중 내린 판단 (Rulings)
+
+SDD 기록에서 모은 것. USER = 사용자 결정, 나머지는 작업 중 판단. 틀렸으면 되돌릴 비용을 같이 적음.
+
+- Task 1: Ruling: `node --test tests/` fails on Node 24 (dir treated as file) — glob "tests/**/*.test.ts" — cost: none
+- Task 1: Ruling: new repo on branch develop, no worktree — Verse8 deploy branch convention — cost: rename branch
+- Task 1: Ruling: added @types/node for node:test typing — cost: none
+- Task 4: Ruling: added highestWorld(s) helper in actions.ts (needed by offline + sim) — cost: none
+- Task 4: Ruling: no TS parameter properties anywhere (node strip-only rejects them) — cost: none
+- Task 6: Ruling: normalize also caps runBest<=bestStage, passMult to {1..64 powers}, spdLv<=max — safer save — cost: none
+- Task 7: Ruling: boss HP formula (60×1.6^(s-1)) replaced by simulator-fitted table stageTable.ts — single exponential cannot hit 1h/3h/6h/10h (initial formula finished 40 stages in 6 min) — cost if wrong: swap table back to formula
+- Task 7: Ruling: gun price = stageHp(ref stage)×8 instead of 100×6^(i-1) — keeps gun prices on the same scale as the fitted economy — cost: retune gun pacing
+- Task 7: Ruling: World 2 end shows 4 rebirths vs spec 1~3 — heuristic-dependent, accepted — cost: minor pacing
+- Task 8: Ruling: copied pop-battle config files whole (characters/weapons/gameConfig/combat) instead of trimming — less divergence, unused exports tree-shaken — cost: some dead code
+- Task 8: Ruling: CharacterAppearance/pupilFlatten copied but not wired (team colors/looks not needed in plan 1) — cost: none
+- Task 8: Ruling: preview config added to pop-battle/.claude/launch.json as 'pop-shooter' (--prefix), since the preview tool reads that file — cost: none
+- Task 9: Ruling: Game.ts (hub movement core) created in T9 instead of T10 — movement needs an owner loop — cost: none
+- Task 9: Ruling: own small brick loader (InstancedMesh + instanceColor) instead of porting pop-battle KitMerger — simpler, 1 draw per brick type — cost: none
+- Task 9: Ruling: Controls exposes drainTaps()/drainDrag() + Game.tapHandler per mode instead of consumeTaps()+setMoveTarget — hub tap = move, training/battle tap = shot — cost: none
+- Task 10: Ruling: USER change — click/tap-to-move removed, virtual joystick on left 40% for mouse and touch (hub only); spec 4.1 updated — cost: none
+- Task 10: Ruling: Jua font from Google Fonts link (pop-battle bundles its own) — cost: font load in Verse8 iframe to verify in plan 2
+- Task 11: Ruling: USER — facilities trigger on entering zone (no use button); training = standing on range mat, leaving ends it; gate radius 1.6 — cost: none
+- Task 11: Ruling: USER — shot fx was white square (sprite w/o texture); now radial glow texture + tracer + hit ring, pooled — cost: none
+- Task 11: Ruling: camera closer (6.5 m / 3.6 m) — character was too small — cost: none
+- Task 11: Ruling: short joystick press (<8px) counts as tap so left-side taps fire too — cost: none
+- Task 13 (partial): Ruling: USER — stages are a continuous run per world: one entrance, auto-advance 1-1→1-2…, fail ends run, next run restarts at world stage 1, coins for every stage cleared (first-clear big, replay small); run ends after boss (world clear) — my call — cost: retune
+- Range zone fx: Ruling: USER — entering a zone must feel obvious (ref Poki +1 MMA Fighter): ZoneRing + ZoneCallout + cam.focus, reuse for upgrade/guns/portal — cost: none
+- Controls: Ruling: USER — full-screen floating joystick, fixed camera yaw, no rotate; 10px dead zone (my call) — cost: none
+- Portal: complete (commit 5689ebe, tests 38 pass; browser: portal snap+callout, range still ok). Ruling: ZoneEntry extracted from TrainingRange for reuse (portal, later upgrade/guns/altar) — cost: none
+- Hub: Ruling: USER — remove center tower, portal close, outside must not be visible: hub 32m fenced, houses/trees N/E/W, south kept low (camera side) — cost: none
+- Task 13: complete (commit ac82aef; browser: fail card at 1-1, strong state clears 1-1..1-10 world clear, 30 boss create/dispose textures 19->19). Ruling: result card only [광장으로], no next/upgrade button yet (upgrade panel = T12) — cost: add button in T12
+- Refit: Ruling: --fit with runs diverges (2-10 hp jumps to 1.1e13, world 3-4 hours over target); stopped before write, kept current table (1-1 3m, 4-10 9h54 ~ within 1-2% of range) — cost: needs fit algorithm fix later (bisection per stage unstable with run resets)
+- i18n: Ruling: USER — 5 languages; default from browser language, choice in localStorage (per device), switching reloads page to rebake 3D labels; ja=M PLUS Rounded 1c, zh-TW=Noto Sans TC, zh-CN=ZCOOL KuaiLe — cost: font picks are mine
+- Bosses: Ruling: USER approved toy direction; 1-9 rotate robot/soldier/jack with tint+size, 10 = teddy king with crown; procedural (no GLB) — Blender MCP mentioned by user but not available in this session — cost: swap to GLB later if wanted
+- Task 12: complete (commit 1d1a747; browser: x10 atk spent == bulkCost(atk,0,10), max spd == maxAffordable, gun buy swaps avatar gun). Ruling: panels are bottom sheets opened on zone landing (no buttons), camera pulled back + look lowered so character shows above sheet; guns facility moved (4.5,-3.5) — cost: none
+- Task 14: complete (commit cc1a838; browser: rebirth stats 0/best kept/x2/gems+10, offline 1h = +2.68M card, char swap x6 textures stable). Ruling: offline window only if >=60s away; USER: run clip above 3 m/s, move 5.76 — cost: none
+- Balance: Ruling: USER — 1-1 hp fixed 300 (BALANCE.stage.firstHp), fit table used from 1-2; camera 7.8/4.4 (my call between too big and too small) — cost: none
+- Battle: Ruling: USER — boss counterattack; HP = 10 hits spaced over stage time so sim timer math unchanged; timer chip replaced by heart bar — cost: none
+- Rebirth/heroes: Ruling: USER — coin rebirth (cost 1e9*10^n, tokens formula unchanged), hero dmg mult 1/1.15/1.35/1.6/1.9/2.2; sim player: stalled 10m + gain>=1.3 + affordable in 10m income -> save & rebirth; check.ts 1-1 range now 0-2 (fixed 300hp) — cost: retune if player behaviour differs
+- Verse8: Ruling: merged editor template keeping platform files, dropped React/Tailwind; account save server saveLoad/saveWrite (no coin-growth cap yet = not official ranking); pushed develop 6acbbd0 — cost: add server economy check later
+- Task 15: complete (sound by subagent 4b17100, loading+tutorial cb183d6, pushed). Ruling: sound ported by subagent with module-level audio singleton — cost: none
+- Final review: C1 I1-I3 M1-M9 fixed (62bef23, 59ea143), re-review all addressed. parked — M6 SDK disconnect during pending connect unverified — Ruling: low impact; parked — offline session (no connection) local copy can overwrite newer server progress from another device — Ruling: existing design, revisit with rev counter in plan 3. Pushed.
