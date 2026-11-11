@@ -31,6 +31,8 @@ export class Stage3D {
     this.scene.add(hemi, sun, sun.target);
 
     window.addEventListener('resize', this.onResize);
+    // 입력칸에서 나오면(모바일 키보드 내려감) 고정했던 크기를 다시 맞춤
+    window.addEventListener('focusout', () => window.setTimeout(this.onResize, 300));
     this.resize();
   }
 
@@ -50,6 +52,8 @@ export class Stage3D {
   }
 
   private resize(): void {
+    // 모바일 키보드가 올라와 화면이 줄어드는 동안(입력칸 포커스)은 크기를 고정 (iframe 화면이 출렁이지 않게)
+    if (document.activeElement instanceof HTMLInputElement) return;
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.renderer.setSize(w, h, false);

@@ -1,3 +1,4 @@
+import type { NicknamePanel } from './NicknamePanel';
 import { audio } from '../audio/audio';
 import { lang, LANG_NAME, LANGS, setLang, t, type StrKey } from '../i18n/i18n';
 import { button, el } from './dom';
@@ -6,7 +7,7 @@ import { button, el } from './dom';
 export class SettingsPanel {
   private readonly root: HTMLDivElement;
 
-  constructor(parent: HTMLElement, guide: { enabled: boolean; setEnabled(on: boolean): void } | null = null) {
+  constructor(parent: HTMLElement, guide: { enabled: boolean; setEnabled(on: boolean): void } | null = null, nick: NicknamePanel | null = null) {
     this.root = el('div', 'result-wrap ui-on');
     const card = el('div', 'result-card settings');
     card.append(el('div', 'result-title', t('settings.title')));
@@ -24,9 +25,16 @@ export class SettingsPanel {
     };
     syncGuide();
     guideBtn.hidden = !guide;
+    // 닉네임 바꾸기 (서버 연결이 있을 때만)
+    const nickBtn = button('', () => { this.close(); nick?.open(); }, 'btn small mute-btn');
+    const syncNick = (): void => { nickBtn.textContent = nick?.nick ? t('nick.change', { n: nick.nick }) : t('nick.set'); };
+    syncNick();
+    nickBtn.hidden = !nick;
+    if (nick) nick.onChange = syncNick;
     card.append(
       mute,
       guideBtn,
+      nickBtn,
       this.slider('settings.master', audio.masterVolume, (v) => audio.setMaster(v)),
       this.slider('settings.sfx', audio.volume, (v) => audio.setVolume(v), true),
       this.slider('settings.music', audio.musicVolume, (v) => audio.setMusicVolume(v)),

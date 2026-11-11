@@ -223,3 +223,9 @@
 .reb-price { flex-wrap: wrap; row-gap: 6px; }
 .reb-bar { width: 100%; height: 12px; border-radius: 999px; background: #e9edf7; overflow: hidden; }
 .reb-fill { height: 100%; background: linear-gradient(#c7b8ff, #8f78f0); transform-origin: left center; transition: transform .2s; }
+
+/* 닉네임 창 */
+.nick-card { gap: 10px; }
+.nick-input { font: inherit; font-size: 22px; color: var(--ink); width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: 14px; border: 3px solid #c9d2ea; background: #fff; text-align: center; outline: none; }
+.nick-input:focus { border-color: var(--yellow); }
+.nick-err { min-height: 20px; color: #e0414f; font-size: 15px; text-align: center; }

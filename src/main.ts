@@ -10,6 +10,8 @@ import { pickSave } from './save/localSave';
 import { CloudSave } from './platform/CloudSave';
 import { NetClient } from './net/NetClient';
 import { startLobby } from './net/lobby';
+import { LobbyApi } from './net/LobbyApi';
+import { NicknamePanel } from './ui/NicknamePanel';
 import { TrainingRange } from './training/TrainingRange';
 import { FloatText } from './ui/FloatText';
 import { BattleScene } from './battle/BattleScene';
@@ -68,7 +70,8 @@ async function boot(): Promise<void> {
   new RebirthPanel(game, ui, callout, float);
   new CharacterPanel(game, ui, callout);
   const guide = new Tutorial(game, ui);
-  const settings = new SettingsPanel(ui, guide);
+  const nickPanel = net.hasVerse ? new NicknamePanel(ui, net, new LobbyApi(net)) : null;
+  const settings = new SettingsPanel(ui, guide, nickPanel);
   game.menuActions.settings = () => settings.open();
   stage.start();
   loading.done();
@@ -77,6 +80,8 @@ async function boot(): Promise<void> {
   if (!showOfflineReward(game, ui, save.now)) game.saver.saveNow();
   // 광장 멀티 (서버에 연결됐을 때만, 실패해도 혼자 게임은 그대로)
   const lobby = startLobby(game, net, cloud, training);
+  // 첫 접속이면 닉네임 정하기 (서버 연결 뒤, 오프라인 보상 창과 겹치지 않게 조금 뒤)
+  if (nickPanel) window.setTimeout(() => void nickPanel.checkOnConnect(), 1500);
   if (import.meta.env.DEV) Object.assign(window, { __hub: lobby });
   if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud, __net: net, __audio: audio });
 }
