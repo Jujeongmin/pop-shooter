@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { HitFx } from '../fx/HitFx';
@@ -139,7 +140,7 @@ export class BattleScene {
     this.arena.add(this.boss.root);
     const label = stageLabel(run.stage);
     this.hud.setStage(label, isBoss(run.stage));
-    this.callout.show({ title: isBoss(run.stage) ? '대장 등장!' : '연속 도전', big: label });
+    this.callout.show({ title: isBoss(run.stage) ? t('battle.bossIn') : t('battle.run'), big: label });
     window.setTimeout(() => { if (this.run) this.callout.hide(); }, 900);
   }
 
@@ -165,7 +166,7 @@ export class BattleScene {
     boss.hit();
     this.kick = 0.06;
     this.dmgAcc += dmg;
-    if (tapped) this.float.show('팡!', _aim, 'pop');
+    if (tapped) this.float.show(t('float.pop'), _aim, 'pop');
   }
 
   private onCleared(stage: number): void {
@@ -176,7 +177,7 @@ export class BattleScene {
     this.boss = null;
     this.game.cam.shake(0.15);
     this.callout.flash('rgba(255, 211, 77, 0.9)');
-    this.float.show(`${stageLabel(stage)} 클리어!`, _chest.set(BOSS_AT.x, 3, BOSS_AT.z), 'coin big');
+    this.float.show(t('battle.cleared', { s: stageLabel(stage) }), _chest.set(BOSS_AT.x, 3, BOSS_AT.z), 'coin big');
     if (run.done) this.endT = 0;
   }
 
@@ -204,7 +205,7 @@ export class BattleScene {
     if (cleared !== null) this.onCleared(cleared);
     if (run.done === 'fail') {
       this.endT = 0;
-      this.callout.show({ title: '시간 초과!', big: `${stageLabel(run.stage)} 실패` });
+      this.callout.show({ title: t('battle.timeUp'), big: t('battle.failed', { s: stageLabel(run.stage) }) });
       return;
     }
     // 쉬는 시간이 끝나 가면 다음 보스 등장
@@ -231,9 +232,9 @@ export class BattleScene {
     const res = finishRun(g.state, run.cleared);
     g.setState(res.state, true);
     const failed = run.done === 'fail' ? run.stage : null;
-    const title = run.done === 'worldClear' ? `월드 ${run.world} 클리어!` : run.cleared.length > 0 ? `${run.cleared.length}스테이지 돌파!` : '아쉬워요!';
+    const title = run.done === 'worldClear' ? t('result.world', { w: run.world }) : run.cleared.length > 0 ? t('result.stages', { n: run.cleared.length }) : t('result.none');
     const tip = failed !== null
-      ? `${stageLabel(failed)}에 필요한 DPS ≈ ${formatNum(stageHp(failed) / stageTime(failed))}\n지금 DPS ${formatNum(autoDps(res.state))} — 사격장에서 더 강해져요!`
+      ? t('result.tip', { s: stageLabel(failed), need: formatNum(stageHp(failed) / stageTime(failed)), now: formatNum(autoDps(res.state)) })
       : null;
     this.hud.show(false);
     this.callout.hide();

@@ -13,11 +13,16 @@ import { BattleHud } from './ui/BattleHud';
 import { ResultCard } from './ui/ResultCard';
 import { ZoneCallout } from './ui/ZoneCallout';
 import { loadBricks } from './world/kit';
+import { applyLang } from './i18n/i18n';
+import { SettingsPanel } from './ui/SettingsPanel';
 
 async function boot(): Promise<void> {
   const ui = document.getElementById('ui')!;
+  const fontReady = applyLang();
   const stage = new Stage3D(document.getElementById('view') as HTMLCanvasElement);
   const [assets, kit] = await Promise.all([loadAssets(stage.renderer), loadBricks()]);
+  // 3D 글자 라벨이 언어 글꼴로 구워지도록 글꼴 먼저
+  await fontReady;
   const game = new Game(stage, assets, kit, loadSave(Date.now()), ui);
   const fx = new HitFx(stage.scene);
   const float = new FloatText(ui, stage.camera);
@@ -31,6 +36,8 @@ async function boot(): Promise<void> {
     portal.release();
     battle.start(1);
   }, 700);
+  const settings = new SettingsPanel(ui);
+  game.menuActions.settings = () => settings.open();
   stage.start();
   if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle });
 }

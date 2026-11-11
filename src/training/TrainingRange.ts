@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { HitFx } from '../fx/HitFx';
@@ -51,7 +52,7 @@ export class TrainingRange {
       flash: 'rgba(79, 179, 255, 0.85)',
       spot: RANGE_SPOT,
       face: RANGE_TARGET,
-      text: { title: '사격장 훈련 중!', big: '화면을 탭하면 더 빨리 쏴요!', hand: true },
+      text: { title: t('range.title'), big: t('range.big'), hand: true },
     });
     // 착지하자마자 한 발
     this.zone.onLanded = () => this.fire(false);
@@ -92,13 +93,13 @@ export class TrainingRange {
     const g = this.game;
     this.pending += coinPerShot(g.state, HUB_WORLD, Date.now());
     this.targetIdx = (this.targetIdx + 1) % g.hub.targets.length;
-    const t = g.hub.targets[this.targetIdx]!;
+    const target = g.hub.targets[this.targetIdx]!;
     this.wobble[this.targetIdx] = 1;
     this.kick = 0.06;
     g.avatar.getMuzzle(_muzzle);
-    _aim.set(t.position.x + (Math.random() - 0.5) * 0.4, 1.6 + (Math.random() - 0.5) * 0.4, t.position.z + 0.12);
+    _aim.set(target.position.x + (Math.random() - 0.5) * 0.4, 1.6 + (Math.random() - 0.5) * 0.4, target.position.z + 0.12);
     this.fx.shot(_muzzle, _aim);
-    if (tapped) this.float.show('팡!', _aim, 'pop');
+    if (tapped) this.float.show(t('float.pop'), _aim, 'pop');
   }
 
   private flush(): void {
@@ -164,6 +165,6 @@ export class TrainingRange {
     if (coins <= 0) return;
     this.game.setState(addCoins(this.game.state, coins), true);
     _aim.set(RANGE_SPOT.x, 2.8, RANGE_SPOT.z - 3);
-    this.float.show(`자리 비운 동안 +${formatNum(coins)}`, _aim, 'coin big');
+    this.float.show(t('float.away', { n: formatNum(coins) }), _aim, 'coin big');
   };
 }

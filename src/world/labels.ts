@@ -1,10 +1,11 @@
+import { fontFamily } from '../i18n/i18n';
 import * as THREE from 'three';
 
 /** 글자 스프라이트 (캔버스 텍스처). 만든 쪽이 disposeLabel 책임 */
 export function makeLabel(text: string, opts: { color?: string; bg?: string; size?: number } = {}): THREE.Sprite {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
-  const font = 'bold 64px Jua, system-ui, sans-serif';
+  const font = `bold 64px ${fontFamily}`;
   ctx.font = font;
   const w = Math.ceil(ctx.measureText(text).width) + 48;
   canvas.width = w;

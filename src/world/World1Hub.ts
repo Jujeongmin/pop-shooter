@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import * as THREE from 'three';
 import { BrickBatch, BRICK_SCALE, type BrickName, type KitModel } from './kit';
 import { disposeLabel, makeLabel } from './labels';
@@ -212,7 +213,7 @@ export class World1Hub {
       this.targets.push(t);
       this.colliders.push({ kind: 'circle', x: t.position.x, z: t.position.z, r: 0.5 });
     }
-    this.label('사격장', RANGE_SPOT.x - 3.4, 3, RANGE_SPOT.z - 2, 0.8);
+    this.label(t('fac.range'), RANGE_SPOT.x - 3.4, 3, RANGE_SPOT.z - 2, 0.8);
   }
 
   /** 업그레이드 기계 · 총 상점 · 환생 제단 (임시 도형) */
@@ -222,7 +223,7 @@ export class World1Hub {
     this.mesh(new THREE.BoxGeometry(2.2, 2.4, 1.6), '#ff8a5b', up.x, 1.2, up.z - 1.6);
     this.mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 20), '#ffd34d', up.x, 2.55, up.z - 1.6);
     this.colliders.push({ kind: 'box', x: up.x, z: up.z - 1.6, hx: 1.1, hz: 0.8 });
-    this.label('업그레이드', up.x, 3.6, up.z - 1.6);
+    this.label(t('fac.upgrade'), up.x, 3.6, up.z - 1.6);
 
     const gs = f('guns');
     this.mesh(new THREE.BoxGeometry(3.2, 1.1, 1.4), '#7cc4ff', gs.x + 1.8, 0.55, gs.z);
@@ -230,7 +231,7 @@ export class World1Hub {
     this.mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.5, 8), '#ffffff', gs.x + 0.2, 1.25, gs.z - 0.8);
     this.mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.5, 8), '#ffffff', gs.x + 0.2, 1.25, gs.z + 0.8);
     this.colliders.push({ kind: 'box', x: gs.x + 1.8, z: gs.z, hx: 1.6, hz: 0.7 });
-    this.label('총 상점', gs.x + 1.8, 3.6, gs.z);
+    this.label(t('fac.guns'), gs.x + 1.8, 3.6, gs.z);
 
     const al = f('altar');
     this.mesh(new THREE.CylinderGeometry(1.6, 1.9, 0.6, 6), '#b9a6ff', al.x, 0.3, al.z + 1.6);
@@ -238,7 +239,7 @@ export class World1Hub {
     this.owned.push(orbMat);
     this.mesh(new THREE.SphereGeometry(0.7, 24, 16), '', al.x, 1.5, al.z + 1.6, orbMat);
     this.colliders.push({ kind: 'circle', x: al.x, z: al.z + 1.6, r: 1.8 });
-    this.label('환생 제단', al.x, 3, al.z + 1.6);
+    this.label(t('fac.altar'), al.x, 3, al.z + 1.6);
   }
 
   /** 월드 포털: 받침 + 세운 고리 + 안쪽 소용돌이(돌아감) + 위에 최고 기록 */
@@ -280,7 +281,7 @@ export class World1Hub {
 
   /** 포털 앞(받침 위, 낮게) 이름 + 최고 기록 한 줄. 고리 위는 따라가는 카메라 화면 밖이라 가려짐. 바뀔 때만 다시 그림 */
   setBest(bestStage: number): void {
-    const text = `월드 1 포털 · ${bestStage <= 0 ? '첫 도전' : `최고 ${stageLabel(Math.min(bestStage, PER_WORLD))}`}`;
+    const text = `${t('fac.portal', { w: 1 })} · ${bestStage <= 0 ? t('portal.first') : t('portal.best', { s: stageLabel(Math.min(bestStage, PER_WORLD)) })}`;
     if (this.bestLabel?.userData.text === text) return;
     if (this.bestLabel) {
       this.bestLabel.removeFromParent();

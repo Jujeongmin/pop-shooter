@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { autoDps, damagePerShot, shotsPerSec } from '../sim/actions.ts';
 import { formatNum } from '../sim/format.ts';
 import { rebirthMult } from '../sim/stats.ts';
@@ -32,7 +33,7 @@ export class Hud {
     this.gems = pill('gem');
     this.mult = pill('reb');
     const menu = el('div', 'hud-menu');
-    menu.append(button('캐릭터', () => actions.menu('character'), 'btn small'), button('설정', () => actions.menu('settings'), 'btn small'));
+    menu.append(button(t('hud.character'), () => actions.menu('character'), 'btn small'), button(t('hud.settings'), () => actions.menu('settings'), 'btn small'));
     top.appendChild(menu);
 
     const stats = el('div', 'hud-stats');
@@ -45,9 +46,9 @@ export class Hud {
       stats.appendChild(r);
       return v;
     };
-    this.atk = row('공격력', 'bullet');
-    this.sps = row('초당 발사', 'timer');
-    this.dps = row('DPS', 'bolt');
+    this.atk = row(t('stat.atk'), 'bullet');
+    this.sps = row(t('stat.sps'), 'timer');
+    this.dps = row(t('stat.dps'), 'bolt');
 
     this.root.append(top, stats);
     parent.appendChild(this.root);

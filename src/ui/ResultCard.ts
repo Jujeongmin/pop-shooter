@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { button, el } from './dom';
 import { icon } from './icons';
 
@@ -42,9 +43,9 @@ export class ResultCard {
     const coin = el('div', 'result-coins');
     coin.append(icon('coin', 'big'), el('span', '', `+${r.coins}`));
     this.card.append(coin);
-    for (const u of r.unlocked) this.card.append(el('div', 'result-unlock', `새 캐릭터 ${u} 열림!`));
+    for (const u of r.unlocked) this.card.append(el('div', 'result-unlock', t('result.unlock', { c: u })));
     if (r.tip) this.card.append(el('div', 'result-tip', r.tip));
-    this.card.append(button('광장으로', () => this.close(), 'btn big'));
+    this.card.append(button(t('result.toHub'), () => this.close(), 'btn big'));
     this.root.hidden = false;
     this.root.classList.remove('in');
     void this.root.offsetWidth;

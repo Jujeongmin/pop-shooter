@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { BALANCE } from '../sim/balance.ts';
@@ -29,8 +30,8 @@ export class PortalZone {
       spot: PORTAL_SPOT,
       face: PORTAL_GATE,
       text: () => ({
-        title: game.state.bestStage > 0 ? `월드 1 포털 · 최고 ${stageLabel(Math.min(game.state.bestStage, BALANCE.stage.perWorld))}` : '월드 1 포털',
-        big: '1-1부터 연속 도전!',
+        title: game.state.bestStage > 0 ? `${t('fac.portal', { w: 1 })} · ${t('portal.best', { s: stageLabel(Math.min(game.state.bestStage, BALANCE.stage.perWorld)) })}` : t('fac.portal', { w: 1 }),
+        big: t('portal.big', { s: stageLabel(1) }),
       }),
     });
     this.zone.onLanded = () => this.onEnterRun?.();

@@ -98,3 +98,11 @@
   .bhud-stage { font-size: 24px; }
   .bhud-hint { font-size: 16px; }
 }
+
+/* 설정 */
+.settings-label { font-size: 16px; color: var(--ink2); align-self: flex-start; }
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.lang-btn { font-size: 16px; padding: 10px 8px; }
+.lang-btn.on { background: var(--yellow); box-shadow: 0 3px 0 #e0a92a; }
+/* 언어 이름은 그 언어 글꼴로 (Jua에 없는 한자·가나) */
+.lang-btn:lang(ja), .lang-btn:lang(zh-TW), .lang-btn:lang(zh-CN) { font-family: system-ui, sans-serif; font-weight: 700; }

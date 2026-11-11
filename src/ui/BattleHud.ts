@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 import { formatNum } from '../sim/format.ts';
 import { el, setText } from './dom';
 import { icon } from './icons';
@@ -24,15 +25,15 @@ export class BattleHud {
     const row = el('div', 'bhud-row');
     this.time = el('span', 'bhud-val', '');
     this.dps = el('span', 'bhud-val', '');
-    const t = el('span', 'bhud-chip bhud-time');
-    t.append(icon('timer'), this.time);
+    const tc = el('span', 'bhud-chip bhud-time');
+    tc.append(icon('timer'), this.time);
     const d = el('span', 'bhud-chip');
     d.append(icon('bolt'), this.dps);
-    row.append(t, d);
-    this.timeChip = t;
+    row.append(tc, d);
+    this.timeChip = tc;
     top.append(this.stage, bar, row);
     this.hint = el('div', 'bhud-hint');
-    this.hint.append(icon('hand', 'bhud-hand'), el('span', '', '화면을 탭하면 더 쏴요!'));
+    this.hint.append(icon('hand', 'bhud-hand'), el('span', '', t('battle.hint')));
     this.root.append(top, this.hint);
     this.root.hidden = true;
     parent.appendChild(this.root);
@@ -44,7 +45,7 @@ export class BattleHud {
 
   /** 스테이지 바뀔 때 (대장이면 빨간 표시) */
   setStage(label: string, boss: boolean): void {
-    setText(this.stage, boss ? `${label} 대장` : label);
+    setText(this.stage, boss ? t('battle.boss', { s: label }) : label);
     this.stage.classList.toggle('boss', boss);
     this.stage.classList.remove('pop');
     void this.stage.offsetWidth;
@@ -55,7 +56,7 @@ export class BattleHud {
     const r = maxHp > 0 ? Math.max(0, hp / maxHp) : 0;
     this.fill.style.transform = `scaleX(${r})`;
     setText(this.hpText, `${formatNum(Math.ceil(hp))} / ${formatNum(maxHp)}`);
-    setText(this.time, `${timeLeft.toFixed(1)}초`);
+    setText(this.time, t('battle.sec', { n: timeLeft.toFixed(1) }));
     this.timeChip.classList.toggle('low', timeLeft <= 5);
     setText(this.dps, formatNum(dps));
   }

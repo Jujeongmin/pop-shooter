@@ -1,3 +1,5 @@
+import { t } from '../i18n/i18n.ts';
+
 export type FacilityId = 'range' | 'upgrade' | 'guns' | 'altar' | 'portal';
 
 export interface Facility {
@@ -19,11 +21,11 @@ export const PORTAL_GATE = { x: 0, z: -10 };
 export const PORTAL_SPOT = { x: 0, z: -6.5 };
 
 export const WORLD1_FACILITIES: readonly Facility[] = [
-  { id: 'range', x: RANGE_SPOT.x, z: RANGE_SPOT.z, radius: 2.6, label: '사격장' },
-  { id: 'upgrade', x: 9, z: 4, radius: 2.6, label: '업그레이드' },
-  { id: 'guns', x: 8, z: -5, radius: 2.6, label: '총 상점' },
-  { id: 'altar', x: 0, z: 11.5, radius: 2.6, label: '환생 제단' },
-  { id: 'portal', x: PORTAL_SPOT.x, z: PORTAL_SPOT.z, radius: 2.4, label: '월드 1 포털' },
+  { id: 'range', x: RANGE_SPOT.x, z: RANGE_SPOT.z, radius: 2.6, label: t('fac.range') },
+  { id: 'upgrade', x: 9, z: 4, radius: 2.6, label: t('fac.upgrade') },
+  { id: 'guns', x: 8, z: -5, radius: 2.6, label: t('fac.guns') },
+  { id: 'altar', x: 0, z: 11.5, radius: 2.6, label: t('fac.altar') },
+  { id: 'portal', x: PORTAL_SPOT.x, z: PORTAL_SPOT.z, radius: 2.4, label: t('fac.portal', { w: 1 }) },
 ];
 
 export function nearestFacility(x: number, z: number, list: readonly Facility[]): Facility | null {
