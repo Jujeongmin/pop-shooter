@@ -75,7 +75,8 @@
 .bhud-chip { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,.92); border-radius: 999px; padding: 3px 12px 3px 5px; font-size: 16px; box-shadow: 0 3px 0 rgba(43,58,103,.15); }
 .bhud-chip .ico { width: 24px; height: 24px; }
 .bhud-time.low { color: #ff4f5e; animation: zone-tap .5s ease-in-out infinite; }
-.bhud-hint { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; font-size: 20px; color: var(--yellow); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; white-space: nowrap; animation: zone-tap .8s ease-in-out infinite; }
+.bhud-hint { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; font-size: 20px; color: var(--yellow); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; white-space: nowrap; animation: hint-bob .8s ease-in-out infinite; }
+@keyframes hint-bob { 0%, 100% { transform: translateX(-50%) translateY(0) } 45% { transform: translateX(-50%) translateY(6px) } }
 .bhud-hand { width: 34px; height: 34px; }
 .chip { display: inline-flex; align-items: center; gap: 4px; }
 .chip .ico { width: 18px; height: 18px; }
@@ -187,7 +188,9 @@
 .bhud-me .ico { width: 34px; height: 34px; flex: none; }
 .bhud-mebar { position: relative; flex: 1; height: 20px; background: rgba(43,58,103,.55); border: 3px solid #fff; border-radius: 999px; overflow: hidden; box-shadow: 0 3px 0 rgba(0,0,0,.15); }
 .bhud-mefill { position: absolute; inset: 0; background: linear-gradient(#7fe08a, #3fbf55); transform-origin: left center; transition: transform .18s; }
-.bhud-me.low .bhud-mefill { background: linear-gradient(#ff8a8a, #ff4f5e); animation: zone-tap .5s ease-in-out infinite; }
+.bhud-me.low .bhud-mefill { background: linear-gradient(#ff8a8a, #ff4f5e); animation: me-low .5s ease-in-out infinite; }
+/* 낮을 때 깜빡임은 밝기로만 (transform 애니메이션은 scaleX 채움을 덮어써서 채움이 흔들렸음) */
+@keyframes me-low { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.45) } }
 .bhud-mecut { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.55); }
 .bhud-me.hurt { animation: me-hurt .3s ease-out; }
 @keyframes me-hurt { 0%, 100% { transform: translateX(-50%) } 25% { transform: translateX(calc(-50% - 6px)) } 60% { transform: translateX(calc(-50% + 5px)) } }

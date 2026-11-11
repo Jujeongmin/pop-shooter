@@ -26,6 +26,9 @@ const BOSS_AT = { x: 0, z: -4 };
 const FLOAT_SEC = 0.3;
 /** 끝난 뒤 결과 카드까지 (보스 쓰러지는 연출 볼 시간) */
 const END_DELAY = 1.1;
+/** 포털 착지 뒤 시작 연출: 카메라가 보스 쪽에서 내 뒤로 돌아옴, 이 동안 전투 안 함 (사용자 2026-11-11: 시작 전에 1-1이 끝나던 문제) */
+const INTRO_SEC = 2.2;
+const INTRO_YAW = Math.PI * 0.8;
 /**
  * 보스 반격: 스테이지 제한 시간을 HITS칸으로 나눠, 칸마다 장난감 공 하나가 날아와 내 체력 한 칸을 깎음.
  * 마지막 공이 닿는 순간 = 제한 시간 끝 → 계산은 sim의 시간 제한 그대로 (밸런스 변화 없음), 보기에는 맞고 쓰러짐.
@@ -53,6 +56,8 @@ export class BattleScene {
   private readonly hud: BattleHud;
   private readonly result: ResultCard;
   private readonly callout: ZoneCallout;
+  private introT = INTRO_SEC;
+  private goShown = true;
   private readonly arena = new THREE.Group();
   private readonly owned: { dispose(): void }[] = [];
   private readonly limiter = new TapLimiter(BALANCE.tap.maxPerSec);
@@ -156,6 +161,11 @@ export class BattleScene {
     g.cam.focus = -1.2;
     audio.setMusic('battle');
     this.run = startRun(g.state, world);
+    // 시작 연출 동안은 쉬는 시간으로 둠 (자동 발사·탭 막힘)
+    this.run.gap = INTRO_SEC;
+    this.introT = 0;
+    this.goShown = false;
+    g.cam.yaw = INTRO_YAW;
     this.endT = -1;
     this.dmgAcc = 0;
     this.spawnBoss();
@@ -179,6 +189,10 @@ export class BattleScene {
     this.arena.add(this.boss.root);
     const label = stageLabel(run.stage);
     this.hud.setStage(label, isBoss(run.stage));
+    if (this.introT < INTRO_SEC) {
+      this.callout.show({ title: t('battle.run'), big: t('battle.ready') });
+      return;
+    }
     this.callout.show({ title: isBoss(run.stage) ? t('battle.bossIn') : t('battle.run'), big: label });
     window.setTimeout(() => { if (this.run) this.callout.hide(); }, 900);
   }
@@ -234,6 +248,17 @@ export class BattleScene {
     const run = this.run;
     if (!run) return;
     const g = this.game;
+    if (this.introT < INTRO_SEC) {
+      this.introT += dt;
+      const k = Math.min(1, this.introT / (INTRO_SEC - 0.4));
+      const e = k * k * (3 - 2 * k);
+      g.cam.yaw = INTRO_YAW * (1 - e);
+      if (!this.goShown && this.introT >= INTRO_SEC - 0.6) {
+        this.goShown = true;
+        this.callout.show({ title: stageLabel(run.stage), big: t('battle.go') });
+        window.setTimeout(() => { if (this.run) this.callout.hide(); }, 700);
+      }
+    }
     if (this.endT >= 0) {
       this.endT += dt;
       if (this.endT >= END_DELAY) this.finish();

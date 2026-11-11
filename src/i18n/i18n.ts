@@ -37,6 +37,8 @@ const STRINGS = {
   'battle.boss': { en: '{s} BOSS', ko: '{s} 대장', ja: '{s} ボス', 'zh-TW': '{s} 首領', 'zh-CN': '{s} 首领' },
   'battle.sec': { en: '{n}s', ko: '{n}초', ja: '{n}秒', 'zh-TW': '{n}秒', 'zh-CN': '{n}秒' },
   'battle.bossIn': { en: 'Boss incoming!', ko: '대장 등장!', ja: 'ボス登場!', 'zh-TW': '首領登場!', 'zh-CN': '首领登场!' },
+  'battle.ready': { en: 'Ready...', ko: '준비...', ja: '準備...', 'zh-TW': '準備...', 'zh-CN': '准备...' },
+  'battle.go': { en: 'GO!', ko: '시작!', ja: 'スタート!', 'zh-TW': '開始!', 'zh-CN': '开始!' },
   'battle.run': { en: 'Stage run', ko: '연속 도전', ja: '連続チャレンジ', 'zh-TW': '連續挑戰', 'zh-CN': '连续挑战' },
   'battle.timeUp': { en: 'Knocked out!', ko: '쓰러졌어요!', ja: 'やられた!', 'zh-TW': '被擊倒了!', 'zh-CN': '被击倒了!' },
   'battle.failed': { en: '{s} failed', ko: '{s} 실패', ja: '{s} 失敗', 'zh-TW': '{s} 失敗', 'zh-CN': '{s} 失败' },

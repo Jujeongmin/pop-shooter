@@ -16,7 +16,7 @@ import { stageHp, stageLabel, stageTime, isBoss, worldOf } from '../../src/sim/s
 import { STAGE_HP } from '../../src/sim/stageTable.ts';
 import { atkCost, spdCost } from '../../src/sim/stats.ts';
 import { checkSave, worth } from '../../src/sim/econ.ts';
-import { buyGear, buyMachine, GEAR, machineCost, machineLv, train, TRAIN_KINDS } from '../../src/sim/training.ts';
+import { buyGear, buyMachine, coinTrainMult, GEAR, machineCost, machineLv, train, trainCap, trainValue, TRAIN_KINDS } from '../../src/sim/training.ts';
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: number): number => {
@@ -46,6 +46,20 @@ function econCheck(c: Ctx): void {
   econ.prev = c.s;
   econ.lastT = c.t;
 }
+/**
+ * --rangegold 0: 경제 구조 변경 시험 (사용자 2026-11-11 제안) — 사격장은 훈련치만, 골드는 전투(첫 클리어·반복)로만.
+ * 이 플레이어는 훈련치가 모두 한도면 가장 높은 월드 입구에서 반복 도전으로 골드를 벌고, 아니면 사격장에서 훈련.
+ */
+const RANGE_GOLD = opt('rangegold', 1) === 1;
+/** --battlebonus 1: (rangegold 0일 때) 전투 보상에 코인 훈련 × 월드 배율을 곱함 */
+const BATTLE_BONUS = opt('battlebonus', 0) === 1;
+function payRun(s: GameState, cleared: readonly number[], world: number): GameState {
+  const r = finishRun(s, cleared);
+  if (RANGE_GOLD || !BATTLE_BONUS) return r.state;
+  const extra = r.coins * (coinTrainMult(s) * (BALANCE.range.multByWorld[world - 1] ?? 1) - 1);
+  return { ...r.state, coins: r.state.coins + extra };
+}
+const farm = { runs: 0, battleSec: 0, rangeSec: 0 };
 /** 1이면 환생이 열리자마자 함 (키보드 탈출 공략 조언), 0이면 10분 정체 때만 */
 const ASAP = opt('asap', 1) === 1;
 
@@ -95,9 +109,34 @@ function buyBest(s: GameState): GameState | null {
 function runUntil(c: Ctx, stopStage: number, maxT: number, onClear?: (stage: number, c: Ctx) => void): number {
   while (c.t < maxT) {
     const shots = shotsPerSec(c.s) + TAPS;
-    c.s = { ...c.s, coins: c.s.coins + coinPerShot(c.s, highestWorld(c.s), Infinity) * shots };
-    if (!NO_TRAIN) c.s = train(c.s, shots);
-    c.t += 1;
+    const full = TRAIN_KINDS.every((k) => trainValue(c.s, k) >= trainCap(c.s, k) - 1e-9);
+    // 반복 도전 월드: 입구 첫 스테이지를 깰 수 있는 가장 높은 열린 월드
+    let farmWorld = 0;
+    for (let w = highestWorld(c.s); w >= 1; w--) {
+      const st = (w - 1) * BALANCE.stage.perWorld + 1;
+      if (effDps(c.s) * stageTime(st) >= stageHp(st)) { farmWorld = w; break; }
+    }
+    if (!RANGE_GOLD && farmWorld > 0 && c.s.bestStage >= 1 && (full || NO_TRAIN)) {
+      // 반복 도전으로 골드 (입구부터 실패할 때까지)
+      const run = startRun(c.s, farmWorld);
+      const t0 = c.t;
+      let tapAcc = 0;
+      while (!run.done) {
+        stepRun(run, 0.25);
+        tapAcc += TAPS * 0.25;
+        while (tapAcc >= 1 && !run.done) { tapAcc -= 1; tapRun(run); }
+        c.t += 0.25;
+      }
+      c.s = payRun(c.s, run.cleared, run.world);
+      c.t = Math.ceil(c.t) + 2;
+      farm.runs++;
+      farm.battleSec += c.t - t0;
+    } else {
+      if (RANGE_GOLD) c.s = { ...c.s, coins: c.s.coins + coinPerShot(c.s, highestWorld(c.s), Infinity) * shots };
+      if (!NO_TRAIN) c.s = train(c.s, shots);
+      c.t += 1;
+      farm.rangeSec += 1;
+    }
     econCheck(c);
     for (let k = 0; k < 400; k++) {
       const n = buyBest(c.s);
@@ -117,7 +156,7 @@ function runUntil(c: Ctx, stopStage: number, maxT: number, onClear?: (stage: num
         c.t += DT;
       }
       const before = c.s.bestStage;
-      c.s = finishRun(c.s, run.cleared).state;
+      c.s = payRun(c.s, run.cleared, run.world);
       // 열린 캐릭터 중 가장 센 것으로
       c.s = { ...c.s, char: c.s.chars.reduce((a, b) => (charMult(b) > charMult(a) ? b : a), c.s.char) };
       c.t = Math.ceil(c.t) + 3;
@@ -191,6 +230,7 @@ if (args.includes('--fit')) {
   const at = new Map<number, { t: number; r: number; tr: string }>();
   runUntil(ctx, STAGE_COUNT, 40 * 3600, (st, c) => at.set(st, { t: c.t, r: c.s.rebirths, tr: `tr ${c.s.trAtk.toFixed(0)}/${c.s.trSpd.toFixed(0)}/${c.s.trCoin.toFixed(0)}% m ${c.s.mAtk}/${c.s.mSpd}/${c.s.mCoin} gear ${c.s.gear.toString(2)}` }));
   console.log(`taps=${TAPS} stall=${STALL_SEC}s`);
+  if (!RANGE_GOLD) console.log(`farm runs ${farm.runs} battle ${hms(farm.battleSec)} range ${hms(farm.rangeSec)}`);
   if (ECON) console.log(`econ checks ${econ.checks} clamps ${econ.clamps} rejects ${econ.rejects} ${JSON.stringify(econ.reasons)}`);
   for (const st of [1, 5, 10, 15, 20, 25, 30, 35, 40]) {
     const r = at.get(st);
