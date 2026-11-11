@@ -18,7 +18,7 @@ export class Stage3D {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.scene.background = new THREE.Color('#bfe3ff');
-    this.scene.fog = new THREE.Fog('#bfe3ff', 60, 140);
+    this.scene.fog = new THREE.Fog('#bfe3ff', 35, 95);
 
     const hemi = new THREE.HemisphereLight('#ffffff', '#a8c7a0', 1.6);
     const sun = new THREE.DirectionalLight('#fff4dc', 2.2);

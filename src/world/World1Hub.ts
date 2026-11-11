@@ -68,26 +68,56 @@ export class World1Hub {
     const flat = (geo: THREE.BufferGeometry, color: string, y: number, x = 0, z = 0): void => {
       this.mesh(geo, color, x, y, z).castShadow = false;
     };
-    flat(new THREE.BoxGeometry(HUB_BOUNDS.hx * 2 + 40, 1, HUB_BOUNDS.hz * 2 + 40), '#9ad48f', -0.5);
-    flat(new THREE.CylinderGeometry(11, 11, 0.06, 48), '#ffe9b8', 0.03);
-    flat(new THREE.BoxGeometry(56, 0.05, 5), '#ffd9a8', 0.025, 0, -22);
-    flat(new THREE.BoxGeometry(4, 0.05, 30), '#ffd9a8', 0.026, 0, -8);
+    const { hx, hz } = HUB_BOUNDS;
+    flat(new THREE.BoxGeometry(220, 1, 220), '#8fcf84', -0.5);
+    // 울타리 안 광장 바닥 + 길 (스폰 → 포털, 가로 길)
+    flat(new THREE.BoxGeometry(hx * 2 + 1, 0.04, hz * 2 + 1), '#a8de98', 0.02);
+    flat(new THREE.BoxGeometry(4, 0.05, 20), '#ffe2b0', 0.03, 0, 1);
+    flat(new THREE.BoxGeometry(24, 0.05, 3.4), '#ffe2b0', 0.031, 0, 1);
+    flat(new THREE.CylinderGeometry(3.6, 3.6, 0.06, 40), '#ffe2b0', 0.032, 0, 6);
   }
 
-  /** 시계탑(가운데) + 블록 집 + 나무 */
+  /** 울타리로 둘러싼 광장 + 바깥 집·나무 벽 + 먼 언덕 (빈 들판·지평선이 안 보이게) */
   private buildTown(b: BrickBatch): void {
-    const towerColors = ['#ff9ec4', '#7cc4ff', '#ffd34d', '#ffffff'];
-    const R = BRICK_SCALE * 2.6;
-    const towerH = 4 * 0.114 * R;
-    for (let i = 0; i < 4; i++) b.add('round-1x1', 0, i * 0.114 * R, 0, towerColors[i]!, 0, R);
-    this.colliders.push({ kind: 'circle', x: 0, z: 0, r: 0.04 * R + 0.1 });
-    const clock = this.mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.25, 32), '#ffffff', 0, towerH - 1.6, 0.04 * R + 0.05);
-    clock.rotation.x = Math.PI / 2;
-    this.label('POP 마을', 0, towerH + 1.2, 0, 1.6);
+    const F = HUB_BOUNDS.hx + 0.8;
+    // 울타리: 말뚝 + 가로대 (InstancedMesh 둘)
+    const postGeo = new THREE.BoxGeometry(0.22, 1.2, 0.22);
+    const railGeo = new THREE.BoxGeometry(1, 0.16, 0.08);
+    this.owned.push(postGeo, railGeo);
+    const posts: THREE.Matrix4[] = [];
+    const rails: THREE.Matrix4[] = [];
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const side = (x0: number, z0: number, x1: number, z1: number): void => {
+      const len = Math.hypot(x1 - x0, z1 - z0);
+      const n = Math.round(len / 1.2);
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.atan2(z1 - z0, x1 - x0));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n;
+        posts.push(new THREE.Matrix4().makeTranslation(x0 + (x1 - x0) * t, 0.6, z0 + (z1 - z0) * t));
+      }
+      for (const y of [0.45, 0.9]) {
+        m.compose(new THREE.Vector3((x0 + x1) / 2, y, (z0 + z1) / 2), q, new THREE.Vector3(len, 1, 1));
+        rails.push(m.clone());
+      }
+    };
+    side(-F, -F, F, -F);
+    side(F, -F, F, F);
+    side(F, F, -F, F);
+    side(-F, F, -F, -F);
+    for (const [geo, list] of [[postGeo, posts], [railGeo, rails]] as const) {
+      const im = new THREE.InstancedMesh(geo, this.mat('#ffffff'), list.length);
+      list.forEach((mm, i) => im.setMatrixAt(i, mm));
+      im.castShadow = true;
+      im.receiveShadow = true;
+      this.root.add(im);
+    }
 
+    // 바깥 집: 북·동·서 (남쪽은 카메라가 있는 쪽이라 비워 둠)
     const houses: [number, number, string, string][] = [
-      [-22, 14, '#ff9ec4', '#7cc4ff'], [-22, 24, '#ffd34d', '#ff8a5b'], [22, 14, '#7cc4ff', '#ffd34d'],
-      [22, 24, '#ff8a5b', '#ff9ec4'], [-8, 25, '#b9a6ff', '#ffd34d'], [8, 25, '#7fd78a', '#ff8a5b'],
+      [-14, -21, '#ff9ec4', '#7cc4ff'], [-4, -22, '#ffd34d', '#ff8a5b'], [7, -21, '#7cc4ff', '#ffd34d'], [17, -22, '#b9a6ff', '#ff9ec4'],
+      [-23, -10, '#7fd78a', '#ff8a5b'], [-23, 1, '#ff8a5b', '#7cc4ff'], [-23, 12, '#ffd34d', '#b9a6ff'],
+      [23, -10, '#ff9ec4', '#ffd34d'], [23, 1, '#7cc4ff', '#ff8a5b'], [23, 12, '#7fd78a', '#ff9ec4'],
     ];
     const W = 0.318 * BRICK_SCALE;
     const D = 0.158 * BRICK_SCALE;
@@ -104,20 +134,55 @@ export class World1Hub {
         b.add('slope-2x4', x + (cx - 1.5) * W * 0.5, 3 * H, z - D * 0.5, roof, 0);
         b.add('slope-2x4', x + (cx - 1.5) * W * 0.5, 3 * H, z + D * 0.5, roof, Math.PI);
       }
-      this.colliders.push({ kind: 'box', x, z, hx: W, hz: D });
     }
-    const trees: [number, number][] = [[-27, 4], [-27, -6], [27, 4], [27, -8], [-10, 14], [10, 14], [-27, -14], [27, -15]];
-    const trunk = new THREE.CylinderGeometry(0.35, 0.45, 2, 12);
-    const leaves = new THREE.SphereGeometry(1.7, 20, 14);
-    this.owned.push(trunk, leaves);
-    for (const [x, z] of trees) {
+
+    // 나무: 울타리 바깥을 빽빽하게 (집 사이 틈 메움) + 남쪽은 낮은 덤불
+    const trunk = new THREE.CylinderGeometry(0.35, 0.45, 2, 10);
+    const leaves = new THREE.SphereGeometry(1.8, 16, 12);
+    const bush = new THREE.SphereGeometry(1.1, 14, 10);
+    this.owned.push(trunk, leaves, bush);
+    const trees: [number, number, number][] = [];
+    let seed = 7;
+    const rnd = (): number => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let x = -26; x <= 26; x += 3.2) {
+      trees.push([x + rnd() * 1.2, -18 - rnd() * 1.5, 0.9 + rnd() * 0.5]);
+      trees.push([x + rnd() * 1.2, -26 - rnd() * 3, 1.1 + rnd() * 0.5]);
+    }
+    for (let z = -16; z <= 18; z += 3.2) {
+      for (const sx of [-1, 1]) {
+        trees.push([sx * (18.5 + rnd() * 1.2), z + rnd(), 0.9 + rnd() * 0.5]);
+        trees.push([sx * (28 + rnd() * 3), z + rnd(), 1.1 + rnd() * 0.5]);
+      }
+    }
+    const leafCols = ['#6fcf7a', '#5fc06c', '#82d98a'];
+    for (const [x, z, s] of trees) {
       const t = new THREE.Mesh(trunk, this.mat('#c98a5a'));
-      t.position.set(x, 1, z);
-      const l = new THREE.Mesh(leaves, this.mat('#6fcf7a'));
-      l.position.set(x, 3.2, z);
+      t.position.set(x, s, z);
+      t.scale.setScalar(s);
+      const l = new THREE.Mesh(leaves, this.mat(leafCols[Math.floor(rnd() * 3)]!));
+      l.position.set(x, 3.2 * s, z);
+      l.scale.setScalar(s);
       t.castShadow = l.castShadow = true;
       this.root.add(t, l);
-      this.colliders.push({ kind: 'circle', x, z, r: 0.6 });
+    }
+    for (let x = -16; x <= 16; x += 2.4) {
+      const bsh = new THREE.Mesh(bush, this.mat('#6fcf7a'));
+      bsh.position.set(x, 0.5, F + 1.4);
+      bsh.scale.set(1, 0.7, 1);
+      this.root.add(bsh);
+    }
+
+    // 먼 언덕: 지평선을 가림 (안개와 섞임)
+    const hill = new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    this.owned.push(hill);
+    const hills: [number, number, number, number][] = [
+      [-40, -45, 22, 9], [0, -52, 28, 12], [40, -45, 22, 10], [-60, -10, 20, 8], [60, -10, 20, 9], [-55, 25, 18, 7], [55, 25, 18, 7],
+    ];
+    for (const [x, z, r, h] of hills) {
+      const mh = new THREE.Mesh(hill, this.mat('#7cc47a'));
+      mh.position.set(x, -0.2, z);
+      mh.scale.set(r, h, r);
+      this.root.add(mh);
     }
   }
 

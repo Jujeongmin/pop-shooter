@@ -9,20 +9,20 @@ export interface Facility {
   label: string;
 }
 
-/** 광장 60×60m. 가운데 시계탑, 남쪽 스폰, 북쪽 끝에 월드 포털 하나 (들어가면 그 월드 1번부터 연속 도전) */
-export const HUB_BOUNDS = { hx: 30, hz: 30 };
-export const HUB_SPAWN = { x: 0, z: 8 };
-export const RANGE_SPOT = { x: -15, z: 2 };
-export const RANGE_TARGET = { x: -15, z: -8 };
+/** 광장 32×32m, 울타리·집·나무로 둘러막힘. 남쪽 스폰 바로 앞(북쪽)에 월드 포털 (들어가면 그 월드 1번부터 연속 도전) */
+export const HUB_BOUNDS = { hx: 15.5, hz: 15.5 };
+export const HUB_SPAWN = { x: 0, z: 6 };
+export const RANGE_SPOT = { x: -9, z: 1 };
+export const RANGE_TARGET = { x: -9, z: -7 };
 /** 포털 고리 중심 (구역은 그 앞 PORTAL_SPOT) */
-export const PORTAL_GATE = { x: 0, z: -24 };
-export const PORTAL_SPOT = { x: 0, z: -20.5 };
+export const PORTAL_GATE = { x: 0, z: -10 };
+export const PORTAL_SPOT = { x: 0, z: -6.5 };
 
 export const WORLD1_FACILITIES: readonly Facility[] = [
-  { id: 'range', x: RANGE_SPOT.x, z: RANGE_SPOT.z, radius: 3, label: '사격장' },
-  { id: 'upgrade', x: 12, z: 4, radius: 3, label: '업그레이드' },
-  { id: 'guns', x: 16, z: -6, radius: 3, label: '총 상점' },
-  { id: 'altar', x: 0, z: 20, radius: 3.2, label: '환생 제단' },
+  { id: 'range', x: RANGE_SPOT.x, z: RANGE_SPOT.z, radius: 2.6, label: '사격장' },
+  { id: 'upgrade', x: 9, z: 4, radius: 2.6, label: '업그레이드' },
+  { id: 'guns', x: 8, z: -5, radius: 2.6, label: '총 상점' },
+  { id: 'altar', x: 0, z: 11.5, radius: 2.6, label: '환생 제단' },
   { id: 'portal', x: PORTAL_SPOT.x, z: PORTAL_SPOT.z, radius: 2.4, label: '월드 1 포털' },
 ];
 
