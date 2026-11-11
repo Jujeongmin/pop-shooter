@@ -5,6 +5,7 @@ import './ui/ui.css';
 import { loadAssets } from './assets/loadAssets';
 import { Game } from './core/Game';
 import { Stage3D } from './core/Stage3D';
+import { MentorNpcs } from './world/MentorNpcs';
 import { HitFx } from './fx/HitFx';
 import { pickSave } from './save/localSave';
 import { CloudSave } from './platform/CloudSave';
@@ -66,6 +67,7 @@ async function boot(): Promise<void> {
     portal.release();
     battle.start(1);
   }, 1200);
+  new MentorNpcs(game);
   new UpgradePanel(game, ui, callout, float);
   new GunPanel(game, ui, callout, float);
   new RebirthPanel(game, ui, callout, float);

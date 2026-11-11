@@ -67,6 +67,13 @@ export function mentorCount(bestStage: number): number {
   return n;
 }
 
+/** 이 종류에서 가진 가장 높은 장비 단계 (0 = 없음): 캐릭터에 보이는 장비 */
+export function topGearTier(s: GameState, k: TrainKind): number {
+  let t = 0;
+  GEAR.forEach((g, i) => { if (g.kind === k && hasGear(s, i)) t = Math.max(t, g.tier); });
+  return t;
+}
+
 /** 이 종류 장비 배율 (가진 장비마다 ×gearMult) */
 export function gearMult(s: GameState, k: TrainKind): number {
   let m = 1;

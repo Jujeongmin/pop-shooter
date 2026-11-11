@@ -53,3 +53,15 @@ test('better station, machines, gear, mentors and rebirths train faster', () => 
   const af = machineAffordable(3, 1e6);
   assert.ok(machineCost(3, af.n) <= 1e6 && machineCost(3, af.n + 1) > 1e6);
 });
+
+test('topGearTier shows the best owned tier per kind', async () => {
+  const { topGearTier } = await import('../../src/sim/training.ts');
+  const s = newState(0);
+  assert.deepEqual([topGearTier(s, 'atk'), topGearTier(s, 'spd'), topGearTier(s, 'coin')], [0, 0, 0]);
+  const iGloves2 = GEAR.findIndex((g) => g.id === 'gloves2');
+  const iPiggy = GEAR.findIndex((g) => g.id === 'piggy');
+  const g = { ...s, gear: (1 << 0) | (1 << iGloves2) | (1 << iPiggy) };
+  assert.equal(topGearTier(g, 'atk'), 2);
+  assert.equal(topGearTier(g, 'spd'), 0);
+  assert.equal(topGearTier(g, 'coin'), 1);
+});

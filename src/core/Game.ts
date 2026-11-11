@@ -4,7 +4,8 @@ import { OcclusionFader } from '../fx/OcclusionFader';
 import * as THREE from 'three';
 import type { Assets } from '../assets/loadAssets';
 import { FollowCamera } from '../camera/FollowCamera';
-import { Avatar } from '../player/Avatar';
+import { Avatar, type GearTiers } from '../player/Avatar';
+import { topGearTier } from '../sim/training.ts';
 import { GUNS } from '../sim/guns.ts';
 import type { CharId, GameState } from '../sim/state.ts';
 import type { CloudSave } from '../platform/CloudSave';
@@ -24,6 +25,11 @@ const RADIUS = 0.4;
 
 const _dir = new THREE.Vector3();
 const _look = { x: 0, y: 0 };
+
+/** 캐릭터에 보일 장비 단계 */
+export function gearTiers(s: GameState): GearTiers {
+  return { atk: topGearTier(s, 'atk'), spd: topGearTier(s, 'spd'), coin: topGearTier(s, 'coin') };
+}
 
 export type GameMode = 'hub' | 'training' | 'battle';
 export type FacilityKind = Facility['id'];
@@ -92,6 +98,7 @@ export class Game {
     this.hub.setBest(state.bestStage);
     this.avatar = new Avatar(assets, state.char, GUNS[state.gun]!);
     stage.scene.add(this.avatar.root);
+    this.avatar.setGear(gearTiers(state));
     stage.onFrame((dt) => this.frame(dt));
   }
 
@@ -122,6 +129,7 @@ export class Game {
     this.avatar.dispose();
     this.avatar = new Avatar(this.assets, c, GUNS[gun]!);
     this.stage.scene.add(this.avatar.root);
+    this.avatar.setGear(gearTiers(this.state));
   }
 
   /** 캐릭터 바꾸기 (가진 것만): 아바타 새로 만들고 이전 것은 해제 */
@@ -232,8 +240,10 @@ export class Game {
   /** 모든 상태 변경은 여기로: 포털 기록·창 갱신 알림. 중요한 변경(구매·클리어·환생)은 save=true로 즉시 저장 */
   setState(next: GameState, save = false): void {
     const prevBest = this.state.bestStage;
+    const prevGear = this.state.gear;
     this.state = next;
     if (next.bestStage !== prevBest) this.hub.setBest(next.bestStage);
+    if (next.gear !== prevGear) this.avatar.setGear(gearTiers(next));
     for (const l of this.stateListeners) l(next);
     if (save) this.saver.saveNow();
   }

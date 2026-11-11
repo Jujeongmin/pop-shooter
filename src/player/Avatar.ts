@@ -5,6 +5,8 @@ import type { Assets } from '../assets/loadAssets';
 import type { GunDef } from '../sim/guns.ts';
 import type { CharId } from '../sim/state.ts';
 import { PlayerAvatar, type AvatarFrame } from './PlayerAvatar';
+import type { TrainKind } from '../sim/training.ts';
+import { makeGlove, makeGoggles, makePiggy } from './GearVisual';
 
 export interface AvatarPose {
   pos: THREE.Vector3;
@@ -25,6 +27,15 @@ const _dir = new THREE.Vector3();
 /** 이 속도(m/s) 넘으면 달리기 클립 */
 const RUN_FROM = 3;
 const _chest = new THREE.Vector3();
+const _w = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _q2 = new THREE.Quaternion();
+const _s = new THREE.Vector3();
+
+export type GearTiers = Record<TrainKind, number>;
+/** 아바타 기준(발 = 0, 앞 = +z) 장비 자리 (m). 화면에서 맞춤 */
+const GOGGLE_AT = new THREE.Vector3(0, 0.9, 0.26);
+const PIGGY_AT = new THREE.Vector3(0, 0.5, -0.18);
 
 /** 팝배틀 PlayerAvatar 감싸기: 캐릭터 복제 + 월드 색 총 + 간단한 자세 입력 */
 export class Avatar {
@@ -35,6 +46,10 @@ export class Avatar {
   private gunObj: THREE.Object3D;
   private readonly frame: AvatarFrame;
   private airTime = 0;
+  /** 붙인 장비 (종류별 단계와 오브젝트). 도형·재질은 GearVisual 공유라 떼기만 함 */
+  private readonly gear: Record<TrainKind, { tier: number; objs: THREE.Object3D[] }> = {
+    atk: { tier: 0, objs: [] }, spd: { tier: 0, objs: [] }, coin: { tier: 0, objs: [] },
+  };
 
   constructor(assets: Assets, char: CharId, gun: GunDef) {
     this.assets = assets;
@@ -108,6 +123,44 @@ export class Avatar {
 
   getMuzzle(out: THREE.Vector3): void {
     this.avatar.getMuzzle(out);
+  }
+
+  /** 장비 표시 (종류마다 가장 높은 단계, 0 = 없음). 바뀐 종류만 다시 붙임 */
+  setGear(tiers: GearTiers): void {
+    this.root.updateMatrixWorld(true);
+    for (const k of ['atk', 'spd', 'coin'] as const) {
+      const cur = this.gear[k];
+      if (cur.tier === tiers[k]) continue;
+      for (const o of cur.objs) o.removeFromParent();
+      cur.objs = [];
+      cur.tier = tiers[k];
+      if (cur.tier <= 0) continue;
+      if (k === 'atk') {
+        for (const bone of ['Hand_R', 'Hand_L']) cur.objs.push(this.attach(makeGlove(cur.tier), bone, null));
+      } else if (k === 'spd') {
+        cur.objs.push(this.attach(makeGoggles(cur.tier), 'Chest', GOGGLE_AT));
+      } else {
+        cur.objs.push(this.attach(makePiggy(cur.tier), 'Chest', PIGGY_AT));
+      }
+    }
+  }
+
+  /** 본에 붙이기: at = 아바타 기준 자리(null이면 본 원점), 방향은 아바타 정면, 월드 크기 1 유지 */
+  private attach(obj: THREE.Object3D, boneName: string, at: THREE.Vector3 | null): THREE.Object3D {
+    const bone = this.root.getObjectByName(boneName);
+    if (!bone) return obj;
+    bone.add(obj);
+    bone.getWorldScale(_s);
+    obj.scale.set(1 / _s.x, 1 / _s.y, 1 / _s.z);
+    if (at) {
+      _w.copy(at);
+      this.root.localToWorld(_w);
+      obj.position.copy(bone.worldToLocal(_w));
+    }
+    bone.getWorldQuaternion(_q);
+    this.root.getWorldQuaternion(_q2);
+    obj.quaternion.copy(_q.invert().multiply(_q2));
+    return obj;
   }
 
   dispose(): void {
