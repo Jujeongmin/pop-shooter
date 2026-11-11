@@ -645,10 +645,50 @@ describe('rank board', () => {
     server.connect({ account: 'nk1' });
     await server.saveWrite({ v: 1, bestStage: 1, char: 'blue', chars: ['blue'] });
     expect((await server.nickSet('기록왕')).ok).toBe(true);
-    await server.saveWrite({ v: 1, bestStage: 3, char: 'blue', chars: ['blue'] });
+    await server.saveWrite({ v: 1, bestStage: 1, coins: 10, char: 'blue', chars: ['blue'] });
     const b = await server.rankTop();
     expect(b.rows.length).toBe(1);
-    expect(b.rows[0].bs).toBe(3);
+    expect(b.rows[0].bs).toBe(1);
     expect(b.rows[0].nick).toBe('기록왕');
+  });
+});
+
+
+// ---------------- 경제 검사 (저장) ----------------
+
+describe('save economy check', () => {
+  test('coins far beyond what the time allows are clamped and the clamp is returned', async (server) => {
+    server.connect({ account: 'ec1' });
+    await server.saveWrite({ v: 1, coins: 100, char: 'blue', chars: ['blue'] });
+    const r = await server.saveWrite({ v: 1, coins: 1e15, char: 'blue', chars: ['blue'] });
+    expect(r.ok).toBe(true);
+    expect(typeof r.coins).toBe('number');
+    expect(r.coins < 1e6).toBe(true);
+    expect((await server.saveLoad()).save.coins).toBe(r.coins);
+  });
+
+  test('impossible stage / levels / skipped rebirths are rejected and the server save is returned to adopt', async (server) => {
+    server.connect({ account: 'ec2' });
+    await server.saveWrite({ v: 1, coins: 0, char: 'blue', chars: ['blue'] });
+    for (const bad of [{ bestStage: 15 }, { atkLv: 500 }, { rebirths: 3, tokens: 3 }]) {
+      const r = await server.saveWrite({ v: 1, char: 'blue', chars: ['blue'], ...bad });
+      expect(r.ok).toBe(false);
+      expect(r.fix.bestStage).toBe(0);
+    }
+    expect((await server.saveLoad()).save.bestStage).toBe(0);
+  });
+
+  test('premium values are server-owned: client gems / pass / paid chars are ignored', async (server) => {
+    server.connect({ account: 'ec3' });
+    await server.saveWrite({ v: 1, gems: 5, char: 'blue', chars: ['blue'] });
+    const r = await server.saveWrite({ v: 1, gems: 999999, passMult: 64, char: 'black', chars: ['blue', 'black'] });
+    expect(r.ok).toBe(true);
+    // 새 계정은 서버 팝젬 0에서 시작 (첫 저장의 팝젬도 믿지 않음), 이후에도 클라이언트 값 무시
+    expect(r.prem.gems).toBe(0);
+    expect(r.prem.passMult).toBe(1);
+    expect(r.prem.char).toBe('blue');
+    const s = (await server.saveLoad()).save;
+    expect(s.gems).toBe(0);
+    expect(s.char).toBe('blue');
   });
 });

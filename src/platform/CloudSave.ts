@@ -16,6 +16,17 @@ export interface CloudLoad {
  * 서버 연결이 안 되면(verse 없음·네트워크·시간 초과) online = false → 게임은 기기 저장만으로 계속.
  * 저장은 실패해도 던지지 않음 (다음 저장 때 다시 보냄).
  */
+/** saveWrite 응답 (server/src/server.ts SaveWriteResult) */
+export interface ServerSaveReply {
+  ok: boolean;
+  reason?: string;
+  prem?: { gems: number; passMult: number; boostUntil: number; chars: string[]; char: string };
+  /** 코인을 상한으로 잘랐으면 서버 코인 */
+  coins?: number;
+  /** 거절됐으면 서버에 남은 저장 (그대로 받아들임) */
+  fix?: Record<string, unknown>;
+}
+
 export class CloudSave {
   online = false;
   account: string | null = null;
@@ -24,6 +35,8 @@ export class CloudSave {
 
   /** 서버 저장 성공 알림 (광장: 서버가 저장값으로 환생·공격력 상한을 쓰므로 저장 뒤 보이는 정보를 다시 보냄) */
   readonly onSaved = new Set<(save: Record<string, unknown>) => void>();
+  /** 서버가 정한 값 (프리미엄·잘린 코인·거절 시 서버 저장) → 게임이 맞춤 */
+  readonly onServerState = new Set<(r: ServerSaveReply) => void>();
 
   /** 광장과 함께 쓰는 연결 */
   readonly net: NetClient;
@@ -64,8 +77,9 @@ export class CloudSave {
         this.pending = null;
         let ok = false;
         try {
-          const r = await this.net.call<{ ok?: boolean } | null>('saveWrite', [s], CALL_TIMEOUT_MS);
+          const r = await this.net.call<ServerSaveReply | null>('saveWrite', [s], CALL_TIMEOUT_MS);
           ok = !!r && r.ok !== false;
+          if (r && (r.prem || r.fix)) for (const fn of this.onServerState) { try { fn(r); } catch { /* 맞추기 실패는 저장과 무관 */ } }
         } catch { /* 다음 저장 때 다시 */ }
         if (ok) for (const fn of this.onSaved) { try { fn(s); } catch { /* 알림 실패는 저장과 무관 */ } }
       }

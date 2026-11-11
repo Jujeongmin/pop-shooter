@@ -78,6 +78,8 @@ async function boot(): Promise<void> {
   game.hub.root.add(board.root);
   game.hub.colliders.push(board.collider);
   cloud.onSaved.add(() => board.refreshSoon());
+  // 서버가 정한 값(프리미엄·잘린 코인·거절 시 서버 저장)으로 맞춤
+  cloud.onServerState.add((r) => game.adoptServer(r));
   // 광장 구조물이 다 생긴 뒤: 카메라를 가리면 반투명이 될 대상 등록
   game.occlusion.register(game.hub.root);
   const settings = new SettingsPanel(ui, guide, nickPanel);

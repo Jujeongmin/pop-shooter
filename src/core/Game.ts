@@ -1,3 +1,5 @@
+import type { ServerSaveReply } from '../platform/CloudSave';
+import { normalizeState } from '../sim/normalize.ts';
 import { OcclusionFader } from '../fx/OcclusionFader';
 import * as THREE from 'three';
 import type { Assets } from '../assets/loadAssets';
@@ -77,13 +79,39 @@ export class Game {
     stage.onFrame((dt) => this.frame(dt));
   }
 
+  /**
+   * 서버 저장 응답 맞추기: 프리미엄(팝젬·패스·부스트·캐릭터)은 서버 값, 코인이 잘렸으면 그 값 이하로,
+   * 거절됐으면 서버 저장으로 통째로 (저장 다시 안 함: 서버가 이미 가진 값). 캐릭터·총이 바뀌면 아바타도.
+   */
+  adoptServer(r: ServerSaveReply): void {
+    const before = this.state;
+    let s: GameState;
+    if (r.fix) {
+      s = normalizeState(r.fix, Date.now());
+    } else if (r.prem) {
+      const chars = r.prem.chars as CharId[];
+      s = { ...before, gems: r.prem.gems, passMult: r.prem.passMult, boostUntil: r.prem.boostUntil, chars, char: chars.includes(before.char) ? before.char : (r.prem.char as CharId) };
+      if (r.coins !== undefined) s = { ...s, coins: Math.min(s.coins, r.coins) };
+    } else return;
+    const same = s.gems === before.gems && s.passMult === before.passMult && s.boostUntil === before.boostUntil && s.char === before.char
+      && s.coins === before.coins && s.chars.length === before.chars.length && !r.fix;
+    if (same) return;
+    if (s.char !== before.char) this.rebuildAvatar(s.char, s.gun);
+    else if (s.gun !== before.gun) this.avatar.setGun(GUNS[s.gun]!);
+    this.setState(s);
+  }
+
+  private rebuildAvatar(c: CharId, gun: number): void {
+    this.avatar.root.removeFromParent();
+    this.avatar.dispose();
+    this.avatar = new Avatar(this.assets, c, GUNS[gun]!);
+    this.stage.scene.add(this.avatar.root);
+  }
+
   /** 캐릭터 바꾸기 (가진 것만): 아바타 새로 만들고 이전 것은 해제 */
   setChar(c: CharId): void {
     if (!this.state.chars.includes(c) || c === this.state.char) return;
-    this.avatar.root.removeFromParent();
-    this.avatar.dispose();
-    this.avatar = new Avatar(this.assets, c, GUNS[this.state.gun]!);
-    this.stage.scene.add(this.avatar.root);
+    this.rebuildAvatar(c, this.state.gun);
     this.setState({ ...this.state, char: c }, true);
   }
 

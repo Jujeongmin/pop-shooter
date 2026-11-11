@@ -15,6 +15,7 @@ import { newState, type GameState } from '../../src/sim/state.ts';
 import { stageHp, stageLabel, stageTime, isBoss, worldOf } from '../../src/sim/stages.ts';
 import { STAGE_HP } from '../../src/sim/stageTable.ts';
 import { atkCost, spdCost } from '../../src/sim/stats.ts';
+import { checkSave, worth } from '../../src/sim/econ.ts';
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: number): number => {
@@ -31,6 +32,19 @@ for (let i = 0; i < args.length; i++) {
 }
 const TAPS = Math.min(opt('taps', 3), BALANCE.tap.maxPerSec);
 const STALL_SEC = opt('stall', 600);
+/** --econ 1: 30초마다 서버 경제 검사(checkSave)를 돌려 정직한 플레이가 걸리는지 셈 */
+const ECON = opt('econ', 0) === 1;
+const econ = { checks: 0, clamps: 0, rejects: 0, reasons: {} as Record<string, number>, prev: null as GameState | null, lastT: 0 };
+function econCheck(c: Ctx): void {
+  if (!ECON) return;
+  if (c.t - econ.lastT < 30 && econ.prev && econ.prev.rebirths === c.s.rebirths) return;
+  const r = checkSave(econ.prev, c.s, c.t - econ.lastT, { gems: 0, passMult: 1, boostUntil: 0, paid: [] }, 0);
+  econ.checks++;
+  if (!r.ok) { econ.rejects++; econ.reasons[r.reason] = (econ.reasons[r.reason] ?? 0) + 1; if (opt('econlog', 0)) console.log('REJECT', r.reason, c.t, JSON.stringify({ p: econ.prev && { b: econ.prev.bestStage, a: econ.prev.atkLv, s: econ.prev.spdLv, g: econ.prev.gun, r: econ.prev.rebirths, c: econ.prev.char }, n: { b: c.s.bestStage, a: c.s.atkLv, s: c.s.spdLv, g: c.s.gun, r: c.s.rebirths, c: c.s.char, co: c.s.coins } })); }
+  else if (r.clamped) { econ.clamps++; if (opt('econlog', 0)) console.log('CLAMP', c.t, c.t - econ.lastT, JSON.stringify({ p: econ.prev && { b: econ.prev.bestStage, a: econ.prev.atkLv, s: econ.prev.spdLv, g: econ.prev.gun, r: econ.prev.rebirths, co: econ.prev.coins, w: worth(econ.prev) }, n: { b: c.s.bestStage, a: c.s.atkLv, g: c.s.gun, co: c.s.coins, w: worth(c.s) }, got: r.state.coins })); }
+  econ.prev = c.s;
+  econ.lastT = c.t;
+}
 /** 1이면 환생이 열리자마자 함 (키보드 탈출 공략 조언), 0이면 10분 정체 때만 */
 const ASAP = opt('asap', 1) === 1;
 
@@ -60,6 +74,7 @@ function runUntil(c: Ctx, stopStage: number, maxT: number, onClear?: (stage: num
   while (c.t < maxT) {
     c.s = { ...c.s, coins: c.s.coins + coinPerShot(c.s, highestWorld(c.s), Infinity) * (shotsPerSec(c.s) + TAPS) };
     c.t += 1;
+    econCheck(c);
     for (let k = 0; k < 400; k++) {
       const n = buyBest(c.s);
       if (!n) break;
@@ -152,6 +167,7 @@ if (args.includes('--fit')) {
   const at = new Map<number, { t: number; r: number }>();
   runUntil(ctx, STAGE_COUNT, 40 * 3600, (st, c) => at.set(st, { t: c.t, r: c.s.rebirths }));
   console.log(`taps=${TAPS} stall=${STALL_SEC}s`);
+  if (ECON) console.log(`econ checks ${econ.checks} clamps ${econ.clamps} rejects ${econ.rejects} ${JSON.stringify(econ.reasons)}`);
   for (const st of [1, 5, 10, 15, 20, 25, 30, 35, 40]) {
     const r = at.get(st);
     console.log(`${stageLabel(st).padEnd(5)} ${hms(r?.t ?? Infinity).padStart(7)}  rebirths ${r ? r.r : '-'}`);

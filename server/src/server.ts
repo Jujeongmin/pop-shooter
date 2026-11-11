@@ -12,6 +12,8 @@
  * 요청마다 새 인스턴스라 상태는 모듈 변수에 두지 않음.
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
+import { allowedChars, checkSave, PAID_CHARS, type Premium } from '../../src/sim/econ.ts';
+import type { CharId, GameState } from '../../src/sim/state.ts';
 import { damagePerShot } from '../../src/sim/actions.ts';
 import {
   HUB_MAX_PLAYERS,
@@ -30,6 +32,32 @@ import {
 } from '../../src/net/shared/hub.ts';
 import { checkNickname } from '../../src/net/shared/nickFilter.ts';
 import { RANK_COLLECTION, RANK_TOP, rankKey, type RankBoard, type RankRow } from '../../src/net/shared/rank.ts';
+
+/** 저장 응답: 서버가 정한 프리미엄 값 + (잘렸으면) 코인 + (거절이면) 서버 저장 */
+interface SaveWriteResult {
+  ok: boolean;
+  reason?: string;
+  now: number;
+  prem?: { gems: number; passMult: number; boostUntil: number; chars: string[]; char: string };
+  coins?: number;
+  fix?: Record<string, unknown>;
+}
+
+/** 서버 프리미엄 (글로벌 사용자 상태 prem). 처음이면 기존 저장의 팝젬·패스·부스트로 시작 (한 번만 믿음) */
+function premOf(st: Record<string, unknown>, prev: GameState | null): Premium {
+  const p = st.prem && typeof st.prem === 'object' ? (st.prem as Record<string, unknown>) : null;
+  const num = (v: unknown, d: number): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : d);
+  if (p) {
+    const paid = Array.isArray(p.paid) ? (p.paid.filter((c) => PAID_CHARS.includes(c as CharId)) as CharId[]) : [];
+    return { gems: Math.floor(num(p.gems, 0)), passMult: num(p.passMult, 1) || 1, boostUntil: num(p.boostUntil, 0), paid };
+  }
+  return { gems: prev ? Math.min(prev.gems, 1000) : 0, passMult: 1, boostUntil: 0, paid: [] };
+}
+
+function premView(p: Premium, s: GameState | null): NonNullable<SaveWriteResult['prem']> {
+  const chars = allowedChars(s?.bestStage ?? 0, p.paid);
+  return { gems: p.gems, passMult: p.passMult, boostUntil: p.boostUntil, chars, char: s && chars.includes(s.char) ? s.char : 'blue' };
+}
 
 /** 저장 한 건 최대 크기 (문서 1MB 한도보다 훨씬 작게) */
 const MAX_SAVE_CHARS = 20000;
@@ -195,28 +223,43 @@ export class Server {
     return { ok: true, save: saveOf(st), now: Date.now() };
   }
 
-  /** 저장: 형식 고쳐서 저장, lastSeen = 서버 시각 */
-  async saveWrite(raw: unknown): Promise<{ ok: boolean; reason?: string; now: number }> {
+  /**
+   * 저장: 형식 고침 → 경제 검사(checkSave: 프리미엄은 서버 값, 늘어난 가치 상한, 깰 수 있는 스테이지, 환생 조건) → 저장 (lastSeen = 서버 시각).
+   * 돌려줌: 서버가 정한 프리미엄 값(팝젬·패스·부스트·캐릭터)과, 코인을 잘랐거나 거절했으면 서버 저장값 → 클라이언트가 맞춤.
+   */
+  async saveWrite(raw: unknown): Promise<SaveWriteResult> {
     const now = Date.now();
     let size = 0;
     try { size = JSON.stringify(raw).length; } catch { return { ok: false, reason: 'bad', now }; }
     if (!raw || typeof raw !== 'object' || size > MAX_SAVE_CHARS) return { ok: false, reason: 'bad', now };
     const account = $sender.account;
-    await $lock(`save:${account}`, async () => {
+    return $lock(`save:${account}`, async (): Promise<SaveWriteResult> => {
+      const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+      const prevRaw = saveOf(st);
+      const prev = prevRaw ? normalizeState(prevRaw, now) : null;
+      const prem = premOf(st, prev);
       const clean = normalizeState(raw, now);
-      await $global.updateMyState({ save: { ...clean, lastSeen: now } });
+      const elapsed = prev ? (now - prev.lastSeen) / 1000 : 0;
+      const r = checkSave(prev, clean, elapsed, prem, now);
+      if (!r.ok) {
+        slog(`save_reject_${r.reason}`, '-', account);
+        // 이전 서버 저장 유지, 클라이언트는 이 값으로 맞춤 (거절이 반복되지 않게)
+        return { ok: false, reason: r.reason, now, prem: premView(prem, prev), fix: prev ? { ...prev } as unknown as Record<string, unknown> : undefined };
+      }
+      const saved = { ...r.state, lastSeen: now };
+      await $global.updateMyState({ save: saved, prem: r.prem });
+      if (r.clamped) slog('save_clamped', '-', account);
       // 기록판 한 줄 (계정마다 하나, 항목당 문서 하나라 커지지 않음). 실패해도 저장은 그대로
       try {
-        const st = ((await $global.getMyState()) || {}) as { nick?: unknown };
         const nk = checkNickname(st.nick);
-        const pw = damagePerShot(clean);
-        const row = { acc: account, nick: nk.ok ? nk.value : '', rb: clean.rebirths, bs: clean.bestStage, pw, c: clean.char, k: rankKey(clean.rebirths, clean.bestStage, pw), t: now };
+        const pw = damagePerShot(saved);
+        const row = { acc: account, nick: nk.ok ? nk.value : '', rb: saved.rebirths, bs: saved.bestStage, pw, c: saved.char, k: rankKey(saved.rebirths, saved.bestStage, pw), t: now };
         const found = await $global.getCollectionItems(RANK_COLLECTION, { filters: [{ field: 'acc', operator: '==', value: account }], limit: 1 });
         if (found[0]) await $global.updateCollectionItem(RANK_COLLECTION, { __id: found[0].__id, ...row });
         else await $global.addCollectionItem(RANK_COLLECTION, row);
       } catch { /* 기록판은 다음 저장 때 다시 */ }
+      return { ok: true, now, prem: premView(r.prem, saved), coins: r.clamped ? saved.coins : undefined };
     });
-    return { ok: true, now };
   }
 
   /** 기록판: 상위 RANK_TOP (키 > 0) + 내 순위. 계정 id는 돌려주지 않음 (내 줄은 me 표시) */
