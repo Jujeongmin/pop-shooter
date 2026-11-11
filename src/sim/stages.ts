@@ -10,8 +10,9 @@ export function isBoss(s: number): boolean {
   return s % BALANCE.stage.perWorld === 0;
 }
 
-/** 보스 체력 = 시뮬레이터가 맞춘 표 (대장 포함) */
+/** 보스 체력 = 시뮬레이터가 맞춘 표 (대장 포함). 1-1만 첫 승리용 고정값 */
 export function stageHp(s: number): number {
+  if (s === 1) return BALANCE.stage.firstHp;
   return STAGE_HP[s - 1] ?? Infinity;
 }
 

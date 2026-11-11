@@ -6,8 +6,9 @@ const _look = new THREE.Vector3();
 /** 위에서 비스듬히 따라가는 고정 각도 카메라 (yaw 고정 = 조이스틱 위쪽이 늘 화면 위쪽) */
 export class FollowCamera {
   yaw = 0;
-  distance = 6.5;
-  height = 3.6;
+  /** 6.5/3.6은 캐릭터가 너무 커서 주변이 안 보임, 예전 9m대는 너무 작았음 → 중간 (사용자 2026-11-11) */
+  distance = 7.8;
+  height = 4.4;
   /** 0 = 평소, 1 = 구역 집중 (조금 당겨짐). focus 목표로 부드럽게 따라감 */
   focus = 0;
   private focusNow = 0;

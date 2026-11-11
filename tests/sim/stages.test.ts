@@ -18,7 +18,13 @@ test('stages', () => {
 
 test('hp table from fitter', () => {
   assert.equal(STAGE_HP.length, STAGE_COUNT);
-  for (let s = 1; s <= STAGE_COUNT; s++) assert.equal(stageHp(s), STAGE_HP[s - 1]);
+  // 1-1은 고정값(firstHp), 나머지는 표 그대로
+  for (let s = 2; s <= STAGE_COUNT; s++) assert.equal(stageHp(s), STAGE_HP[s - 1]);
   for (let s = 2; s <= STAGE_COUNT; s++) assert.ok(stageHp(s) > stageHp(s - 1), `stage ${s} hp must grow`);
   for (const s of STAGE_HP) assert.ok(Number.isFinite(s) && s > 0);
+});
+
+test('1-1 is a fixed easy first win (300 hp), table starts at 1-2', () => {
+  assert.equal(stageHp(1), 300);
+  assert.ok(stageHp(2) > stageHp(1));
 });

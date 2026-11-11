@@ -11,6 +11,8 @@ export const BALANCE = {
   stage: {
     perWorld: 10, worlds: 4,
     timeNormal: 20, timeBoss: 30, firstClearCoinMult: 2, replayCoinMult: 0.3,
+    /** 1-1 체력 고정: 처음 온 사람이 몇 초 훈련하면 바로 이기게 (사용자 2026-11-11). 표(fit)는 1-2부터 의미 있음 */
+    firstHp: 300,
   },
   rebirth: { unlockStage: 10, tokenOffset: 5, tokenDiv: 2, multPerToken: 0.5 },
   range: { multByWorld: [1, 4, 16, 64] },
