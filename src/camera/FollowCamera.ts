@@ -11,12 +11,19 @@ export class FollowCamera {
   /** 0 = 평소, 1 = 구역 집중 (조금 당겨짐). focus 목표로 부드럽게 따라감 */
   focus = 0;
   private focusNow = 0;
+  private shakeAmp = 0;
+  private shakeT = 0;
   private readonly cam: THREE.PerspectiveCamera;
   private readonly pos = new THREE.Vector3();
   private initialized = false;
 
   constructor(cam: THREE.PerspectiveCamera) {
     this.cam = cam;
+  }
+
+  /** 짧은 흔들림 (m) */
+  shake(amp: number): void {
+    this.shakeAmp = Math.max(this.shakeAmp, amp);
   }
 
   rotate(dxPx: number): void {
@@ -40,6 +47,12 @@ export class FollowCamera {
     if (!this.initialized) { this.pos.copy(_goal); this.initialized = true; }
     this.pos.lerp(_goal, 1 - Math.exp(-dt * 8));
     this.cam.position.copy(this.pos);
+    if (this.shakeAmp > 0.001) {
+      this.shakeT += dt;
+      this.cam.position.x += Math.sin(this.shakeT * 61) * this.shakeAmp;
+      this.cam.position.y += Math.sin(this.shakeT * 47 + 1) * this.shakeAmp;
+      this.shakeAmp *= Math.exp(-dt * 9);
+    }
     _look.set(target.x, target.y + 1, target.z);
     this.cam.lookAt(_look);
   }

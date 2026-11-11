@@ -46,6 +46,13 @@ export class ZoneRing {
     this.root.position.set(x, 0, z);
   }
 
+  /** 튕김 + 퍼지는 파동 한 번 더 (착지 순간 등) */
+  burst(): void {
+    this.pop = 1;
+    this.waveT = 0;
+    this.wave.visible = true;
+  }
+
   setInside(inside: boolean): void {
     if (inside === this.inside) return;
     this.inside = inside;

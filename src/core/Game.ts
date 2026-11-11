@@ -36,6 +36,9 @@ export class Game {
   yaw = Math.PI;
   readonly velocity = new THREE.Vector3();
   near: Facility | null = null;
+  /** 남은 이동 잠금(초): 구역에 '잡히는' 연출 동안 조이스틱·키보드 무시. 잠금 뒤엔 입력을 한 번 놓아야 다시 움직임 */
+  moveLock = 0;
+  private needRelease = false;
   /** 다른 Task가 붙는 매 프레임 훅 */
   private readonly tickers: ((dt: number) => void)[] = [];
   /** 탭 처리 (훈련 구역·전투 = 추가 발사). 없으면 탭 무시. 이동은 조이스틱·키보드 */
@@ -125,6 +128,15 @@ export class Game {
 
   private updateMove(dt: number): void {
     const m = this.controls.move();
+    if (this.moveLock > 0) {
+      this.moveLock -= dt;
+      this.needRelease = true;
+    }
+    if (this.needRelease && m.x === 0 && m.y === 0 && this.moveLock <= 0) this.needRelease = false;
+    if (this.needRelease) {
+      this.velocity.set(0, 0, 0);
+      return;
+    }
     _dir.set(0, 0, 0);
     if (m.x !== 0 || m.y !== 0) this.cam.toWorld(m.x, m.y, _dir);
     const speed = MOVE_SPEED * Math.min(1, _dir.length());
@@ -142,10 +154,10 @@ export class Game {
   }
 
   /** 아바타 자세 (훈련·전투 Task가 aimAt·kick을 덮어씀) */
-  readonly pose = { aimAt: null as THREE.Vector3 | null, kick: 0 };
+  readonly pose = { aimAt: null as THREE.Vector3 | null, kick: 0, squash: 0 };
 
   updateAvatar(dt: number): void {
-    this.avatar.update(dt, { pos: this.pos, yaw: this.yaw, velocity: this.velocity, aimAt: this.pose.aimAt, kick: this.pose.kick });
+    this.avatar.update(dt, { pos: this.pos, yaw: this.yaw, velocity: this.velocity, aimAt: this.pose.aimAt, kick: this.pose.kick, squash: this.pose.squash });
   }
 
   /** 모든 상태 변경은 여기로: 문 색·창 갱신 알림. 중요한 변경(구매·클리어·환생)은 save=true로 즉시 저장 */

@@ -51,6 +51,9 @@
 @keyframes zone-drop { from { transform: translateY(-30px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
 @keyframes zone-pop { 0% { transform: translate(-50%, -50%) scale(.2); opacity: 0 } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1 } }
 @keyframes zone-fade { to { transform: translate(-50%, -50%) scale(.7); opacity: 0 } }
+.zone-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(255,255,255,0) 45%, var(--flash, #4fb3ff) 130%); }
+.zone-flash.go { animation: zone-flash .45s ease-out both; }
+@keyframes zone-flash { 0% { opacity: 0 } 15% { opacity: 1 } 100% { opacity: 0 } }
 @keyframes zone-tap { 0%, 100% { transform: translateY(0) scale(1) } 45% { transform: translateY(10px) scale(.88) } }
 @media (max-width: 760px), (max-height: 460px) {
   .zone-big { font-size: 24px; -webkit-text-stroke-width: 5px; }

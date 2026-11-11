@@ -8,11 +8,16 @@ import { TapLimiter } from '../sim/tapLimiter.ts';
 import { ZoneRing } from '../fx/ZoneRing';
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
-import { RANGE_SPOT, WORLD1_FACILITIES } from '../world/facilities';
+import { RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES } from '../world/facilities';
 
 /** 지금 있는 광장 월드 (계획 1 = 월드 1) */
 const HUB_WORLD = 1;
 const FLUSH_SEC = 0.25;
+/** 들어오면 사격 자리로 폴짝 빨려 들어가는 시간·높이, 착지 뒤 이동 잠금 */
+const SNAP_SEC = 0.24;
+const SNAP_HOP = 0.6;
+const LAND_LOCK = 0.3;
+const SQUASH_SEC = 0.6;
 
 const _muzzle = new THREE.Vector3();
 const _aim = new THREE.Vector3();
@@ -38,6 +43,10 @@ export class TrainingRange {
   private readonly wobble: number[];
   private hiddenAt = 0;
   private readonly ring: ZoneRing;
+  /** 자리로 빨려 들어가는 중이면 0..SNAP_SEC, 아니면 −1 */
+  private snapT = -1;
+  private readonly snapFrom = new THREE.Vector3();
+  private squashT = SQUASH_SEC;
   private readonly callout: ZoneCallout;
   /** 디버그·검증: 지금까지 인정한 탭 수 */
   tapsAccepted = 0;
@@ -66,9 +75,10 @@ export class TrainingRange {
     this.shotAcc = 0;
     this.ring.setInside(true);
     this.game.cam.focus = 1;
-    this.callout.show({ title: '사격장 훈련 중!', big: '화면을 탭하면 더 빨리 쏴요!', hand: true });
-    // 들어오자마자 한 발: 자리 잡은 느낌
-    this.fire(false);
+    // 사격 자리로 폴짝 → 착지(land)에서 연출이 터짐
+    this.snapFrom.copy(this.game.pos);
+    this.snapT = 0;
+    this.game.moveLock = SNAP_SEC + LAND_LOCK;
   }
 
   stop(): void {
@@ -78,9 +88,41 @@ export class TrainingRange {
     this.game.tapHandler = null;
     this.game.pose.aimAt = null;
     this.game.pose.kick = 0;
+    this.game.pose.squash = 0;
+    this.game.pos.y = 0;
+    this.snapT = -1;
+    this.squashT = SQUASH_SEC;
     this.ring.setInside(false);
     this.game.cam.focus = 0;
     this.callout.hide();
+  }
+
+  /** 사격 자리 착지: 링 튕김 + 화면 번쩍 + 흔들림 + 찌그러짐 + 문구 + 첫 발 */
+  private land(): void {
+    const g = this.game;
+    g.pos.y = 0;
+    this.squashT = 0;
+    this.ring.burst();
+    g.cam.shake(0.08);
+    this.callout.flash('rgba(79, 179, 255, 0.85)');
+    this.callout.show({ title: '사격장 훈련 중!', big: '화면을 탭하면 더 빨리 쏴요!', hand: true });
+    this.fire(false);
+  }
+
+  private updateSnap(dt: number): void {
+    const g = this.game;
+    this.snapT += dt;
+    const k = Math.min(1, this.snapT / SNAP_SEC);
+    const e = 1 - (1 - k) ** 3;
+    g.pos.x = this.snapFrom.x + (RANGE_SPOT.x - this.snapFrom.x) * e;
+    g.pos.z = this.snapFrom.z + (RANGE_SPOT.z - this.snapFrom.z) * e;
+    g.pos.y = Math.sin(Math.PI * k) * SNAP_HOP;
+    g.yaw = Math.atan2(RANGE_TARGET.x - g.pos.x, RANGE_TARGET.z - g.pos.z);
+    g.pose.squash = -0.25 * Math.sin(Math.PI * k);
+    if (k >= 1) {
+      this.snapT = -1;
+      this.land();
+    }
   }
 
   private tap(): void {
@@ -125,6 +167,12 @@ export class TrainingRange {
       t.rotation.x = -Math.sin(w * Math.PI * 2) * 0.25 * w;
     });
     if (!this.active) return;
+    if (this.snapT >= 0) { this.updateSnap(dt); return; }
+    if (this.squashT < SQUASH_SEC) {
+      this.squashT += dt;
+      const t = this.squashT;
+      g.pose.squash = t < SQUASH_SEC ? Math.exp(-t * 7) * Math.cos(t * 24) : 0;
+    }
     // 걷는 중엔 쏘지 않음 (판 밖으로 나가면 facilityLeave가 stop)
     if (g.velocity.lengthSq() > 0.04) {
       g.pose.aimAt = null;

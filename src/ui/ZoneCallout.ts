@@ -18,6 +18,7 @@ export class ZoneCallout {
   private readonly center: HTMLDivElement;
   private readonly bigText: HTMLDivElement;
   private readonly hand: HTMLDivElement;
+  private readonly flashEl: HTMLDivElement;
   private hideTimer = 0;
 
   constructor(parent: HTMLElement) {
@@ -27,7 +28,20 @@ export class ZoneCallout {
     this.hand = el('div', 'zone-hand', '👆');
     this.center.append(this.top, this.bigText, this.hand);
     this.center.hidden = true;
-    parent.append(this.center);
+    this.flashEl = el('div', 'zone-flash');
+    this.flashEl.hidden = true;
+    this.flashEl.addEventListener('animationend', () => { this.flashEl.hidden = true; });
+    parent.append(this.flashEl, this.center);
+  }
+
+  /** 화면 가장자리 번쩍 (구역에 잡힌 순간) */
+  flash(color: string): void {
+    const f = this.flashEl;
+    f.style.setProperty('--flash', color);
+    f.hidden = false;
+    f.classList.remove('go');
+    void f.offsetWidth;
+    f.classList.add('go');
   }
 
   show(t: CalloutText): void {

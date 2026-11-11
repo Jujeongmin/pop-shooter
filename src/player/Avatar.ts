@@ -15,6 +15,8 @@ export interface AvatarPose {
   aimAt: THREE.Vector3 | null;
   /** 반동 (m) */
   kick: number;
+  /** 착지 찌그러짐 (+ = 납작, − = 길쭉), 0이면 원래 크기 */
+  squash?: number;
 }
 
 const _dir = new THREE.Vector3();
@@ -90,6 +92,8 @@ export class Avatar {
       f.pitch = -0.1;
     }
     this.avatar.update(f);
+    const q = p.squash ?? 0;
+    this.root.scale.set(1 + q * 0.35, 1 - q * 0.45, 1 + q * 0.35);
   }
 
   getMuzzle(out: THREE.Vector3): void {
