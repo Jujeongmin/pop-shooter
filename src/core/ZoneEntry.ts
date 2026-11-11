@@ -17,7 +17,7 @@ export interface ZoneEntryOptions {
   /** 착지 때 화면 가장자리 번쩍 색 */
   flash: string;
   /** 폴짝 뛰어 내려앉을 자리 (없으면 구역 중심) */
-  spot?: { x: number; z: number };
+  spot?: { x: number; z: number } | (() => { x: number; z: number });
   /** 카메라: focus(1 = 당김, 음수 = 뒤로), lookUp(음수면 캐릭터가 화면 위쪽에: 아래 창이 가리지 않게) */
   cam?: { focus: number; lookUp: number };
   /** 착지 뒤 바라볼 곳 */
@@ -36,7 +36,8 @@ export class ZoneEntry {
   private readonly callout: ZoneCallout;
   private readonly ring: ZoneRing;
   private readonly opt: ZoneEntryOptions;
-  private readonly spot: { x: number; z: number };
+  private spot: { x: number; z: number };
+  private readonly zoneCenter: { x: number; z: number };
   private snapT = -1;
   private readonly from = new THREE.Vector3();
   inside = false;
@@ -47,7 +48,8 @@ export class ZoneEntry {
     this.game = game;
     this.callout = callout;
     this.opt = opt;
-    this.spot = opt.spot ?? { x: zone.x, z: zone.z };
+    this.zoneCenter = { x: zone.x, z: zone.z };
+    this.spot = this.zoneCenter;
     this.ring = new ZoneRing(zone.x, zone.z, zone.radius, opt.color);
     // 광장에 붙여서 전투 중 광장을 숨기면 같이 숨음
     game.hub.root.add(this.ring.root);
@@ -64,6 +66,9 @@ export class ZoneEntry {
     this.ring.setInside(true);
     this.game.cam.focus = this.opt.cam?.focus ?? 1;
     this.game.cam.lookUp = this.opt.cam?.lookUp ?? 0;
+    // 내려앉을 자리: 함수면 들어올 때마다 새로 (예: 사격장 매트 안 무작위)
+    const sp = this.opt.spot;
+    this.spot = typeof sp === 'function' ? sp() : sp ?? this.zoneCenter;
     this.from.copy(this.game.pos);
     this.snapT = 0;
     this.game.moveLock = SNAP_SEC + LAND_LOCK;

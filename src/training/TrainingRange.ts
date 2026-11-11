@@ -53,7 +53,8 @@ export class TrainingRange {
     this.zone = new ZoneEntry(game, callout, WORLD1_FACILITIES.find((f) => f.id === 'range')!, {
       color: '#4fb3ff',
       flash: 'rgba(79, 179, 255, 0.85)',
-      spot: RANGE_SPOT,
+      // 매트(6×4m) 안 무작위 자리: 여러 명이 훈련해도 한 점에 겹치지 않음
+      spot: () => ({ x: RANGE_SPOT.x + (Math.random() - 0.5) * 4.4, z: RANGE_SPOT.z + (Math.random() - 0.5) * 2.6 }),
       face: RANGE_TARGET,
       text: { title: t('range.title'), big: t('range.big'), hand: true },
     });
