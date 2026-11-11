@@ -3,7 +3,7 @@ import * as THREE from 'three';
 const _goal = new THREE.Vector3();
 const _look = new THREE.Vector3();
 
-/** 뒤 위에서 비스듬히 따라가는 카메라. 드래그로 좌우 회전 */
+/** 위에서 비스듬히 따라가는 고정 각도 카메라 (yaw 고정 = 조이스틱 위쪽이 늘 화면 위쪽) */
 export class FollowCamera {
   yaw = 0;
   distance = 6.5;
@@ -24,10 +24,6 @@ export class FollowCamera {
   /** 짧은 흔들림 (m) */
   shake(amp: number): void {
     this.shakeAmp = Math.max(this.shakeAmp, amp);
-  }
-
-  rotate(dxPx: number): void {
-    this.yaw -= dxPx * 0.006;
   }
 
   /** 화면 기준 이동 입력 → 월드 방향 (카메라 yaw 기준) */

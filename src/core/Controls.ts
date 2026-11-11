@@ -5,18 +5,16 @@ export interface Tap { x: number; y: number }
 const DRAG_PX = 8;
 
 /**
- * 입력 하나로 모음: 키보드 WASD/화살표 + 왼쪽 끌기 조이스틱(마우스·터치) + 오른쪽 끌기(카메라 회전) + 탭.
+ * 입력 하나로 모음: 키보드 WASD/화살표 + 화면 어디서나 끌기 조이스틱(마우스·터치) + 탭. 카메라는 고정 (회전 입력 없음).
  * UI 요소 위 입력은 무시 (UI는 pointer-events로 따로 받음).
  */
 export class Controls {
   private readonly keys = new Set<string>();
   private readonly joy: Joystick;
-  private readonly downs = new Map<number, { x: number; y: number; lastX: number; dragging: boolean }>();
+  private readonly downs = new Map<number, { x: number; y: number; dragging: boolean }>();
   private taps: Tap[] = [];
-  /** 이번 프레임까지 쌓인 카메라 회전 드래그(px) */
-  private dragDx = 0;
   touchMode = false;
-  /** 광장에서만 켬: 화면 왼쪽 40%를 누르고 끌면 조이스틱 (마우스·터치 공통). 끄면 모든 누름 = 탭 */
+  /** 광장에서만 켬: 화면 어디든 누르고 끌면 조이스틱 (마우스·터치 공통, 첫 손가락). 끄면 모든 누름 = 탭 */
   joystickEnabled = true;
   private readonly target: HTMLElement;
 
@@ -42,11 +40,11 @@ export class Controls {
 
   private readonly onDown = (e: PointerEvent): void => {
     this.touchMode = e.pointerType === 'touch';
-    if (this.joystickEnabled && e.clientX < window.innerWidth * 0.4 && !this.joy.active) {
+    if (this.joystickEnabled && !this.joy.active) {
       this.joy.begin(e);
       return;
     }
-    this.downs.set(e.pointerId, { x: e.clientX, y: e.clientY, lastX: e.clientX, dragging: false });
+    this.downs.set(e.pointerId, { x: e.clientX, y: e.clientY, dragging: false });
     this.target.setPointerCapture?.(e.pointerId);
   };
 
@@ -55,15 +53,11 @@ export class Controls {
     const d = this.downs.get(e.pointerId);
     if (!d) return;
     if (!d.dragging && Math.hypot(e.clientX - d.x, e.clientY - d.y) > DRAG_PX) d.dragging = true;
-    if (d.dragging) {
-      this.dragDx += e.clientX - d.lastX;
-      d.lastX = e.clientX;
-    }
   };
 
   private readonly onUp = (e: PointerEvent): void => {
     if (this.joy.owns(e.pointerId)) {
-      // 끌지 않고 뗀 조이스틱 = 탭 (훈련·전투 중 왼쪽을 눌러도 추가 발사)
+      // 끌지 않고 뗀 조이스틱 = 탭 (훈련 중 어디를 눌러도 추가 발사)
       if (this.joy.maxDrag <= DRAG_PX && e.type === 'pointerup') this.taps.push({ x: e.clientX, y: e.clientY });
       this.joy.end();
       return;
@@ -94,12 +88,6 @@ export class Controls {
     const t = this.taps;
     this.taps = [];
     return t;
-  }
-
-  drainDrag(): number {
-    const d = this.dragDx;
-    this.dragDx = 0;
-    return d;
   }
 
   dispose(): void {

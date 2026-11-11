@@ -1,4 +1,6 @@
-/** 떠다니는 조이스틱 (마우스·터치): 화면 왼쪽 영역에서 누른 곳에 뜸 */
+/** 떠다니는 조이스틱 (마우스·터치): 화면 어디든 누른 곳에 뜸. 가운데 DEAD_PX 안은 0 (짧은 탭이 걸음으로 새지 않게) */
+const DEAD_PX = 10;
+
 export class Joystick {
   readonly el: HTMLDivElement;
   private readonly knob: HTMLDivElement;
@@ -46,8 +48,10 @@ export class Joystick {
     const d = Math.hypot(dx, dy);
     this.maxDrag = Math.max(this.maxDrag, d);
     if (d > this.radius) { dx *= this.radius / d; dy *= this.radius / d; }
-    this.x = dx / this.radius;
-    this.y = dy / this.radius;
+    // 데드존 밖만 0..1로 다시 펼침
+    const k = d <= DEAD_PX ? 0 : (Math.min(d, this.radius) - DEAD_PX) / (this.radius - DEAD_PX) / Math.min(d, this.radius);
+    this.x = dx * k;
+    this.y = dy * k;
     this.knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
   }
 

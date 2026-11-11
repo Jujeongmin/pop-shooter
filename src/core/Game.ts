@@ -108,7 +108,6 @@ export class Game {
   }
 
   private frame(dt: number): void {
-    this.cam.rotate(this.controls.drainDrag());
     const taps = this.controls.drainTaps();
     if (this.mode === 'hub') {
       this.updateMove(dt);
