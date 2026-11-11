@@ -1,6 +1,6 @@
 import { t } from '../i18n/i18n';
 import { autoDps, damagePerShot, shotsPerSec } from '../sim/actions.ts';
-import { formatNum } from '../sim/format.ts';
+import { formatMult, formatNum } from '../sim/format.ts';
 import { rebirthMult } from '../sim/stats.ts';
 import type { GameState } from '../sim/state.ts';
 import { button, el, setText } from './dom';
@@ -57,7 +57,7 @@ export class Hud {
   update(s: GameState): void {
     setText(this.coins, formatNum(s.coins));
     setText(this.gems, formatNum(s.gems));
-    setText(this.mult, `×${formatNum(rebirthMult(s.tokens) * s.passMult)}`);
+    setText(this.mult, `×${formatMult(rebirthMult(s.tokens) * s.passMult)}`);
     setText(this.atk, formatNum(damagePerShot(s)));
     setText(this.sps, shotsPerSec(s).toFixed(2).replace(/\.?0+$/, ''));
     setText(this.dps, formatNum(autoDps(s)));

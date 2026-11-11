@@ -1,5 +1,5 @@
 /**
- * 진행 시뮬레이터 (탐욕 구매 + 정체되면 환생).
+ * 진행 시뮬레이터 (탐욕 구매 + 10분 정체 시 환생 배율이 1.3배 이상 오르고 10분 수입으로 살 수 있으면 코인을 모아 환생, 가장 센 캐릭터 사용).
  *   npm run sim                       현재 표로 진행 시간 출력
  *   npm run sim -- --taps 0           완전 방치 플레이어
  *   npm run sim -- --fit [--fresh]    목표 시간(WORLD_END_MIN)에 맞춰 src/sim/stageTable.ts 다시 생성 (2~3번 반복해 수렴)
@@ -8,13 +8,13 @@
  */
 import { writeFileSync } from 'node:fs';
 import { BALANCE, FIRST_STAGE_MIN, STAGE_COUNT, WORLD_END_MIN } from '../../src/sim/balance.ts';
-import { buyAtk, buyNextGun, buySpd, canRebirth, coinPerShot, damagePerShot, doRebirth, highestWorld, shotsPerSec } from '../../src/sim/actions.ts';
+import { buyAtk, buyNextGun, buySpd, canRebirth, charMult, rebirthCost, rebirthTokens, coinPerShot, damagePerShot, doRebirth, highestWorld, shotsPerSec } from '../../src/sim/actions.ts';
 import { finishRun, startRun, stepRun, tapRun } from '../../src/sim/run.ts';
 import { GUNS, gunPrice } from '../../src/sim/guns.ts';
 import { newState, type GameState } from '../../src/sim/state.ts';
 import { stageHp, stageLabel, stageTime, isBoss, worldOf } from '../../src/sim/stages.ts';
 import { STAGE_HP } from '../../src/sim/stageTable.ts';
-import { atkCost, spdCost } from '../../src/sim/stats.ts';
+import { atkCost, rebirthMult, spdCost } from '../../src/sim/stats.ts';
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: number): number => {
@@ -31,6 +31,8 @@ for (let i = 0; i < args.length; i++) {
 }
 const TAPS = Math.min(opt('taps', 3), BALANCE.tap.maxPerSec);
 const STALL_SEC = opt('stall', 600);
+/** 환생 배율이 이만큼 이상 오를 때만 환생 */
+const GAIN = opt('gain', 1.3);
 
 interface Ctx { s: GameState; t: number; lastProgress: number }
 
@@ -58,7 +60,13 @@ function runUntil(c: Ctx, stopStage: number, maxT: number, onClear?: (stage: num
   while (c.t < maxT) {
     c.s = { ...c.s, coins: c.s.coins + coinPerShot(c.s, highestWorld(c.s), Infinity) * (shotsPerSec(c.s) + TAPS) };
     c.t += 1;
-    for (let k = 0; k < 400; k++) {
+    // 10분 진전 없으면 구매를 멈추고 코인을 모아 환생 (코인 환생)
+    // 단, 10분 안에 모을 수 있는 가격일 때만 (못 모으면 계속 강화)
+    const income = coinPerShot(c.s, highestWorld(c.s), Infinity) * (shotsPerSec(c.s) + TAPS);
+    // 그리고 환생 배율이 1.5배 이상 오를 때만 (토큰 1개 받자고 다 버리지 않음)
+    const gain = rebirthMult(c.s.tokens + rebirthTokens(c.s)) / rebirthMult(c.s.tokens);
+    const saving = c.t - c.lastProgress > STALL_SEC && gain >= GAIN && rebirthCost(c.s) <= income * 600;
+    for (let k = 0; k < 400 && !saving; k++) {
       const n = buyBest(c.s);
       if (!n) break;
       c.s = n;
@@ -77,6 +85,8 @@ function runUntil(c: Ctx, stopStage: number, maxT: number, onClear?: (stage: num
       }
       const before = c.s.bestStage;
       c.s = finishRun(c.s, run.cleared).state;
+      // 열린 캐릭터 중 가장 센 것으로
+      c.s = { ...c.s, char: c.s.chars.reduce((a, b) => (charMult(b) > charMult(a) ? b : a), c.s.char) };
       c.t = Math.ceil(c.t) + 3;
       if (c.s.bestStage > before) {
         c.lastProgress = c.t;
@@ -84,7 +94,7 @@ function runUntil(c: Ctx, stopStage: number, maxT: number, onClear?: (stage: num
         if (c.s.bestStage >= stopStage) return c.t;
       }
     }
-    if (canRebirth(c.s) && c.t - c.lastProgress > STALL_SEC) {
+    if (saving && canRebirth(c.s)) {
       c.s = doRebirth(c.s)!;
       c.lastProgress = c.t;
     }

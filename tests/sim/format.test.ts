@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatNum } from '../../src/sim/format.ts';
+import { formatMult, formatNum } from '../../src/sim/format.ts';
 
 test('formatNum', () => {
   assert.equal(formatNum(0), '0');
@@ -16,4 +16,12 @@ test('formatNum', () => {
   assert.equal(formatNum(Infinity), '∞');
   assert.equal(formatNum(NaN), '0');
   assert.equal(formatNum(-5), '0');
+});
+
+test('formatMult keeps small decimals', () => {
+  assert.equal(formatMult(2.5), '2.5');
+  assert.equal(formatMult(1.15), '1.15');
+  assert.equal(formatMult(15.625), '15.6');
+  assert.equal(formatMult(3), '3');
+  assert.equal(formatMult(2500), '2.50K');
 });

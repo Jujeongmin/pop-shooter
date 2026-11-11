@@ -2,11 +2,10 @@ import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
-import { canRebirth, doRebirth, rebirthTokens } from '../sim/actions.ts';
+import { canRebirth, doRebirth, rebirthCost, rebirthTokens } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
-import { formatNum } from '../sim/format.ts';
+import { formatMult, formatNum } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
-import { stageLabel } from '../sim/stages.ts';
 import { rebirthMult } from '../sim/stats.ts';
 import { WORLD1_FACILITIES } from '../world/facilities';
 import { button, el } from './dom';
@@ -18,10 +17,10 @@ import type { ZoneCallout } from './ZoneCallout';
 const HOP_SEC = 0.5;
 const _at = new THREE.Vector3();
 
-const mult = (tokens: number, pass: number): string => `×${formatNum(rebirthMult(tokens) * pass)}`;
+const mult = (tokens: number, pass: number): string => `×${formatMult(rebirthMult(tokens) * pass)}`;
 
 /**
- * 환생 제단: 구역에 들어가면 폴짝 + 아래 창. 잠김 이유 / 배율 지금 → 다음, 받는 팝젬, 초기화·유지 목록.
+ * 환생 제단: 구역에 들어가면 폴짝 + 아래 창. 배율 지금 → 다음, 받는 팝젬, 초기화·유지 목록, 환생 가격(코인, 할 때마다 오름).
  * [환생하기] → 한 번 더 확인 → 화면 하얗게 + 캐릭터 폴짝 + 상태 적용·즉시 저장.
  */
 export class RebirthPanel {
@@ -51,20 +50,15 @@ export class RebirthPanel {
     game.facilityActions.altar = () => this.zone.enter();
     game.facilityLeave.altar = () => { this.zone.leave(); this.panel.close(); };
     game.onTick((dt) => this.update(dt));
+    game.onStateChange(() => { if (this.panel.isOpen && !this.confirming) this.render(); });
   }
 
   private render(): void {
     const s = this.game.state;
     const b = this.panel.body;
     b.replaceChildren();
-    if (!canRebirth(s)) {
-      const box = el('div', 'reb-locked');
-      box.append(icon('lock', 'big'), el('div', '', s.bestStage < BALANCE.rebirth.unlockStage
-        ? t('reb.lockedBest', { s: stageLabel(BALANCE.rebirth.unlockStage) })
-        : t('reb.lockedRun')));
-      b.append(box);
-      return;
-    }
+    const can = canRebirth(s);
+    const cost = rebirthCost(s);
     const next = s.tokens + rebirthTokens(s);
     const card = el('div', 'reb-mult');
     card.append(icon('reb', 'big'), el('div', 'reb-mult-l', t('reb.mult')));
@@ -80,9 +74,16 @@ export class RebirthPanel {
       return d;
     };
     lists.append(li(t('reb.reset'), t('reb.resetList'), 'reset'), li(t('reb.keep'), t('reb.keepList'), 'keep'));
-    b.append(card, gems, lists);
-    if (!this.confirming) {
-      b.append(button(t('reb.go'), () => { this.confirming = true; this.render(); }, 'btn big reb-go'));
+    const price = el('div', 'reb-price');
+    const pv = el('span', 'reb-price-v');
+    pv.append(icon('coin'), el('span', '', formatNum(cost)));
+    price.append(el('span', 'reb-price-l', t('reb.cost')), pv);
+    const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: formatNum(cost - s.coins) }));
+    b.append(card, gems, lists, price, tip);
+    if (!this.confirming || !can) {
+      const go = button(t('reb.go'), () => { this.confirming = true; this.render(); }, 'btn big reb-go');
+      go.disabled = !can;
+      b.append(go);
     } else {
       const row = el('div', 'reb-confirm');
       row.append(el('div', 'reb-sure', t('reb.sure')));
@@ -104,7 +105,7 @@ export class RebirthPanel {
     this.hopT = 0;
     g.avatar.getMuzzle(_at);
     _at.y += 0.8;
-    this.float.show(t('reb.done', { m: formatNum(rebirthMult(next.tokens) * next.passMult) }), _at, 'coin big');
+    this.float.show(t('reb.done', { m: formatMult(rebirthMult(next.tokens) * next.passMult) }), _at, 'coin big');
     this.confirming = false;
     this.render();
   }

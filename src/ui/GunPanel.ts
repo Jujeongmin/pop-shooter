@@ -4,7 +4,7 @@ import { ZoneEntry } from '../core/ZoneEntry';
 import { gunName, t } from '../i18n/i18n';
 import { buyNextGun, worldUnlocked } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
-import { formatNum } from '../sim/format.ts';
+import { formatMult, formatNum } from '../sim/format.ts';
 import { gunMult, gunPrice, GUNS } from '../sim/guns.ts';
 import { WORLD1_FACILITIES } from '../world/facilities';
 import { button, el } from './dom';
@@ -16,10 +16,6 @@ import type { ZoneCallout } from './ZoneCallout';
 
 const _at = new THREE.Vector3();
 
-/** 배율: 1000 미만은 유효숫자 3자리 (2.5, 6.25, 15.6), 그 위는 K·M 표기 */
-function multText(m: number): string {
-  return m < 1000 ? String(Number(m.toPrecision(3))) : formatNum(m);
-}
 
 /**
  * 총 상점: 구역에 들어가면 폴짝 + 아래 창. 16자루를 월드별로 묶어 보여 줌 (총은 순서대로만 삼).
@@ -98,7 +94,7 @@ export class GunPanel {
         gi.alt = '';
         gi.draggable = false;
         const mid = el('div', '');
-        mid.append(el('div', 'gun-name', gunName(g.world, g.model)), el('div', 'gun-dmg', t('shop.dmg', { m: multText(gunMult(g.index)) })));
+        mid.append(el('div', 'gun-name', gunName(g.world, g.model)), el('div', 'gun-dmg', t('shop.dmg', { m: formatMult(gunMult(g.index)) })));
         let right: HTMLElement;
         if (g.index === s.gun) {
           row.classList.add('equipped');

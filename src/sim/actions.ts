@@ -7,8 +7,12 @@ import { atkValue, bulkCost, rebirthMult, spdValue } from './stats.ts';
 /** 월드 대장 첫 클리어로 열리는 캐릭터 (월드 1~3) */
 const BOSS_UNLOCKS: readonly CharId[] = ['yellow', 'red', 'pink'];
 
+export function charMult(c: CharId): number {
+  return BALANCE.charMult[c];
+}
+
 export function damagePerShot(s: GameState): number {
-  return atkValue(s.atkLv) * gunMult(s.gun) * rebirthMult(s.tokens) * s.passMult;
+  return atkValue(s.atkLv) * gunMult(s.gun) * rebirthMult(s.tokens) * s.passMult * charMult(s.char);
 }
 
 export function shotsPerSec(s: GameState): number {
@@ -98,8 +102,13 @@ export function clearStage(s: GameState, stage: number): ClearResult {
   return { state: next, coins, firstClear, unlockedChar };
 }
 
+/** 다음 환생 가격 (코인) */
+export function rebirthCost(s: GameState): number {
+  return BALANCE.rebirth.costBase * BALANCE.rebirth.costGrowth ** s.rebirths;
+}
+
 export function canRebirth(s: GameState): boolean {
-  return s.bestStage >= BALANCE.rebirth.unlockStage && s.runBest >= 1;
+  return s.coins >= rebirthCost(s);
 }
 
 export function rebirthTokens(s: GameState): number {
@@ -107,7 +116,7 @@ export function rebirthTokens(s: GameState): number {
   return Math.max(1, Math.floor((s.runBest - r.tokenOffset) / r.tokenDiv));
 }
 
-/** 초기화: 코인·스탯·총·이번 회차 기록. 유지: bestStage·팝젬·캐릭터·패스·부스트·튜토리얼 */
+/** 코인(가격 포함 전부)·스탯·총·이번 회차 기록 초기화. 유지: bestStage·팝젬·캐릭터·패스·부스트·튜토리얼 */
 export function doRebirth(s: GameState): GameState | null {
   if (!canRebirth(s)) return null;
   return {

@@ -14,7 +14,10 @@ export const BALANCE = {
     /** 1-1 체력 고정: 처음 온 사람이 몇 초 훈련하면 바로 이기게 (사용자 2026-11-11). 표(fit)는 1-2부터 의미 있음 */
     firstHp: 300,
   },
-  rebirth: { unlockStage: 10, tokenOffset: 5, tokenDiv: 2, multPerToken: 0.5 },
+  /** 환생: 코인을 내고 언제든 (사용자 2026-11-11). 가격 = costBase × costGrowth^환생 횟수 */
+  rebirth: { costBase: 1e9, costGrowth: 10, tokenOffset: 5, tokenDiv: 2, multPerToken: 0.5 },
+  /** 캐릭터 피해 배율: 해금 순서대로 점점 좋게 (사용자 2026-11-11). 코인도 피해에 비례해 같이 오름 */
+  charMult: { blue: 1, yellow: 1.15, red: 1.35, pink: 1.6, white: 1.9, black: 2.2 },
   range: { multByWorld: [1, 4, 16, 64] },
   offline: { rate: 0.5, capSec: 7200 },
   gems: { worldBossFirst: 50, perRebirth: 10 },

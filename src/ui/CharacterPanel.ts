@@ -4,6 +4,7 @@ import { ZoneEntry } from '../core/ZoneEntry';
 import { WORLD1_FACILITIES } from '../world/facilities';
 import type { ZoneCallout } from './ZoneCallout';
 import { t } from '../i18n/i18n';
+import { charMult } from '../sim/actions.ts';
 import { stageLabel } from '../sim/stages.ts';
 import { CHAR_IDS, type CharId } from '../sim/state.ts';
 import { bakeCharIcons } from './charIcons';
@@ -50,7 +51,7 @@ export class CharacterPanel {
       img.src = this.thumbs[id];
       img.alt = '';
       img.draggable = false;
-      card.append(img, el('div', 'char-name', CHARACTERS[id].name));
+      card.append(img, el('div', 'char-name', CHARACTERS[id].name), el('div', 'char-power', t('char.power', { m: charMult(id) })));
       if (id === s.char) {
         const tag = el('span', 'tag eq');
         tag.append(icon('check'), el('span', '', t('char.using')));

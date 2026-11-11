@@ -23,3 +23,8 @@ export function formatNum(n: number): string {
   const decimals = m < 10 ? 2 : m < 100 ? 1 : 0;
   return floorTo(m, decimals) + unitName(k);
 }
+
+/** 배율 표기: 1000 미만은 유효숫자 3자리 그대로 (2.5, 1.15, 15.6), 그 위는 formatNum */
+export function formatMult(m: number): string {
+  return m < 1000 ? String(Number(m.toPrecision(3))) : formatNum(m);
+}
