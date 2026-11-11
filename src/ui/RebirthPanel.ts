@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
@@ -99,6 +100,7 @@ export class RebirthPanel {
     const next = doRebirth(g.state);
     if (!next) return;
     g.setState(next, true);
+    audio.play('rebirth');
     g.avatar.setGun(GUNS[next.gun]!);
     this.callout.flash('rgba(255, 255, 255, 1)');
     g.cam.shake(0.12);

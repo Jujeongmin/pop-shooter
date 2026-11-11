@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { audio } from '../audio/audio';
 import { ZoneRing } from '../fx/ZoneRing';
 import type { CalloutText, ZoneCallout } from '../ui/ZoneCallout';
 import type { Facility } from '../world/facilities';
@@ -104,6 +105,7 @@ export class ZoneEntry {
     g.pos.y = 0;
     g.pose.grounded = true;
     this.ring.burst();
+    audio.play('zoneLand');
     g.cam.shake(0.08);
     this.callout.flash(this.opt.flash);
     const t = this.opt.text;

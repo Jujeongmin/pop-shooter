@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
@@ -127,6 +128,7 @@ export class UpgradePanel {
     const next = kind === 'atk' ? buyAtk(g.state, p.n) : buySpd(g.state, p.n);
     if (!next) return;
     g.setState(next, true);
+    audio.play('upgrade');
     const r = this.rows.find((x) => x.kind === kind)!;
     bump(r.root);
     g.avatar.getMuzzle(_at);

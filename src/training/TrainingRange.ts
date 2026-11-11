@@ -1,4 +1,7 @@
 import { t } from '../i18n/i18n';
+import { audio } from '../audio/audio';
+import { FIRE_SOUND } from '../config/audio';
+import { GUNS } from '../sim/guns.ts';
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { HitFx } from '../fx/HitFx';
@@ -99,6 +102,7 @@ export class TrainingRange {
     g.avatar.getMuzzle(_muzzle);
     _aim.set(target.position.x + (Math.random() - 0.5) * 0.4, 1.6 + (Math.random() - 0.5) * 0.4, target.position.z + 0.12);
     this.fx.shot(_muzzle, _aim);
+    audio.play(FIRE_SOUND[GUNS[g.state.gun]!.model]);
     if (tapped) this.float.show(t('float.pop'), _aim, 'pop');
   }
 
@@ -108,6 +112,7 @@ export class TrainingRange {
     g.setState(addCoins(g.state, this.pending));
     _aim.set(RANGE_SPOT.x, 2.4, RANGE_SPOT.z - 3);
     this.float.show(`+${formatNum(this.pending)}`, _aim, 'coin');
+    audio.play('coin');
     this.pending = 0;
   }
 

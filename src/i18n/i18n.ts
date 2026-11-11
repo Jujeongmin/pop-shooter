@@ -57,6 +57,11 @@ const STRINGS = {
 
   'settings.title': { en: 'Settings', ko: '설정', ja: '設定', 'zh-TW': '設定', 'zh-CN': '设置' },
   'settings.lang': { en: 'Language', ko: '언어', ja: '言語', 'zh-TW': '語言', 'zh-CN': '语言' },
+  'settings.master': { en: 'Master volume', ko: '전체 음량', ja: '全体の音量', 'zh-TW': '總音量', 'zh-CN': '总音量' },
+  'settings.sfx': { en: 'Sound effects', ko: '효과음', ja: '効果音', 'zh-TW': '音效', 'zh-CN': '音效' },
+  'settings.music': { en: 'Music', ko: '배경음악', ja: 'BGM', 'zh-TW': '背景音樂', 'zh-CN': '背景音乐' },
+  'settings.soundOn': { en: 'Sound: ON', ko: '소리: 켜짐', ja: 'サウンド: ON', 'zh-TW': '聲音:開', 'zh-CN': '声音:开' },
+  'settings.soundOff': { en: 'Sound: OFF (muted)', ko: '소리: 꺼짐 (음소거)', ja: 'サウンド: OFF(ミュート)', 'zh-TW': '聲音:關(靜音)', 'zh-CN': '声音:关(静音)' },
   'settings.close': { en: 'Close', ko: '닫기', ja: '閉じる', 'zh-TW': '關閉', 'zh-CN': '关闭' },
 
   'up.title': { en: 'Upgrades', ko: '업그레이드', ja: 'アップグレード', 'zh-TW': '升級', 'zh-CN': '升级' },

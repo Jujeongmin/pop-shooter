@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { gunName, t } from '../i18n/i18n';
@@ -133,6 +134,7 @@ export class GunPanel {
     const next = buyNextGun(g.state);
     if (!next) return;
     g.setState(next, true);
+    audio.play('gunBuy');
     g.avatar.setGun(GUNS[next.gun]!);
     bump(row);
     this.callout.flash('rgba(255, 211, 77, 0.9)');

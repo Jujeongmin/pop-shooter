@@ -15,6 +15,7 @@ import { ResultCard } from './ui/ResultCard';
 import { ZoneCallout } from './ui/ZoneCallout';
 import { loadBricks } from './world/kit';
 import { applyLang } from './i18n/i18n';
+import { audio } from './audio/audio';
 import { SettingsPanel } from './ui/SettingsPanel';
 import { UpgradePanel } from './ui/UpgradePanel';
 import { GunPanel } from './ui/GunPanel';
@@ -24,6 +25,9 @@ import { showOfflineReward } from './ui/OfflinePanel';
 
 async function boot(): Promise<void> {
   const ui = document.getElementById('ui')!;
+  // 첫 입력(클릭·터치·키)에서 소리를 켬. 광장 음악은 그때부터
+  audio.attachUnlock(window);
+  audio.setMusic('hub');
   const fontReady = applyLang();
   // 계정 저장 서버 연결은 에셋 받는 동안 같이 (안 되면 기기 저장으로)
   const cloud = new CloudSave();
@@ -57,7 +61,7 @@ async function boot(): Promise<void> {
   game.menuActions.settings = () => settings.open();
   stage.start();
   showOfflineReward(game, ui, save.now);
-  if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud });
+  if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud, __audio: audio });
 }
 
 boot().catch((e) => {

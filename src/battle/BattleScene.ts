@@ -1,4 +1,7 @@
 import { t } from '../i18n/i18n';
+import { audio } from '../audio/audio';
+import { FIRE_SOUND } from '../config/audio';
+import { GUNS } from '../sim/guns.ts';
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { HitFx } from '../fx/HitFx';
@@ -150,6 +153,7 @@ export class BattleScene {
     g.hud.setVisible(false);
     g.placeAt(PLAYER_AT.x, PLAYER_AT.z, Math.PI);
     g.cam.focus = -1.2;
+    audio.setMusic('battle');
     this.run = startRun(g.state, world);
     this.endT = -1;
     this.dmgAcc = 0;
@@ -197,6 +201,8 @@ export class BattleScene {
     _aim.y += (Math.random() - 0.5) * boss.height * 0.3;
     _aim.z += 0.4;
     this.fx.shot(_muzzle, _aim);
+    audio.play(FIRE_SOUND[GUNS[this.game.state.gun]!.model]);
+    audio.play('bossHit');
     boss.hit();
     this.kick = 0.06;
     this.dmgAcc += dmg;
@@ -206,6 +212,7 @@ export class BattleScene {
   private onCleared(stage: number): void {
     const run = this.run!;
     this.boss?.defeat();
+    audio.play('bossDown');
     for (const toy of this.toys) { toy.t = FLIGHT; toy.mesh.visible = false; }
     this.dying?.dispose();
     this.dying = this.boss;
@@ -279,6 +286,7 @@ export class BattleScene {
         this.launched++;
         if (!toy) continue;
         boss.throwToy();
+        audio.play('bossThrow');
         boss.chest(toy.from);
         toy.from.y = boss.height * 0.7;
         toy.from.z += boss.height * 0.15;
@@ -301,6 +309,7 @@ export class BattleScene {
       this.landed = Math.min(HITS, this.landed + 1);
       this.hud.setMyHp(1 - this.landed / HITS);
       this.hud.hurt();
+      audio.play('playerHit');
       this.hurtT = 0;
       this.callout.flash('rgba(255, 80, 95, 0.55)');
       g.cam.shake(0.07);
@@ -317,6 +326,7 @@ export class BattleScene {
     const g = this.game;
     const res = finishRun(g.state, run.cleared);
     g.setState(res.state, true);
+    audio.play(run.cleared.length > 0 ? 'win' : 'lose');
     const failed = run.done === 'fail' ? run.stage : null;
     const title = run.done === 'worldClear' ? t('result.world', { w: run.world }) : run.cleared.length > 0 ? t('result.stages', { n: run.cleared.length }) : t('result.none');
     const tip = failed !== null
@@ -354,6 +364,7 @@ export class BattleScene {
     g.cam.lookUp = 0;
     g.hud.setVisible(true);
     g.setMode('hub');
+    audio.setMusic('hub');
     g.placeAt(PORTAL_SPOT.x, PORTAL_SPOT.z + 3.2, Math.PI);
   }
 

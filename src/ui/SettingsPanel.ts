@@ -1,14 +1,28 @@
-import { lang, LANG_NAME, LANGS, setLang, t } from '../i18n/i18n';
+import { audio } from '../audio/audio';
+import { lang, LANG_NAME, LANGS, setLang, t, type StrKey } from '../i18n/i18n';
 import { button, el } from './dom';
 
-/** 설정 창: 언어 고르기 (고르면 저장 후 새로고침) */
+/** 설정 창: 소리(전체·효과음·배경음 음량, 음소거; 기기에 저장) + 언어 고르기 (고르면 저장 후 새로고침) */
 export class SettingsPanel {
   private readonly root: HTMLDivElement;
 
   constructor(parent: HTMLElement) {
     this.root = el('div', 'result-wrap ui-on');
     const card = el('div', 'result-card settings');
-    card.append(el('div', 'result-title', t('settings.title')), el('div', 'settings-label', t('settings.lang')));
+    card.append(el('div', 'result-title', t('settings.title')));
+    const mute = button('', () => { audio.setMuted(!audio.muted); audio.saveSettings(); syncMute(); }, 'btn small mute-btn');
+    const syncMute = (): void => {
+      mute.textContent = t(audio.muted ? 'settings.soundOff' : 'settings.soundOn');
+      mute.classList.toggle('on', audio.muted);
+    };
+    syncMute();
+    card.append(
+      mute,
+      this.slider('settings.master', audio.masterVolume, (v) => audio.setMaster(v)),
+      this.slider('settings.sfx', audio.volume, (v) => audio.setVolume(v), true),
+      this.slider('settings.music', audio.musicVolume, (v) => audio.setMusicVolume(v)),
+      el('div', 'settings-label', t('settings.lang')),
+    );
     const grid = el('div', 'lang-grid');
     for (const l of LANGS) {
       const b = button(LANG_NAME[l], () => { if (l !== lang) setLang(l); else this.close(); }, `btn small lang-btn${l === lang ? ' on' : ''}`);
@@ -21,6 +35,24 @@ export class SettingsPanel {
     // 바깥 어두운 곳 누르면 닫기
     this.root.addEventListener('pointerup', (e) => { if (e.target === this.root) this.close(); });
     parent.append(this.root);
+  }
+
+  /** 음량 슬라이더 한 줄. 움직이는 동안 바로 반영, 놓으면 저장 (효과음은 놓을 때 소리로 확인) */
+  private slider(key: StrKey, value: number, apply: (v: number) => void, preview = false): HTMLElement {
+    const row = el('label', 'vol-row');
+    const input = el('input', 'vol-range ui-on');
+    input.type = 'range';
+    input.min = '0';
+    input.max = '100';
+    input.step = '1';
+    input.value = String(Math.round(value * 100));
+    input.addEventListener('input', () => apply(input.valueAsNumber / 100));
+    input.addEventListener('change', () => {
+      audio.saveSettings();
+      if (preview) audio.play('uiTick');
+    });
+    row.append(el('span', 'settings-label', t(key)), input);
+    return row;
   }
 
   open(): void {
