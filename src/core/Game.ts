@@ -161,10 +161,10 @@ export class Game {
   }
 
   /** 아바타 자세 (훈련·전투 Task가 aimAt·kick을 덮어씀) */
-  readonly pose = { aimAt: null as THREE.Vector3 | null, kick: 0, grounded: true };
+  readonly pose = { aimAt: null as THREE.Vector3 | null, kick: 0, grounded: true, dead: false };
 
   updateAvatar(dt: number): void {
-    this.avatar.update(dt, { pos: this.pos, yaw: this.yaw, velocity: this.velocity, aimAt: this.pose.aimAt, kick: this.pose.kick, grounded: this.pose.grounded });
+    this.avatar.update(dt, { pos: this.pos, yaw: this.yaw, velocity: this.velocity, aimAt: this.pose.aimAt, kick: this.pose.kick, grounded: this.pose.grounded, dead: this.pose.dead });
   }
 
   /** 모든 상태 변경은 여기로: 포털 기록·창 갱신 알림. 중요한 변경(구매·클리어·환생)은 save=true로 즉시 저장 */

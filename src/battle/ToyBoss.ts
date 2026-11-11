@@ -49,6 +49,8 @@ export class ToyBoss {
   private enterT = 0;
   private dieT = -1;
   private anger = 0;
+  /** 던지기 자세 (0 → 1) */
+  private throwT = 1;
   private clock = Math.random() * 10;
 
   constructor(stage: number) {
@@ -350,6 +352,11 @@ export class ToyBoss {
     return out.set(this.root.position.x, this.root.position.y + this.height * 0.5, this.root.position.z);
   }
 
+  /** 장난감 던지기: 몸을 앞으로 숙였다 폄 */
+  throwToy(): void {
+    if (this.dieT < 0) this.throwT = 0;
+  }
+
   hit(): void {
     if (this.dieT < 0) this.hitT = 0;
   }
@@ -387,6 +394,10 @@ export class ToyBoss {
       return;
     }
     this.animate(this.clock, 5 + this.anger * 2.5, dt);
+    if (this.throwT < 1) {
+      this.throwT = Math.min(1, this.throwT + dt * 3);
+      this.body.rotation.x = Math.sin(this.throwT * Math.PI) * 0.35;
+    } else this.body.rotation.x = 0;
     const brow = 0.15 + this.anger * 0.2;
     for (const b of this.brows) b.m.rotation.z = b.side * brow;
     for (const ch of this.cheeks) ch.visible = this.anger > 0;

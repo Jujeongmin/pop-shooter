@@ -177,3 +177,13 @@
 .char-name { font-size: 16px; }
 .char-card .tag { font-size: 12px; padding: 3px 8px; white-space: normal; text-align: center; }
 .char-card .btn.small { padding: 6px 14px; }
+
+/* 내 체력바 (전투) */
+.bhud-me { position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%); width: min(70vw, 300px); display: flex; align-items: center; gap: 6px; }
+.bhud-me .ico { width: 34px; height: 34px; flex: none; }
+.bhud-mebar { position: relative; flex: 1; height: 20px; background: rgba(43,58,103,.55); border: 3px solid #fff; border-radius: 999px; overflow: hidden; box-shadow: 0 3px 0 rgba(0,0,0,.15); }
+.bhud-mefill { position: absolute; inset: 0; background: linear-gradient(#7fe08a, #3fbf55); transform-origin: left center; transition: transform .18s; }
+.bhud-me.low .bhud-mefill { background: linear-gradient(#ff8a8a, #ff4f5e); animation: zone-tap .5s ease-in-out infinite; }
+.bhud-mecut { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.55); }
+.bhud-me.hurt { animation: me-hurt .3s ease-out; }
+@keyframes me-hurt { 0%, 100% { transform: translateX(-50%) } 25% { transform: translateX(calc(-50% - 6px)) } 60% { transform: translateX(calc(-50% + 5px)) } }

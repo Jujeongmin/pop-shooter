@@ -17,6 +17,8 @@ export interface AvatarPose {
   kick: number;
   /** 공중이면 false (점프·공중·착지 클립 자동 재생). 없으면 땅 */
   grounded?: boolean;
+  /** 쓰러짐 (사망 클립) */
+  dead?: boolean;
 }
 
 const _dir = new THREE.Vector3();
@@ -91,6 +93,7 @@ export class Avatar {
     this.airTime = grounded ? 0 : this.airTime + dt;
     f.grounded = grounded;
     f.mode = grounded ? 'ground' : 'air';
+    f.dead = p.dead ?? false;
     if (p.aimAt) {
       this.avatar.getChestPosition(_chest);
       _dir.copy(p.aimAt).sub(_chest);

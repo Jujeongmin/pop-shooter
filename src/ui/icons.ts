@@ -48,6 +48,9 @@ const SVG: Record<string, string> = {
   close: `
     <circle cx="32" cy="32" r="27" fill="#fff" ${S}/>
     <path d="M23 23l18 18M41 23L23 41" fill="none" stroke="${INK}" stroke-width="6" stroke-linecap="round"/>`,
+  heart: `
+    <path d="M32 55C14 43 6 33 6 22a13 13 0 0 1 26-5 13 13 0 0 1 26 5c0 11-8 21-26 33z" fill="#ff5e6a" ${S}/>
+    <path d="M17 18a7 7 0 0 1 8-3" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".8"/>`,
   check: `
     <circle cx="32" cy="32" r="27" fill="#5ccf6b" ${S}/>
     <path d="M20 33l8 8 16-17" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`,
@@ -56,7 +59,7 @@ const SVG: Record<string, string> = {
     <path d="M22 22l20 20M42 22L22 42" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>`,
 };
 
-export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'lock' | 'close';
+export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'heart' | 'lock' | 'close';
 
 /** 아이콘 span (크기는 CSS .ico / 추가 클래스) */
 export function icon(name: IconName, cls = ''): HTMLSpanElement {

@@ -9,10 +9,11 @@ export class BattleHud {
   private readonly stage: HTMLDivElement;
   private readonly fill: HTMLDivElement;
   private readonly hpText: HTMLDivElement;
-  private readonly time: HTMLSpanElement;
   private readonly dps: HTMLSpanElement;
   private readonly hint: HTMLDivElement;
-  private readonly timeChip: HTMLSpanElement;
+  private readonly me: HTMLDivElement;
+  private readonly meFill: HTMLDivElement;
+  private readonly meCells: HTMLDivElement[] = [];
 
   constructor(parent: HTMLElement) {
     this.root = el('div', 'bhud');
@@ -23,15 +24,24 @@ export class BattleHud {
     this.hpText = el('div', 'bhud-hp', '');
     bar.append(this.fill, this.hpText);
     const row = el('div', 'bhud-row');
-    this.time = el('span', 'bhud-val', '');
     this.dps = el('span', 'bhud-val', '');
-    const tc = el('span', 'bhud-chip bhud-time');
-    tc.append(icon('timer'), this.time);
     const d = el('span', 'bhud-chip');
     d.append(icon('bolt'), this.dps);
-    row.append(tc, d);
-    this.timeChip = tc;
+    row.append(d);
     top.append(this.stage, bar, row);
+    // 내 체력: 아래쪽, 10칸 (보스 장난감 한 번 맞을 때마다 한 칸)
+    this.me = el('div', 'bhud-me');
+    const meBar = el('div', 'bhud-mebar');
+    this.meFill = el('div', 'bhud-mefill');
+    meBar.append(this.meFill);
+    for (let i = 1; i < 10; i++) {
+      const c = el('div', 'bhud-mecut');
+      c.style.left = `${i * 10}%`;
+      meBar.append(c);
+      this.meCells.push(c);
+    }
+    this.me.append(icon('heart'), meBar);
+    this.root.append(this.me);
     this.hint = el('div', 'bhud-hint');
     this.hint.append(icon('hand', 'bhud-hand'), el('span', '', t('battle.hint')));
     this.root.append(top, this.hint);
@@ -52,12 +62,23 @@ export class BattleHud {
     this.stage.classList.add('pop');
   }
 
-  update(hp: number, maxHp: number, timeLeft: number, dps: number): void {
+  /** 내 체력 비율 0..1 (낮으면 빨갛게 깜빡) */
+  setMyHp(r: number): void {
+    this.meFill.style.transform = `scaleX(${Math.max(0, r)})`;
+    this.me.classList.toggle('low', r <= 0.3);
+  }
+
+  /** 맞았을 때 체력바 흔들기 */
+  hurt(): void {
+    this.me.classList.remove('hurt');
+    void this.me.offsetWidth;
+    this.me.classList.add('hurt');
+  }
+
+  update(hp: number, maxHp: number, dps: number): void {
     const r = maxHp > 0 ? Math.max(0, hp / maxHp) : 0;
     this.fill.style.transform = `scaleX(${r})`;
     setText(this.hpText, `${formatNum(Math.ceil(hp))} / ${formatNum(maxHp)}`);
-    setText(this.time, t('battle.sec', { n: timeLeft.toFixed(1) }));
-    this.timeChip.classList.toggle('low', timeLeft <= 5);
     setText(this.dps, formatNum(dps));
   }
 }

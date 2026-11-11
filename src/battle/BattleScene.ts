@@ -22,6 +22,15 @@ const BOSS_AT = { x: 0, z: -4 };
 const FLOAT_SEC = 0.3;
 /** 끝난 뒤 결과 카드까지 (보스 쓰러지는 연출 볼 시간) */
 const END_DELAY = 1.1;
+/**
+ * 보스 반격: 스테이지 제한 시간을 HITS칸으로 나눠, 칸마다 장난감 공 하나가 날아와 내 체력 한 칸을 깎음.
+ * 마지막 공이 닿는 순간 = 제한 시간 끝 → 계산은 sim의 시간 제한 그대로 (밸런스 변화 없음), 보기에는 맞고 쓰러짐.
+ */
+const HITS = 10;
+const FLIGHT = 0.7;
+const POOL = 4;
+
+interface Toy { mesh: THREE.Mesh; t: number; from: THREE.Vector3; to: THREE.Vector3 }
 
 const _muzzle = new THREE.Vector3();
 const _aim = new THREE.Vector3();
@@ -52,6 +61,12 @@ export class BattleScene {
   private dmgAcc = 0;
   private floatT = 0;
   private endT = -1;
+  /** 이번 스테이지 전체 시간, 던진 수, 맞은 수 */
+  private stageT = 1;
+  private launched = 0;
+  private landed = 0;
+  private readonly toys: Toy[] = [];
+  private hurtT = 1;
   /** 디버그·검증 */
   get active(): boolean {
     return this.run !== null;
@@ -65,6 +80,19 @@ export class BattleScene {
     this.result = result;
     this.callout = callout;
     this.buildArena();
+    const toyGeo = new THREE.SphereGeometry(0.24, 16, 12);
+    const toyMat = new THREE.MeshStandardMaterial({ color: '#ff5e6a', roughness: 0.4 });
+    const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 });
+    const stripeGeo = new THREE.TorusGeometry(0.245, 0.04, 6, 20);
+    this.owned.push(toyGeo, toyMat, stripeMat, stripeGeo);
+    for (let i = 0; i < POOL; i++) {
+      const mesh = new THREE.Mesh(toyGeo, toyMat);
+      mesh.add(new THREE.Mesh(stripeGeo, stripeMat));
+      mesh.castShadow = true;
+      mesh.visible = false;
+      this.arena.add(mesh);
+      this.toys.push({ mesh, t: FLIGHT, from: new THREE.Vector3(), to: new THREE.Vector3() });
+    }
     this.arena.visible = false;
     game.stage.scene.add(this.arena);
     game.onTick((dt) => this.update(dt));
@@ -138,6 +166,10 @@ export class BattleScene {
     this.game.cam.focus = -1.2 - extra * 0.28;
     this.game.cam.lookUp = extra * 0.35;
     this.boss.root.position.set(BOSS_AT.x, 0, BOSS_AT.z);
+    this.stageT = run.battle.timeLeft;
+    this.launched = 0;
+    this.landed = 0;
+    this.hud.setMyHp(1);
     this.boss.root.rotation.y = 0;
     this.arena.add(this.boss.root);
     const label = stageLabel(run.stage);
@@ -174,6 +206,7 @@ export class BattleScene {
   private onCleared(stage: number): void {
     const run = this.run!;
     this.boss?.defeat();
+    for (const toy of this.toys) { toy.t = FLIGHT; toy.mesh.visible = false; }
     this.dying?.dispose();
     this.dying = this.boss;
     this.boss = null;
@@ -207,9 +240,14 @@ export class BattleScene {
     if (cleared !== null) this.onCleared(cleared);
     if (run.done === 'fail') {
       this.endT = 0;
+      this.landed = HITS;
+      this.hud.setMyHp(0);
+      g.pose.dead = true;
+      g.pose.aimAt = null;
       this.callout.show({ title: t('battle.timeUp'), big: t('battle.failed', { s: stageLabel(run.stage) }) });
       return;
     }
+    this.updateToys(dt);
     // 쉬는 시간이 끝나 가면 다음 보스 등장
     if (!this.boss && !run.done && run.gap < 0.5) this.spawnBoss();
     // 조준·반동
@@ -225,7 +263,53 @@ export class BattleScene {
     }
     const b = run.battle;
     this.boss?.setHpRatio(b.hp / b.maxHp);
-    this.hud.update(run.gap > 0 ? stageHp(run.stage) : b.hp, b.maxHp, b.timeLeft, autoDps(run.from));
+    this.hud.update(run.gap > 0 ? stageHp(run.stage) : b.hp, b.maxHp, autoDps(run.from));
+  }
+
+  /** 보스가 칸마다 장난감 공을 던짐 (도착 시각 = 칸 경계), 닿으면 내 체력 한 칸 */
+  private updateToys(dt: number): void {
+    const run = this.run!;
+    const g = this.game;
+    const boss = this.boss;
+    if (boss && run.gap <= 0 && !run.done) {
+      const elapsed = this.stageT - run.battle.timeLeft;
+      const step = this.stageT / HITS;
+      while (this.launched < HITS && (this.launched + 1) * step - FLIGHT <= elapsed) {
+        const toy = this.toys.find((x) => x.t >= FLIGHT);
+        this.launched++;
+        if (!toy) continue;
+        boss.throwToy();
+        boss.chest(toy.from);
+        toy.from.y = boss.height * 0.7;
+        toy.from.z += boss.height * 0.15;
+        toy.to.set(g.pos.x, 1.1, g.pos.z);
+        toy.t = 0;
+        toy.mesh.visible = true;
+        toy.mesh.scale.setScalar(Math.max(1.6, boss.height / 2.4));
+      }
+    }
+    for (const toy of this.toys) {
+      if (toy.t >= FLIGHT) continue;
+      toy.t += dt;
+      const k = Math.min(1, toy.t / FLIGHT);
+      toy.mesh.position.lerpVectors(toy.from, toy.to, k);
+      toy.mesh.position.y += Math.sin(k * Math.PI) * 1.6;
+      toy.mesh.rotation.x += dt * 12;
+      toy.mesh.rotation.z += dt * 7;
+      if (k < 1) continue;
+      toy.mesh.visible = false;
+      this.landed = Math.min(HITS, this.landed + 1);
+      this.hud.setMyHp(1 - this.landed / HITS);
+      this.hud.hurt();
+      this.hurtT = 0;
+      this.callout.flash('rgba(255, 80, 95, 0.55)');
+      g.cam.shake(0.07);
+    }
+    // 맞으면 뒤로 살짝 밀렸다 돌아옴
+    if (this.hurtT < 1) {
+      this.hurtT = Math.min(1, this.hurtT + dt * 4);
+      g.pos.z = PLAYER_AT.z + Math.sin(this.hurtT * Math.PI) * 0.35;
+    }
   }
 
   private finish(): void {
@@ -264,6 +348,8 @@ export class BattleScene {
     g.hub.root.visible = true;
     g.pose.aimAt = null;
     g.pose.kick = 0;
+    g.pose.dead = false;
+    for (const toy of this.toys) { toy.t = FLIGHT; toy.mesh.visible = false; }
     g.cam.focus = 0;
     g.cam.lookUp = 0;
     g.hud.setVisible(true);
