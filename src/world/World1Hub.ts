@@ -200,7 +200,8 @@ export class World1Hub {
       const t = new THREE.Group();
       t.position.set(RANGE_TARGET.x + i * 2, 0, RANGE_TARGET.z);
       const p = new THREE.Mesh(post, this.mat('#c98a5a'));
-      p.position.y = 0.6;
+      // 막대는 과녁판 뒤에 (판 두께 최대 0.18 → 반 0.09 + 막대 반지름 0.08): 앞면을 뚫고 보이지 않게
+      p.position.set(0, 0.6, -0.19);
       t.add(p);
       discs.forEach((g, k) => {
         const d = new THREE.Mesh(g, this.mat(ringColors[k]!));
@@ -234,12 +235,12 @@ export class World1Hub {
     this.label(t('fac.guns'), gs.x + 1.8, 3.6, gs.z);
 
     const al = f('altar');
-    this.mesh(new THREE.CylinderGeometry(1.6, 1.9, 0.6, 6), '#b9a6ff', al.x, 0.3, al.z + 1.6);
+    this.mesh(new THREE.CylinderGeometry(1.6, 1.9, 0.6, 6), '#b9a6ff', al.x, 0.3, al.z - 1.6);
     const orbMat = new THREE.MeshStandardMaterial({ color: '#f3ecff', emissive: '#b9a6ff', emissiveIntensity: 0.6 });
     this.owned.push(orbMat);
-    this.mesh(new THREE.SphereGeometry(0.7, 24, 16), '', al.x, 1.5, al.z + 1.6, orbMat);
-    this.colliders.push({ kind: 'circle', x: al.x, z: al.z + 1.6, r: 1.8 });
-    this.label(t('fac.altar'), al.x, 3, al.z + 1.6);
+    this.mesh(new THREE.SphereGeometry(0.7, 24, 16), '', al.x, 1.5, al.z - 1.6, orbMat);
+    this.colliders.push({ kind: 'circle', x: al.x, z: al.z - 1.6, r: 1.8 });
+    this.label(t('fac.altar'), al.x, 3, al.z - 1.6);
   }
 
   /** 월드 포털: 받침 + 세운 고리 + 안쪽 소용돌이(돌아감) + 위에 최고 기록 */

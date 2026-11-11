@@ -3,7 +3,7 @@ import type { Assets } from '../assets/loadAssets';
 import { FollowCamera } from '../camera/FollowCamera';
 import { Avatar } from '../player/Avatar';
 import { GUNS } from '../sim/guns.ts';
-import type { GameState } from '../sim/state.ts';
+import type { CharId, GameState } from '../sim/state.ts';
 import { AutoSaver } from '../save/localSave';
 import { Hud } from '../ui/Hud';
 import { HUB_SPAWN, nearestFacility, type Facility } from '../world/facilities';
@@ -13,7 +13,8 @@ import { World1Hub } from '../world/World1Hub';
 import { Controls, type Tap } from './Controls';
 import type { Stage3D } from './Stage3D';
 
-export const MOVE_SPEED = 4.8;
+/** 이동 속도 (m/s): 사용자 요청으로 4.8 × 1.2 */
+export const MOVE_SPEED = 5.76;
 const RADIUS = 0.4;
 
 const _dir = new THREE.Vector3();
@@ -70,6 +71,16 @@ export class Game {
     this.avatar = new Avatar(assets, state.char, GUNS[state.gun]!);
     stage.scene.add(this.avatar.root);
     stage.onFrame((dt) => this.frame(dt));
+  }
+
+  /** 캐릭터 바꾸기 (가진 것만): 아바타 새로 만들고 이전 것은 해제 */
+  setChar(c: CharId): void {
+    if (!this.state.chars.includes(c) || c === this.state.char) return;
+    this.avatar.root.removeFromParent();
+    this.avatar.dispose();
+    this.avatar = new Avatar(this.assets, c, GUNS[this.state.gun]!);
+    this.stage.scene.add(this.avatar.root);
+    this.setState({ ...this.state, char: c }, true);
   }
 
   onTick(fn: (dt: number) => void): void {

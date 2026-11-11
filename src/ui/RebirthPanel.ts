@@ -1,0 +1,123 @@
+import * as THREE from 'three';
+import type { Game } from '../core/Game';
+import { ZoneEntry } from '../core/ZoneEntry';
+import { t } from '../i18n/i18n';
+import { canRebirth, doRebirth, rebirthTokens } from '../sim/actions.ts';
+import { BALANCE } from '../sim/balance.ts';
+import { formatNum } from '../sim/format.ts';
+import { GUNS } from '../sim/guns.ts';
+import { stageLabel } from '../sim/stages.ts';
+import { rebirthMult } from '../sim/stats.ts';
+import { WORLD1_FACILITIES } from '../world/facilities';
+import { button, el } from './dom';
+import type { FloatText } from './FloatText';
+import { icon } from './icons';
+import { Panel } from './Panel';
+import type { ZoneCallout } from './ZoneCallout';
+
+const HOP_SEC = 0.5;
+const _at = new THREE.Vector3();
+
+const mult = (tokens: number, pass: number): string => `×${formatNum(rebirthMult(tokens) * pass)}`;
+
+/**
+ * 환생 제단: 구역에 들어가면 폴짝 + 아래 창. 잠김 이유 / 배율 지금 → 다음, 받는 팝젬, 초기화·유지 목록.
+ * [환생하기] → 한 번 더 확인 → 화면 하얗게 + 캐릭터 폴짝 + 상태 적용·즉시 저장.
+ */
+export class RebirthPanel {
+  private readonly game: Game;
+  private readonly panel: Panel;
+  private readonly float: FloatText;
+  private readonly callout: ZoneCallout;
+  private readonly zone: ZoneEntry;
+  private confirming = false;
+  private hopT = HOP_SEC;
+
+  constructor(game: Game, ui: HTMLElement, callout: ZoneCallout, float: FloatText) {
+    this.game = game;
+    this.float = float;
+    this.callout = callout;
+    this.panel = new Panel(ui, t('reb.title'));
+    const f = WORLD1_FACILITIES.find((x) => x.id === 'altar')!;
+    this.zone = new ZoneEntry(game, callout, f, {
+      color: '#b9a6ff',
+      flash: 'rgba(185, 166, 255, 0.9)',
+      spot: { x: f.x, z: f.z + 0.6 },
+      face: { x: f.x, z: f.z - 2 },
+      cam: { focus: -0.4, lookUp: -1.4 },
+      text: null,
+    });
+    this.zone.onLanded = () => { this.confirming = false; this.render(); this.panel.open(); };
+    game.facilityActions.altar = () => this.zone.enter();
+    game.facilityLeave.altar = () => { this.zone.leave(); this.panel.close(); };
+    game.onTick((dt) => this.update(dt));
+  }
+
+  private render(): void {
+    const s = this.game.state;
+    const b = this.panel.body;
+    b.replaceChildren();
+    if (!canRebirth(s)) {
+      const box = el('div', 'reb-locked');
+      box.append(icon('lock', 'big'), el('div', '', s.bestStage < BALANCE.rebirth.unlockStage
+        ? t('reb.lockedBest', { s: stageLabel(BALANCE.rebirth.unlockStage) })
+        : t('reb.lockedRun')));
+      b.append(box);
+      return;
+    }
+    const next = s.tokens + rebirthTokens(s);
+    const card = el('div', 'reb-mult');
+    card.append(icon('reb', 'big'), el('div', 'reb-mult-l', t('reb.mult')));
+    const v = el('div', 'reb-mult-v');
+    v.append(el('span', '', mult(s.tokens, s.passMult)), el('span', 'arrow', '→'), el('b', '', mult(next, s.passMult)));
+    card.append(v);
+    const gems = el('div', 'reb-gems');
+    gems.append(icon('gem'), el('span', '', `${t('reb.gems')} +${BALANCE.gems.perRebirth}`));
+    const lists = el('div', 'reb-lists');
+    const li = (title: string, body: string, cls: string): HTMLDivElement => {
+      const d = el('div', `reb-list ${cls}`);
+      d.append(el('div', 'reb-list-t', title), el('div', '', body));
+      return d;
+    };
+    lists.append(li(t('reb.reset'), t('reb.resetList'), 'reset'), li(t('reb.keep'), t('reb.keepList'), 'keep'));
+    b.append(card, gems, lists);
+    if (!this.confirming) {
+      b.append(button(t('reb.go'), () => { this.confirming = true; this.render(); }, 'btn big reb-go'));
+    } else {
+      const row = el('div', 'reb-confirm');
+      row.append(el('div', 'reb-sure', t('reb.sure')));
+      const btns = el('div', 'reb-btns');
+      btns.append(button(t('reb.no'), () => { this.confirming = false; this.render(); }, 'btn'), button(t('reb.yes'), () => this.rebirth(), 'btn pink'));
+      row.append(btns);
+      b.append(row);
+    }
+  }
+
+  private rebirth(): void {
+    const g = this.game;
+    const next = doRebirth(g.state);
+    if (!next) return;
+    g.setState(next, true);
+    g.avatar.setGun(GUNS[next.gun]!);
+    this.callout.flash('rgba(255, 255, 255, 1)');
+    g.cam.shake(0.12);
+    this.hopT = 0;
+    g.avatar.getMuzzle(_at);
+    _at.y += 0.8;
+    this.float.show(t('reb.done', { m: formatNum(rebirthMult(next.tokens) * next.passMult) }), _at, 'coin big');
+    this.confirming = false;
+    this.render();
+  }
+
+  private update(dt: number): void {
+    this.zone.update(dt);
+    // 환생 폴짝 (점프·착지 클립)
+    if (this.hopT >= HOP_SEC) return;
+    const g = this.game;
+    this.hopT = Math.min(HOP_SEC, this.hopT + dt);
+    const k = this.hopT / HOP_SEC;
+    g.pos.y = Math.sin(Math.PI * k) * 1.1;
+    g.pose.grounded = k >= 1;
+    if (k >= 1) g.pos.y = 0;
+  }
+}

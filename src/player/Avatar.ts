@@ -20,6 +20,8 @@ export interface AvatarPose {
 }
 
 const _dir = new THREE.Vector3();
+/** 이 속도(m/s) 넘으면 달리기 클립 */
+const RUN_FROM = 3;
 const _chest = new THREE.Vector3();
 
 /** 팝배틀 PlayerAvatar 감싸기: 캐릭터 복제 + 월드 색 총 + 간단한 자세 입력 */
@@ -79,6 +81,8 @@ export class Avatar {
     f.feet.copy(p.pos);
     f.bodyYaw = p.yaw;
     f.velocity.copy(p.velocity);
+    // 조이스틱을 어느 정도 이상 밀면 달리기 클립 (살짝 밀면 걷기)
+    f.sprinting = Math.hypot(p.velocity.x, p.velocity.z) > RUN_FROM;
     f.weaponKick = p.kick;
     const grounded = p.grounded ?? true;
     f.justJumped = f.grounded && !grounded;

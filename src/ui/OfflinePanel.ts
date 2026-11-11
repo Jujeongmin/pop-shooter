@@ -1,0 +1,36 @@
+import type { Game } from '../core/Game';
+import { t } from '../i18n/i18n';
+import { addCoins } from '../sim/actions.ts';
+import { formatNum } from '../sim/format.ts';
+import { offlineReward } from '../sim/offline.ts';
+import { button, el } from './dom';
+import { icon } from './icons';
+
+/** 1분 넘게 비웠을 때만 창을 띄움 (새로고침마다 뜨지 않게) */
+const MIN_SEC = 60;
+
+export function durationText(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? t('time.hm', { h, m }) : t('time.m', { m: Math.max(1, m) });
+}
+
+/**
+ * 오프라인 보상: 게임 시작 때 한 번. offlineReward(저장된 lastSeen 기준)가 있으면 "자리 비운 동안" 창 → [받기].
+ * 받으면 코인 추가 + 즉시 저장(lastSeen 갱신). 광고 2배 버튼은 계획 2.
+ */
+export function showOfflineReward(game: Game, ui: HTMLElement, now: number): void {
+  const r = offlineReward(game.state, now);
+  if (r.seconds < MIN_SEC || !(r.coins > 0)) return;
+  const wrap = el('div', 'result-wrap ui-on in');
+  const card = el('div', 'result-card');
+  card.append(el('div', 'result-title', t('off.title')), el('div', 'result-tip', t('off.body', { t: durationText(r.seconds) })));
+  const coin = el('div', 'result-coins');
+  coin.append(icon('coin', 'big'), el('span', '', `+${formatNum(r.coins)}`));
+  card.append(coin, button(t('off.claim'), () => {
+    game.setState(addCoins(game.state, r.coins), true);
+    wrap.remove();
+  }, 'btn big'));
+  wrap.append(card);
+  ui.append(wrap);
+}

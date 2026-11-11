@@ -17,6 +17,9 @@ import { applyLang } from './i18n/i18n';
 import { SettingsPanel } from './ui/SettingsPanel';
 import { UpgradePanel } from './ui/UpgradePanel';
 import { GunPanel } from './ui/GunPanel';
+import { RebirthPanel } from './ui/RebirthPanel';
+import { CharacterPanel } from './ui/CharacterPanel';
+import { showOfflineReward } from './ui/OfflinePanel';
 
 async function boot(): Promise<void> {
   const ui = document.getElementById('ui')!;
@@ -40,9 +43,12 @@ async function boot(): Promise<void> {
   }, 700);
   new UpgradePanel(game, ui, callout, float);
   new GunPanel(game, ui, callout, float);
+  new RebirthPanel(game, ui, callout, float);
+  new CharacterPanel(game, ui);
   const settings = new SettingsPanel(ui);
   game.menuActions.settings = () => settings.open();
   stage.start();
+  showOfflineReward(game, ui, Date.now());
   if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle });
 }
 
