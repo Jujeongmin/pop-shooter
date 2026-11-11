@@ -211,19 +211,18 @@ export class World1Hub {
     this.swirl.castShadow = false;
     for (const dx of [-2.2, 2.2]) this.colliders.push({ kind: 'circle', x: g.x + dx, z: g.z, r: 0.45 });
     this.colliders.push({ kind: 'box', x: g.x, z: g.z, hx: 2, hz: 0.25 });
-    this.label('월드 1 포털', g.x, 5.6, g.z, 1.1);
   }
 
-  /** 포털 위 최고 기록 (바뀔 때만 다시 그림) */
+  /** 포털 앞(받침 위, 낮게) 이름 + 최고 기록 한 줄. 고리 위는 따라가는 카메라 화면 밖이라 가려짐. 바뀔 때만 다시 그림 */
   setBest(bestStage: number): void {
-    const text = bestStage <= 0 ? '최고 기록 없음' : `최고 기록 ${stageLabel(Math.min(bestStage, PER_WORLD))}`;
+    const text = `월드 1 포털 · ${bestStage <= 0 ? '첫 도전' : `최고 ${stageLabel(Math.min(bestStage, PER_WORLD))}`}`;
     if (this.bestLabel?.userData.text === text) return;
     if (this.bestLabel) {
       this.bestLabel.removeFromParent();
       disposeLabel(this.bestLabel);
       this.labels.splice(this.labels.indexOf(this.bestLabel), 1);
     }
-    this.bestLabel = this.label(text, PORTAL_GATE.x, 4.7, PORTAL_GATE.z, 0.8);
+    this.bestLabel = this.label(text, PORTAL_GATE.x, 0.9, PORTAL_GATE.z + 1.6, 0.75);
     this.bestLabel.userData.text = text;
   }
 
