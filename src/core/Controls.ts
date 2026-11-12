@@ -10,7 +10,7 @@ const MOUSE_LOOK = 0.0045;
 /**
  * 입력 하나로 모음 (사용자 2026-11-11, 포키 +1 MMA Fighter 방식).
  * - 모바일: 화면을 네 칸으로 나눴을 때 왼쪽 아래 칸에서 누르면 이동 조이스틱, 나머지는 끌면 시점 돌리기, 안 끌고 떼면 탭.
- * - PC: WASD·방향키 이동, 마우스 끌기로 시점. 화면을 클릭하면 마우스 잠금(움직이면 시점), Tab으로 잠금 풀기/다시 잠금.
+ * - PC: WASD·방향키 이동, 마우스 끌기로 시점. 처음엔 잠그지 않음(잠그지 않고 하는 사람도 있음, 사용자 2026-11-12), Tab으로 마우스 잠금/풀기 (잠금 중엔 움직이면 시점).
  *   잠금 중 클릭 = 탭. 시설 창이 열리면 잠금을 풀어 버튼을 누를 수 있게 (Panel이 releaseLock 호출).
  * UI 요소 위 입력은 무시 (UI는 pointer-events로 따로 받음).
  */
@@ -161,8 +161,6 @@ export class Controls {
     this.downs.delete(e.pointerId);
     if (!d.dragging && e.type === 'pointerup') {
       this.taps.push({ x: e.clientX, y: e.clientY });
-      // PC: 화면 클릭으로 마우스 잠금 (Tab으로 풂)
-      if (!d.touch && e.button === 0) this.requestLock();
     }
   };
 

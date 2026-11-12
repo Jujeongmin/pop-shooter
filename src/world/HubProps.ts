@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { fontFamily } from '../i18n/i18n';
 import type { IconName } from '../ui/icons';
 
@@ -22,6 +23,20 @@ function outlineMaterial(): THREE.MeshBasicMaterial {
 }
 
 export type Animate = (dt: number, clock: number) => void;
+
+/**
+ * 외곽선 전용 도형: 같은 자리 꼭짓점을 합쳐 부드러운 법선으로 다시 계산.
+ * 원뿔 끝·상자 모서리처럼 면마다 법선이 갈라진 도형을 그대로 부풀리면 면이 벌어지고 끝이 튀어나옴 (사용자 2026-11-12 지적).
+ */
+function outlineGeometry(geo: THREE.BufferGeometry): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', geo.getAttribute('position').clone());
+  if (geo.index) g.setIndex(geo.index.clone());
+  const merged = mergeVertices(g, 1e-4);
+  g.dispose();
+  merged.computeVertexNormals();
+  return merged;
+}
 
 export class ToyBuilder {
   readonly root = new THREE.Group();
@@ -61,7 +76,7 @@ export class ToyBuilder {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     if (outline) {
-      const o = new THREE.Mesh(geo, this.ink);
+      const o = new THREE.Mesh(this.own(outlineGeometry(geo)), this.ink);
       o.castShadow = false;
       mesh.add(o);
     }

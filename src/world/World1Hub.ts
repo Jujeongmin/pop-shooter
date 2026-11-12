@@ -6,7 +6,7 @@ import type { Collider } from './movement';
 import { BALANCE } from '../sim/balance.ts';
 import { stageLabel } from '../sim/stages.ts';
 import type { GunModel } from '../sim/guns.ts';
-import { buildAltar, buildGunShop, buildRangeBooths, buildUpgrade, buildWardrobe } from './HubFacilities';
+import { buildAltar, buildFountain, buildGunShop, buildRangeBooths, buildTreadmill, buildUpgrade, buildWardrobe, type FountainProps, type TreadmillProps } from './HubFacilities';
 import { ToyBuilder } from './HubProps';
 import { HUB_BOUNDS, PORTAL_GATE, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
 
@@ -36,6 +36,9 @@ export class World1Hub {
   private readonly toys = new ToyBuilder();
   private readonly guns: Record<GunModel, THREE.Object3D> | null;
   private clock = 0;
+  /** 러닝머신·동전 분수 (Stations가 움직임) */
+  treadmill!: TreadmillProps;
+  fountain!: FountainProps;
 
   constructor(kit: Record<BrickName, KitModel>, guns: Record<GunModel, THREE.Object3D> | null = null) {
     this.guns = guns;
@@ -202,7 +205,7 @@ export class World1Hub {
   /** 사격장: 파란 매트 + 과녁 3개 */
   private buildRange(): void {
     // 줄마다 발판 색 (공격 빨강 / 연사 파랑 / 코인 금색)
-    for (const lane of RANGE_LANES) this.mesh(new THREE.BoxGeometry(1.9, 0.08, 4), lane.mat, lane.x, 0.04, RANGE_SPOT.z).castShadow = false;
+    for (const lane of RANGE_LANES) this.mesh(new THREE.BoxGeometry(6, 0.08, 4), lane.mat, lane.x, 0.04, RANGE_SPOT.z).castShadow = false;
     this.mesh(new THREE.BoxGeometry(6, 0.06, 10), '#e8f4ff', RANGE_SPOT.x, 0.03, (RANGE_SPOT.z + RANGE_TARGET.z) / 2 - 1).castShadow = false;
     const post = new THREE.CylinderGeometry(0.08, 0.08, 1.2, 8);
     this.owned.push(post);
@@ -210,7 +213,7 @@ export class World1Hub {
     const discs = [0, 1, 2, 3].map((k) => new THREE.CylinderGeometry((0.7 - k * 0.16) * 1.4, (0.7 - k * 0.16) * 1.4, 0.12 + k * 0.02, 28));
     this.owned.push(...discs);
     for (let i = -1; i <= 1; i++) {
-      const lane = RANGE_LANES[i + 1]!;
+      const lane = RANGE_LANES[0];
       const ringColors = ['#ffffff', lane.color, '#ffffff', lane.color];
       const t = new THREE.Group();
       t.position.set(RANGE_TARGET.x + i * 2, 0, RANGE_TARGET.z);
@@ -239,6 +242,8 @@ export class World1Hub {
     buildGunShop(this.toys, f('guns'), this.colliders, this.guns);
     buildAltar(this.toys, f('altar'), this.colliders);
     buildWardrobe(this.toys, f('chars'), this.colliders);
+    this.treadmill = buildTreadmill(this.toys, this.colliders);
+    this.fountain = buildFountain(this.toys, this.colliders);
   }
 
   /** 월드 포털: 받침 + 세운 고리 + 안쪽 소용돌이(돌아감) + 위에 최고 기록 */

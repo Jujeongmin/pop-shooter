@@ -9,7 +9,7 @@
  * 가정: 가장 높은 열린 월드 훈련장, 평균 초당 taps 탭, 광고·VX 없음.
  */
 import { BALANCE, STAGE_COUNT } from '../../src/sim/balance.ts';
-import { buyNextGun, canRebirth, charMult, damagePerShot, doRebirth, goldMult, highestWorld, shotsPerSec } from '../../src/sim/actions.ts';
+import { buyNextGun, canRebirth, charMult, damagePerShot, doRebirth, goldMult, highestWorld, shotsPerSec, trainRate } from '../../src/sim/actions.ts';
 import { finishRun, startRun, stepRun, tapRun } from '../../src/sim/run.ts';
 import { GUNS, gunPrice } from '../../src/sim/guns.ts';
 import { newState, type GameState } from '../../src/sim/state.ts';
@@ -62,10 +62,9 @@ function econCheck(c: Ctx): void {
 
 /** 이번 1초에 쏠 훈련장: 10초 훈련했을 때 DPS(공격·연사) 또는 골드 배율(코인, 절반 가치)이 가장 크게 느는 쪽 */
 function pickKind(s: GameState, world: number): TrainKind {
-  const shots = (shotsPerSec(s) + TAPS) * 10;
   const d0 = effDps(s);
   const gain = (k: TrainKind): number => {
-    const n = train(s, k, shots, world);
+    const n = train(s, k, (trainRate(s, k) + TAPS) * 10, world);
     if (k === 'coin') return (goldMult(n, 0) / goldMult(s, 0) - 1) * 0.5;
     return effDps(n) / d0 - 1;
   };
@@ -127,7 +126,7 @@ function runUntil(c: Ctx, maxT: number, onClear: (stage: number, c: Ctx) => void
   while (c.t < maxT && c.s.bestStage < STAGE_COUNT) {
     const world = highestWorld(c.s);
     const k = pickKind(c.s, world);
-    c.s = train(c.s, k, shotsPerSec(c.s) + TAPS, world);
+    c.s = train(c.s, k, trainRate(c.s, k) + TAPS, world);
     c.kindSec[k] += 1;
     c.t += 1;
     econCheck(c);

@@ -4,9 +4,13 @@ import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import type { GameState } from '../sim/state.ts';
 import { rebirthMult, TRAIN_KINDS, trainValue, type TrainKind } from '../sim/training.ts';
-import { pct } from './UpgradePanel';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
+
+/** 배율 표기: 1000 미만은 소수 둘째 자리까지, 그 위는 큰 수 표기 */
+function multText(m: number): string {
+  return m < 1000 ? m.toFixed(2) : formatNum(m);
+}
 
 export interface HudActions {
   menu: (which: 'settings') => void;
@@ -91,7 +95,8 @@ export class Hud {
         b.fill.style.transform = `scaleX(${Math.min(1, v / goal)})`;
         b.fill.classList.toggle('full', v >= goal);
       }
-      setText(b.v, k === 'atk' ? `+${formatNum(v)}` : `+${pct(v)}%`);
+      // 연사·골드는 지금 배율로 (처음 '+0%'가 '0% 오름'으로 읽혀서, 사용자 2026-11-12)
+      setText(b.v, k === 'atk' ? `+${formatNum(v)}` : `×${multText(1 + Math.min(v, k === 'spd' ? BALANCE.train.spdMax : v) / 100)}`);
     }
   }
 

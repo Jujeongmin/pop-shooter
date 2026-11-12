@@ -8,7 +8,7 @@ import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
 import { rebirthMult } from '../sim/training.ts';
-import { WORLD1_FACILITIES } from '../world/facilities';
+import { HUB_SPAWN, WORLD1_FACILITIES } from '../world/facilities';
 import { button, el } from './dom';
 import type { FloatText } from './FloatText';
 import { icon } from './icons';
@@ -117,7 +117,11 @@ export class RebirthPanel {
     this.float.show(t('reb.done', { m: formatMult(rebirthMult(next.tokens) * next.passMult) }), _at, 'coin big');
     this.confirming = false;
     this.render();
+    this.respawn = true;
   }
+
+  /** 환생 연출(폴짝)이 끝나면 처음 시작 자리로 (사용자 2026-11-12) */
+  private respawn = false;
 
   private update(dt: number): void {
     this.zone.update(dt);
@@ -129,5 +133,12 @@ export class RebirthPanel {
     g.pos.y = Math.sin(Math.PI * k) * 1.1;
     g.pose.grounded = k >= 1;
     if (k >= 1) g.pos.y = 0;
+    if (k >= 1 && this.respawn) {
+      this.respawn = false;
+      // 제단을 떠난 것으로 처리돼 창도 닫힘 (Game.placeAt → facilityLeave.altar)
+      g.placeAt(HUB_SPAWN.x, HUB_SPAWN.z, Math.PI);
+      g.cam.yaw = 0;
+      this.callout.flash('rgba(255, 255, 255, 0.9)');
+    }
   }
 }

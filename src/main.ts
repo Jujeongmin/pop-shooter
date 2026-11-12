@@ -6,6 +6,7 @@ import { loadAssets } from './assets/loadAssets';
 import { Game } from './core/Game';
 import { Stage3D } from './core/Stage3D';
 import { MentorNpcs } from './world/MentorNpcs';
+import { Stations } from './training/Stations';
 import { HitFx } from './fx/HitFx';
 import { pickSave } from './save/localSave';
 import { CloudSave } from './platform/CloudSave';
@@ -58,6 +59,7 @@ async function boot(): Promise<void> {
   const float = new FloatText(ui, stage.camera);
   const callout = new ZoneCallout(ui);
   const training = new TrainingRange(game, fx, float, callout);
+  new Stations(game, float, callout);
   const portal = new PortalZone(game, callout);
   const battle = new BattleScene(game, fx, float, new BattleHud(ui), new ResultCard(ui), callout);
   // 포털 착지 → 잠깐 보여 주고 전투로 (그 사이 걸어 나가면 취소)

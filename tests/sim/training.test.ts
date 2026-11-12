@@ -65,3 +65,13 @@ test('topGearTier shows the best owned tier per kind', async () => {
   assert.equal(topGearTier(g, 'spd'), 0);
   assert.equal(topGearTier(g, 'coin'), 1);
 });
+
+test('trainRate: attack follows fire rate, fire-rate and gold stations run at a fixed pace', async () => {
+  const { trainRate } = await import('../../src/sim/actions.ts');
+  const s = newState(0);
+  const fast = train(s, 'spd', 1e9, 1);
+  assert.equal(trainRate(s, 'atk'), shotsPerSec(s));
+  assert.equal(trainRate(fast, 'atk'), 12);
+  assert.equal(trainRate(s, 'spd'), BALANCE.train.actionsPerSec);
+  assert.equal(trainRate(fast, 'coin'), BALANCE.train.actionsPerSec);
+});

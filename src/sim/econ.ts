@@ -1,4 +1,4 @@
-import { goldMult, highestWorld, maxDps, rebirthReq, shotsPerSec } from './actions.ts';
+import { goldMult, highestWorld, maxDps, rebirthReq, trainRate } from './actions.ts';
 import { BALANCE } from './balance.ts';
 import { gunPrice } from './guns.ts';
 import { RUN_GAP_SEC } from './run.ts';
@@ -101,12 +101,13 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
   const rich = richest(prev, s);
   const world = highestWorld(rich);
   // 그 시간에 쏠 수 있는 최대 발 수 (연사는 이전·지금 중 큰 쪽 + 최대 탭)
-  const shots = dt * (Math.max(shotsPerSec(prev), shotsPerSec(s)) + BALANCE.tap.maxPerSec);
+  // 그 시간에 할 수 있는 최대 훈련 동작 수 (종류별: 공격 = 발사, 연사·골드 = 고정 동작) + 최대 탭
+  const shotsOf = (k: TrainKind): number => dt * (Math.max(trainRate(prev, k), trainRate(s, k)) + BALANCE.tap.maxPerSec);
   // 훈련치 상한 (환생했으면 0부터). prevUp = 이전 저장에서 그 사이 오를 수 있었던 최대 (환생 조건·스테이지 검사용)
   let clamped = false;
   const prevUp: GameState = { ...rich };
   for (const k of TRAIN_KINDS) {
-    const room = MARGIN * shots * gainPerShot(rich, k, world) + TRAIN_FLOOR;
+    const room = MARGIN * shotsOf(k) * gainPerShot(rich, k, world) + TRAIN_FLOOR;
     prevUp[TR_FIELD[k]] = trainValue(prev, k) + room;
     const cap = (rebirthGain === 1 ? 0 : trainValue(prev, k)) + room;
     if (trainValue(s, k) > cap) { s = { ...s, [TR_FIELD[k]]: cap }; clamped = true; }

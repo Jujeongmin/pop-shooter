@@ -21,6 +21,11 @@ export function shotsPerSec(s: GameState): number {
   return spdTrainMult(s);
 }
 
+/** 훈련 동작 수/초 (탭 제외): 공격 = 사격장 발사 수, 연사·골드 보너스 = 러닝머신 걸음·동전 받기 (고정) */
+export function trainRate(s: GameState, k: 'atk' | 'spd' | 'coin'): number {
+  return k === 'atk' ? shotsPerSec(s) : BALANCE.train.actionsPerSec;
+}
+
 export function autoDps(s: GameState): number {
   return damagePerShot(s) * shotsPerSec(s);
 }

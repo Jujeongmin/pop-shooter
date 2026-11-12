@@ -22,7 +22,7 @@ export const BALANCE = {
     bossMult: 2.5,
   },
   /** 월드별 체력 배수 (월드가 바뀔 때 뛰는 값). 2026-11-11 시뮬레이터 탐색: 1-10 30분, 2-10 2h50, 3-10 6h19, 4-10 11h26 (탭 3/초) */
-  worldHpMult: [1, 250, 25, 1.5],
+  worldHpMult: [1, 120, 12, 0.8],
   /**
    * 환생: 공격 훈련치가 reqBase × reqGrowth^환생 횟수에 닿으면 가능.
    * 보상 = 훈련 속도 ×multGrowth (곱으로 쌓임).
@@ -49,6 +49,8 @@ export const BALANCE = {
     gearMult: 1.6,
     mentorMult: 1.3,
     spdMax: 1100,
+    /** 러닝머신(연사)·동전 분수(골드 보너스)의 기본 동작 수/초 (내 연사와 무관, 탭으로 더함). 사격장(공격)은 초당 발사 수 (사용자 2026-11-12) */
+    actionsPerSec: 2,
   },
 } as const;
 

@@ -22,6 +22,8 @@ export interface ZoneEntryOptions {
   cam?: { focus: number; lookUp: number };
   /** 착지 뒤 바라볼 곳 */
   face: { x: number; z: number };
+  /** 착지 높이 (m, 러닝머신 벨트 위 등). 없으면 바닥 0 */
+  landY?: number;
   /** 착지 때 가운데 문구 (함수면 착지 순간 값으로, null이면 문구 없음: 창이 뜨는 시설) */
   text: CalloutText | (() => CalloutText) | null;
 }
@@ -102,12 +104,13 @@ export class ZoneEntry {
     const e = 1 - (1 - k) ** 3;
     g.pos.x = this.from.x + (this.spot.x - this.from.x) * e;
     g.pos.z = this.from.z + (this.spot.z - this.from.z) * e;
-    g.pos.y = Math.sin(Math.PI * k) * SNAP_HOP;
+    // 바닥 → 착지 높이로 올라가며 폴짝
+    g.pos.y = Math.sin(Math.PI * k) * SNAP_HOP + (this.opt.landY ?? 0) * e;
     g.yaw = Math.atan2(this.opt.face.x - g.pos.x, this.opt.face.z - g.pos.z);
     g.pose.grounded = false;
     if (k < 1) return;
     this.snapT = -1;
-    g.pos.y = 0;
+    g.pos.y = this.opt.landY ?? 0;
     g.pose.grounded = true;
     this.ring.burst();
     audio.play('zoneLand');

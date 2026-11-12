@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { t } from '../i18n/i18n';
 import type { GunModel } from '../sim/guns.ts';
 import type { Facility } from './facilities';
-import { RANGE_LANES, RANGE_SPOT, RANGE_TARGET } from './facilities';
+import { FOUNTAIN, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, TREADMILL } from './facilities';
 import type { ToyBuilder } from './HubProps';
 import type { Collider } from './movement';
 
@@ -146,16 +146,93 @@ export function buildWardrobe(b: ToyBuilder, f: Facility, colliders: Collider[])
   b.sign('heart', t('fac.chars'), f.x - 2.8, 2.1, f.z - 0.9, { w: 2.0, color: '#ff9ec4', rotY: 0.3 });
 }
 
-/** 사격장 줄마다 아치 부스 (줄 아이콘 간판) + 사격장 간판 */
+/** 사격장(공격): 과녁 셋을 감싸는 큰 아치 부스 + 간판 */
 export function buildRangeBooths(b: ToyBuilder): void {
-  const icons = { atk: 'target', spd: 'rapid', coin: 'cointarget' } as const;
-  const names = { atk: 'fac.rangeAtk', spd: 'fac.rangeSpd', coin: 'fac.rangeCoin' } as const;
-  // 아치는 과녁 바로 뒤 (과녁을 감싸는 부스, 발판에서 과녁을 가리지 않게)
-  for (const lane of RANGE_LANES) {
-    const z = RANGE_TARGET.z - 0.45;
-    for (const dx of [-0.92, 0.92]) b.toy(new THREE.CylinderGeometry(0.08, 0.08, 3.0, 10), lane.color, lane.x + dx, 1.5, z);
-    b.toy(b.box(2.0, 0.18, 0.3, 0.06), lane.color, lane.x, 3.02, z);
-    b.sign(icons[lane.kind], t(names[lane.kind]), lane.x, 3.45, z, { w: 1.7, h: 0.6, color: lane.color, post: false });
+  const z = RANGE_TARGET.z - 0.45;
+  const lane = RANGE_LANES[0];
+  for (const dx of [-3.25, 3.25]) b.toy(new THREE.CylinderGeometry(0.1, 0.1, 3.0, 10), lane.color, RANGE_SPOT.x + dx, 1.5, z);
+  b.toy(b.box(6.8, 0.2, 0.32, 0.07), lane.color, RANGE_SPOT.x, 3.02, z);
+  b.sign('target', `${t('fac.range')} · ${t('fac.rangeAtk')}`, RANGE_SPOT.x, 3.5, z, { w: 2.8, h: 0.7, color: lane.color, post: false });
+}
+
+/** 러닝머신 (연사 훈련): 벨트가 흐르고 캐릭터가 위에서 달림. 앞 = −z (손잡이·화면) */
+export interface TreadmillProps { setSpeed(v: number): void }
+export function buildTreadmill(b: ToyBuilder, colliders: Collider[]): TreadmillProps {
+  const g = new THREE.Group();
+  g.position.set(TREADMILL.x, 0, TREADMILL.z);
+  b.root.add(g);
+  b.toy(b.box(1.5, 0.32, 2.8, 0.12), '#5d6a92', 0, 0.16, 0, g);
+  // 벨트: 줄무늬 텍스처가 뒤(+z)로 흐름
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 128;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#3a466f'; ctx.fillRect(0, 0, 32, 128);
+  ctx.fillStyle = '#4f9dff';
+  for (let y = 0; y < 128; y += 32) ctx.fillRect(0, y, 32, 8);
+  const tex = b.own(new THREE.CanvasTexture(c));
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, 3);
+  const belt = b.toy(new THREE.PlaneGeometry(1.2, 2.5), b.own(new THREE.MeshBasicMaterial({ map: tex })), 0, 0.33, 0.05, g, false);
+  belt.rotation.x = -Math.PI / 2;
+  // 손잡이 + 화면 (앞)
+  for (const x of [-0.65, 0.65]) b.toy(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 10), '#dfe5f2', x, 0.95, -1.15, g);
+  b.toy(b.box(1.45, 0.12, 0.14, 0.05), '#4f9dff', 0, 1.6, -1.15, g);
+  b.toy(b.box(0.9, 0.45, 0.12, 0.06), '#bfeaff', 0, 1.82, -1.2, g);
+  let speed = 0;
+  b.animators.push((dt) => { tex.offset.y -= dt * speed * 0.9; });
+  colliders.push({ kind: 'box', x: TREADMILL.x, z: TREADMILL.z - 1.2, hx: 0.75, hz: 0.12 });
+  b.sign('timer', t('fac.treadmill'), TREADMILL.x + 1.9, 2.0, TREADMILL.z - 0.6, { w: 2.0, color: '#4f9dff', rotY: -0.35 });
+  return { setSpeed: (v) => { speed = v; } };
+}
+
+/** 동전 분수 (골드 보너스 훈련): 금색 기계 꼭대기 관에서 동전이 떨어지고 캐릭터가 받음. 기계는 서는 자리 북쪽 */
+export interface FountainProps {
+  /** 동전 하나 떨어뜨림 (받는 곳 = to). 닿으면 onCatch */
+  drop(to: THREE.Vector3, onCatch: () => void): void;
+}
+export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainProps {
+  const mx = FOUNTAIN.x;
+  const mz = FOUNTAIN.z - 1.5;
+  const g = new THREE.Group();
+  g.position.set(mx, 0, mz);
+  b.root.add(g);
+  b.toy(new THREE.CylinderGeometry(0.9, 1.05, 0.35, 24), '#ffe48a', 0, 0.18, 0, g);
+  b.toy(new THREE.CylinderGeometry(0.62, 0.7, 1.7, 24), '#ffc928', 0, 1.2, 0, g);
+  b.toy(new THREE.SphereGeometry(0.66, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), '#ff9ec4', 0, 2.05, 0, g);
+  b.toy(new THREE.CylinderGeometry(0.22, 0.22, 0.12, 18), '#ffffff', 0, 2.68, 0, g);
+  // 앞으로 휘어진 관 (서는 자리 위에서 끝남)
+  const spout = b.toy(new THREE.TorusGeometry(0.75, 0.14, 12, 24, Math.PI / 2), '#ffc928', 0, 2.2, 0.75, g);
+  spout.rotation.set(0, Math.PI / 2, 0);
+  const coinGeo = b.own(new THREE.CylinderGeometry(0.14, 0.14, 0.04, 18));
+  const coinMat = b.mat('#ffd34d', { emissive: '#ffb000', metal: 0.4, rough: 0.3 });
+  const pool: { m: THREE.Mesh; t: number; from: THREE.Vector3; to: THREE.Vector3; done: (() => void) | null }[] = [];
+  for (let i = 0; i < 10; i++) {
+    const m = new THREE.Mesh(coinGeo, coinMat);
+    m.visible = false;
+    b.root.add(m);
+    pool.push({ m, t: 1, from: new THREE.Vector3(), to: new THREE.Vector3(), done: null });
   }
-  b.sign('target', t('fac.range'), RANGE_SPOT.x - 4.1, 2.0, RANGE_SPOT.z - 1.0, { w: 1.9, color: '#ffffff', rotY: 0.45 });
+  const FALL = 0.45;
+  b.animators.push((dt) => {
+    for (const p of pool) {
+      if (p.t >= 1) continue;
+      p.t = Math.min(1, p.t + dt / FALL);
+      p.m.position.lerpVectors(p.from, p.to, p.t);
+      p.m.position.y += Math.sin(p.t * Math.PI) * 0.35;
+      p.m.rotation.x += dt * 10;
+      if (p.t >= 1) { p.m.visible = false; p.done?.(); p.done = null; }
+    }
+  });
+  colliders.push({ kind: 'circle', x: mx, z: mz, r: 1.0 });
+  b.sign('cointarget', t('fac.fountain'), mx - 2.1, 2.0, mz + 0.6, { w: 2.1, color: '#ffc928', rotY: 0.35 });
+  return {
+    drop: (to, onCatch) => {
+      const p = pool.find((x) => x.t >= 1) ?? pool[0]!;
+      p.from.set(mx, 2.2, mz + 1.45);
+      p.to.copy(to);
+      p.t = 0;
+      p.done = onCatch;
+      p.m.visible = true;
+    },
+  };
 }

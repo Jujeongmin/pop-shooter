@@ -67,6 +67,8 @@ export class Game {
   private readonly stateListeners: ((s: GameState) => void)[] = [];
   readonly ui: HTMLElement;
   readonly hud: Hud;
+  private lockHint: HTMLDivElement | null = null;
+  private lockHintTouch: boolean | null = null;
   readonly saver: AutoSaver;
   /** 카메라와 나 사이를 가리는 광장 구조물 반투명 (main이 광장을 다 만든 뒤 register) */
   readonly occlusion = new OcclusionFader();
@@ -77,17 +79,17 @@ export class Game {
     this.state = state;
     this.ui = ui;
     this.controls = new Controls(stage.renderer.domElement, ui);
-    // PC 마우스 잠금 중: 가운데 점 + "Tab: 마우스 풀기"
+    // PC: 왼쪽 아래 늘 "Tab: 마우스 고정 / 풀기" (사용자 2026-11-12), 잠금 중엔 가운데 점. 터치 기기에선 숨김
     const cross = document.createElement('div');
     cross.className = 'lock-cross';
     const hint = document.createElement('div');
-    hint.className = 'lock-hint';
-    hint.textContent = t('ctl.unlock');
+    hint.className = 'lock-hint on';
+    hint.textContent = t('ctl.lock');
     ui.append(cross, hint);
+    this.lockHint = hint;
     this.controls.onLockChange = (on) => {
       cross.classList.toggle('on', on);
-      hint.classList.toggle('on', on);
-      hint.textContent = t('ctl.unlock');
+      hint.textContent = t(on ? 'ctl.unlock' : 'ctl.lock');
     };
     this.hud = new Hud(ui, { menu: (m) => this.menuActions[m]?.() });
     this.saver = new AutoSaver(() => this.state, save.account, save.cloud);
@@ -161,7 +163,10 @@ export class Game {
     this.pos.set(x, 0, z);
     this.yaw = yaw;
     this.velocity.set(0, 0, 0);
+    const prev = this.near;
     this.near = nearestFacility(x, z, this.hub.facilities);
+    // 다른 곳으로 옮겨졌으면 있던 시설은 떠난 것으로 (훈련 구역이 켜진 채 남지 않게: 환생 후 스폰 등)
+    if (prev && prev.id !== this.near?.id) this.leaveFacility(prev);
   }
 
   setMode(mode: GameMode): void {
@@ -181,6 +186,11 @@ export class Game {
   }
 
   private frame(dt: number): void {
+    const touch = this.controls.touchMode;
+    if (touch !== this.lockHintTouch && this.lockHint) {
+      this.lockHintTouch = touch;
+      this.lockHint.classList.toggle('on', !touch);
+    }
     const taps = this.controls.drainTaps();
     const look = this.controls.drainLook(_look);
     if (this.mode === 'hub' && (look.x !== 0 || look.y !== 0)) this.cam.turn(look.x, look.y);
