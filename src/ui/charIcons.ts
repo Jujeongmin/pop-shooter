@@ -10,7 +10,11 @@ const S = 192;
  * 캐릭터 창 초상: 6명을 대기 자세로 정면에서 한 번씩 그려 PNG 주소로.
  * 복제 스켈레톤(boneTexture)·믹서는 그린 뒤 해제, 오프스크린 렌더러는 dispose + forceContextLoss.
  */
+let cache: Record<CharId, string> | null = null;
+
 export function bakeCharIcons(assets: Assets): Record<CharId, string> {
+  // 캐릭터 창·멘토 탭이 같이 씀: 한 번만 그림
+  if (cache) return cache;
   const canvas = document.createElement('canvas');
   const r = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
   r.setSize(S, S, false);
@@ -52,5 +56,6 @@ export function bakeCharIcons(assets: Assets): Record<CharId, string> {
   }
   r.dispose();
   r.forceContextLoss();
+  cache = out;
   return out;
 }

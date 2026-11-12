@@ -96,10 +96,21 @@ const SVG: Record<string, string> = {
 
 export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'heart' | 'lock' | 'close' | 'target' | 'rapid' | 'cointarget' | 'gloves' | 'goggles' | 'piggy' | 'medal';
 
-/** 아이콘 span (크기는 CSS .ico / 추가 클래스) */
+const BASE = `${import.meta.env.BASE_URL}ui/icons/`;
+
+/**
+ * 아이콘 span (크기는 CSS .ico / 추가 클래스). 그림 = Codex로 만든 장난감풍 아이콘 (원본 art-src/ui-icons, 변환 tools/ui/icons_to_webp.py → public/ui/icons/<이름>.webp, 128px).
+ * 그림을 못 받으면 예전 SVG로 대신 그림.
+ */
 export function icon(name: IconName, cls = ''): HTMLSpanElement {
   const s = document.createElement('span');
   s.className = `ico ico-${name}${cls ? ` ${cls}` : ''}`;
-  s.innerHTML = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${SVG[name]}</svg>`;
+  const img = document.createElement('img');
+  img.src = `${BASE}${name}.webp`;
+  img.alt = '';
+  img.draggable = false;
+  img.decoding = 'async';
+  img.onerror = () => { s.innerHTML = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${SVG[name]}</svg>`; };
+  s.append(img);
   return s;
 }

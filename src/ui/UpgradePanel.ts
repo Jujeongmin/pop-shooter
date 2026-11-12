@@ -12,6 +12,8 @@ import {
   buyGear, buyMachine, GEAR, gearPrice, gearUnlocked, gainPerShot, hasGear, machineAffordable, machineCost, machineLv, MENTORS, TRAIN_KINDS, type TrainKind,
 } from '../sim/training.ts';
 import { WORLD1_FACILITIES } from '../world/facilities';
+import { MENTOR_CHAR } from '../world/MentorNpcs';
+import { bakeCharIcons } from './charIcons';
 import { button, el, setText } from './dom';
 import type { FloatText } from './FloatText';
 import { icon, type IconName } from './icons';
@@ -29,7 +31,7 @@ const _at = new THREE.Vector3();
 
 interface MachRow { kind: TrainKind; root: HTMLDivElement; lv: HTMLSpanElement; val: HTMLDivElement; btn: HTMLButtonElement; cost: HTMLSpanElement; n: HTMLSpanElement }
 interface GearRow { i: number; root: HTMLDivElement; btn: HTMLButtonElement; cost: HTMLSpanElement; n: HTMLSpanElement }
-interface MentorRow { i: number; root: HTMLDivElement; status: HTMLDivElement }
+interface MentorRow { i: number; root: HTMLDivElement; status: HTMLDivElement; face: HTMLImageElement }
 
 /** 훈련 % 보기 좋게 (작은 값은 소수까지) */
 export function pct(v: number): string {
@@ -159,9 +161,13 @@ export class UpgradePanel {
     const mid = el('div', 'up-mid');
     mid.append(el('div', 'up-name', t(`mentor.${m.id}` as StrKey)), el('div', 'up-val', t('mentor.desc', { m: BALANCE.train.mentorMult })));
     const status = el('div', 'mentor-st');
-    root.append(icon('medal', `m${i}`), mid, status);
+    // 멘토 = 팝배틀 캐릭터 (광장 NPC와 같은 얼굴)
+    // 그림은 멘토 탭을 처음 열 때 (시작 때 오프스크린 렌더러를 만들지 않게)
+    const face = el('img', 'mentor-face');
+    face.alt = '';
+    root.append(face, mid, status);
     this.sections.get('mentor')!.append(root);
-    return { i, root, status };
+    return { i, root, status, face };
   }
 
   private loadUnit(): Unit {
@@ -268,6 +274,7 @@ export class UpgradePanel {
     for (const r of this.mentorRows) {
       const m = MENTORS[r.i]!;
       const joined = s.bestStage >= m.needStage;
+      if (!r.face.src) r.face.src = bakeCharIcons(this.game.assets)[MENTOR_CHAR[m.id] ?? 'yellow'];
       r.root.classList.toggle('locked', !joined);
       r.status.replaceChildren(joined ? icon('check') : el('span', '', t('mentor.need', { st: stageLabel(m.needStage) })));
     }

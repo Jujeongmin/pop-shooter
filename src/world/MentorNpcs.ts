@@ -10,7 +10,7 @@ import { MENTORS } from '../sim/training.ts';
 import { disposeLabel, makeLabel } from './labels';
 
 /** 멘토 = 팝배틀 로비 NPC 4명 그대로 (사용자 2026-11-11) */
-const MENTOR_CHAR: Record<string, CharId> = { coach: 'yellow', sniper: 'pink', captain: 'red', legend: 'white' };
+export const MENTOR_CHAR: Record<string, CharId> = { coach: 'yellow', sniper: 'pink', captain: 'red', legend: 'white' };
 /** 멘토 자리: 업그레이드 기계 동쪽, 울타리 앞에 한 줄 (서쪽 광장을 봄) */
 const SPOTS: readonly { x: number; z: number }[] = [{ x: 13, z: -6 }, { x: 13, z: -3 }, { x: 13, z: 0 }, { x: 13, z: 3 }];
 const FACE_YAW = -Math.PI / 2;
