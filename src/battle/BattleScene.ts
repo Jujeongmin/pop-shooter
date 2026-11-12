@@ -71,6 +71,8 @@ export class BattleScene {
   private endT = -1;
   /** 이번 스테이지 전체 시간, 던진 수, 맞은 수 */
   private stageT = 1;
+  /** 방금 깬 스테이지 최대 체력: 다음 보스가 나오기 전까지 체력바를 0 / 이 값으로 (한 방에 깨도 깎인 게 보이게) */
+  private clearedMax = 0;
   private launched = 0;
   private landed = 0;
   private readonly toys: Toy[] = [];
@@ -243,6 +245,13 @@ export class BattleScene {
 
   private onCleared(stage: number): void {
     const run = this.run!;
+    // 한 방에 깨면 모아 둔 피해 숫자가 보스와 함께 사라지던 것 (사용자 2026-11-12) → 쓰러지기 전에 바로 띄움
+    if (this.boss && this.dmgAcc > 0) {
+      this.float.show(`-${formatNum(this.dmgAcc)}`, this.boss.chest(_aim), 'big');
+      this.dmgAcc = 0;
+      this.floatT = 0;
+    }
+    this.clearedMax = stageHp(stage);
     this.boss?.defeat();
     audio.play('bossDown');
     for (const toy of this.toys) { toy.t = FLIGHT; toy.mesh.visible = false; }
@@ -324,12 +333,15 @@ export class BattleScene {
     this.floatT += dt;
     if (this.floatT >= FLOAT_SEC && this.dmgAcc > 0 && this.boss) {
       this.floatT = 0;
-      this.float.show(`-${formatNum(this.dmgAcc)}`, this.boss.chest(_aim).setY(this.boss.height * 0.95), 'big');
+      // 머리 위가 아니라 가슴 높이: 멀리 작은 보스면 머리 위 숫자가 화면 위 체력바·DPS와 겹침
+      this.float.show(`-${formatNum(this.dmgAcc)}`, this.boss.chest(_aim), 'big');
       this.dmgAcc = 0;
     }
     const b = run.battle;
     this.boss?.setHpRatio(b.hp / b.maxHp);
-    this.hud.update(run.gap > 0 ? stageHp(run.stage) : b.hp, b.maxHp, autoDps(run.from));
+    // 쉬는 시간: 다음 보스가 나오기 전까지는 방금 깬 보스 체력 0, 나오면 새 체력
+    if (run.gap > 0 && !this.boss) this.hud.update(0, this.clearedMax, autoDps(run.from));
+    else this.hud.update(run.gap > 0 ? stageHp(run.stage) : b.hp, b.maxHp, autoDps(run.from));
   }
 
   /** 보스가 칸마다 장난감 공을 던짐 (도착 시각 = 칸 경계), 닿으면 내 체력 한 칸 */

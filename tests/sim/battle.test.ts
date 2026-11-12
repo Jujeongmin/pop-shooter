@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newState } from '../../src/sim/state.ts';
-import { startBattle, stepBattle, tapBattle } from '../../src/sim/battle.ts';
+import { HOPELESS_SPEED, hopeless, startBattle, stepBattle, tapBattle } from '../../src/sim/battle.ts';
 import { stageHp } from '../../src/sim/stages.ts';
 
 test('battle win and lose by dps', () => {
@@ -14,6 +14,22 @@ test('battle win and lose by dps', () => {
   while (!weak.done) stepBattle(weak, 0.1);
   assert.equal(weak.done, 'lose');
   assert.ok(weak.timeLeft <= 0);
+});
+
+test('a battle that cannot be won ends HOPELESS_SPEED times sooner; a winnable one keeps the full timer', () => {
+  const weak = startBattle(newState(0), 9);
+  assert.ok(hopeless(weak));
+  let t = 0;
+  while (!weak.done) { stepBattle(weak, 0.05); t += 0.05; }
+  assert.equal(weak.done, 'lose');
+  assert.ok(Math.abs(t - 20 / HOPELESS_SPEED) < 0.2, `lost after ${t}s`);
+  // 딱 시간 안에 이기는 판: 끝까지 보통 속도
+  const s = { ...newState(0) };
+  const b = startBattle(s, 1);
+  b.hp = b.maxHp = b.dmg * Math.floor(b.sps * 19);
+  assert.ok(!hopeless(b));
+  while (!b.done) stepBattle(b, 0.05);
+  assert.equal(b.done, 'win');
 });
 
 test('auto shots follow shots per sec', () => {

@@ -18,6 +18,17 @@ export function startBattle(s: GameState, stage: number): Battle {
   return { stage, hp, maxHp: hp, timeLeft: stageTime(stage), dmg: damagePerShot(s), sps: shotsPerSec(s), shotAcc: 0, done: null };
 }
 
+/**
+ * 이길 수 없게 되면(남은 시간에 쏠 수 있는 피해 < 남은 체력) 시간이 이 배로 빨리 흘러 금방 짐
+ * (사용자 2026-11-12: 내가 죽기까지 너무 오래 걸림). 전투 중 공격력이 고정이라 시작부터 알 수 있음. 이기는 판은 그대로.
+ */
+export const HOPELESS_SPEED = 5;
+
+/** 남은 시간 동안 자동 사격으로는 못 이김 */
+export function hopeless(b: Battle): boolean {
+  return b.hp > b.dmg * Math.floor(b.shotAcc + b.sps * b.timeLeft + 1e-9);
+}
+
 function hit(b: Battle, shots: number): void {
   b.hp = Math.max(0, b.hp - b.dmg * shots);
   if (b.hp <= 0) b.done = 'win';
@@ -31,7 +42,7 @@ export function stepBattle(b: Battle, dt: number): number {
   b.shotAcc -= shots;
   if (shots > 0) hit(b, shots);
   if (b.done) return shots;
-  b.timeLeft -= dt;
+  b.timeLeft -= dt * (hopeless(b) ? HOPELESS_SPEED : 1);
   if (b.timeLeft <= 0) {
     b.timeLeft = 0;
     b.done = 'lose';

@@ -115,13 +115,16 @@ export class RebirthPanel {
     } else {
       const go = button(t('reb.go'), () => { this.confirming = 'normal'; this.render(); }, 'btn big reb-go');
       go.disabled = !can;
-      b.append(go);
+      // 환생하기·팝젬 건너뛰기를 한 줄에 (사용자 2026-11-12: 창이 스크롤되지 않게)
+      const acts = el('div', 'reb-acts');
+      acts.append(go);
+      b.append(acts);
       // 조건이 안 되면 팝젬으로 바로 환생 (서버 연결 때만)
       if (!can && this.prem?.online) {
         const sk = button(t('reb.skip', { n: formatNum(skipGems) }), () => { this.msg = ''; this.confirming = 'skip'; this.render(); }, 'btn reb-skip');
         sk.prepend(icon('gem'));
         sk.disabled = s.gems < skipGems;
-        b.append(sk);
+        acts.append(sk);
       }
     }
     if (this.msg) b.append(el('div', 'reb-tip', this.msg));
