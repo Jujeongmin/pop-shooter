@@ -2,12 +2,14 @@ import type { Game } from '../core/Game';
 import { t, type StrKey } from '../i18n/i18n';
 import type { Premium } from '../platform/Premium';
 import { charMult } from '../sim/actions.ts';
-import { formatNum } from '../sim/format.ts';
 import { BOOST_AD_MS, GEM_BOOST, GEM_ITEMS, nextPassProduct, PASS_ORDER, PRODUCTS, type AdKind } from '../sim/premium.ts';
 import { bakeCharIcons } from './charIcons';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 import { Panel } from './Panel';
+
+/** 가격·팝젬 개수는 줄이지 않고 그대로 (1,000 → "1.00K"로 보이면 헷갈림) */
+const plain = (n: number): string => Math.floor(n).toLocaleString('en-US');
 
 export type Tab = 'free' | 'pass' | 'gems' | 'heroes';
 const TABS: readonly Tab[] = ['free', 'pass', 'gems', 'heroes'];
@@ -87,7 +89,7 @@ export class ShopPanel {
   /** VX 상품 구매 버튼 (가격 VX, 못 사면 이유) */
   private vxButton(productId: string): HTMLButtonElement {
     const it = this.prem.item(productId);
-    const label = it.price !== null ? `${formatNum(it.price)} VX` : t(`shop.vx.${it.reason}` as StrKey);
+    const label = it.price !== null ? `${plain(it.price)} VX` : t(`shop.vx.${it.reason}` as StrKey);
     const b = button(label, () => this.prem.buy(productId), 'btn buy');
     b.disabled = !it.canBuy;
     return b;
@@ -96,7 +98,7 @@ export class ShopPanel {
   /** 보유 팝젬 한 줄 */
   private myGems(): HTMLDivElement {
     const d = el('div', 'up-hint my-gems');
-    d.append(icon('gem'), el('span', '', t('shop.myGems', { n: formatNum(this.game.state.gems) })));
+    d.append(icon('gem'), el('span', '', t('shop.myGems', { n: plain(this.game.state.gems) })));
     return d;
   }
 
@@ -107,11 +109,11 @@ export class ShopPanel {
       const c = button(t('shop.charge'), () => { this.tab = 'gems'; this.msg = ''; this.render(); }, 'btn buy charge');
       c.prepend(icon('gem'));
       const wrap = el('div', 'gem-need');
-      wrap.append(el('div', 'gem-price', `${formatNum(price)}`), c);
+      wrap.append(el('div', 'gem-price', plain(price)), c);
       wrap.querySelector('.gem-price')!.prepend(icon('gem'));
       return wrap;
     }
-    const b = button(formatNum(price), () => void this.gemBuy(id, b), 'btn buy');
+    const b = button(plain(price), () => void this.gemBuy(id, b), 'btn buy');
     b.prepend(icon('gem'));
     b.disabled = !this.prem.online || !this.prem.known;
     return b;
@@ -153,7 +155,7 @@ export class ShopPanel {
     } else if (this.tab === 'gems') {
       for (const id of ['gems_s', 'gems_m', 'gems_l']) {
         const n = (PRODUCTS[id] as { gems: number }).gems;
-        b.append(this.row('gem', t('shop.gemPack', { n: formatNum(n) }), t('shop.gemPackDesc'), this.vxButton(id)));
+        b.append(this.row('gem', t('shop.gemPack', { n: plain(n) }), t('shop.gemPackDesc'), this.vxButton(id)));
       }
     } else {
       b.append(this.myGems());
