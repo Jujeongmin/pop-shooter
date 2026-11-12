@@ -7,3 +7,4 @@ dist/
 art-src/ui-icons/*.log
 art-src/thumbnail/*.log
 art-src/vxshop/*.log
+store-assets/

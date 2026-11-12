@@ -205,10 +205,12 @@ export class BattleScene {
   private spawnBoss(): void {
     const run = this.run!;
     this.boss = new ToyBoss(run.stage, themeOf(run.world).bossTints);
-    // 큰 보스일수록 카메라를 뒤·위로 (대장 머리·왕관이 잘리지 않게)
+    // 큰 보스일수록 카메라가 위를 더 봄 (대장 머리·왕관이 잘리지 않게). 뒤로는 물리지 않음:
+    // 예전엔 focus를 더 낮춰 뒤로 물렸는데 1-6쯤부터 카메라가 둘레 관중석 블록(3번째 줄 반지름 16.4m, 높이 5.2m) 안에 들어가
+    // 블록 면이 화면을 덮고 내 캐릭터가 안 보였음 (사용자 2026-11-12 스크린샷). focus -1.2 = 카메라 z 약 15.9
     const extra = Math.max(0, this.boss.height - 2.4);
-    this.game.cam.focus = -1.2 - extra * 0.28;
-    this.game.cam.lookUp = extra * 0.35;
+    this.game.cam.focus = -1.2;
+    this.game.cam.lookUp = extra * 0.55;
     this.boss.root.position.set(BOSS_AT.x, 0, BOSS_AT.z);
     this.stageT = run.battle.timeLeft;
     this.launched = 0;
