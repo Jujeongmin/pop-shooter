@@ -76,6 +76,9 @@ async function boot(): Promise<void> {
     portal.release();
     battle.start(game.world);
   }, 1200);
+  // 광장 배경음 = 지금 월드 곡 (월드 이동 때 바뀜)
+  audio.setWorld(game.world);
+  game.onWorldChange((w) => audio.setWorld(w));
   new MentorNpcs(game);
   new TravelPanel(game, ui, callout);
   new UpgradePanel(game, ui, callout, float);

@@ -1,11 +1,12 @@
-import { AUDIO_STORAGE_KEY, MIX, MUSIC, SFX_FILES, SOUNDS, type FileSoundId, type MusicId, type SoundId } from '../config/audio';
-import { renderMusic } from './musicTracks';
+import { AUDIO_STORAGE_KEY, MIX, MUSIC, MUSIC_FILE, SFX_FILES, SOUNDS, type FileSoundId, type MusicId, type SoundId, type TrackId } from '../config/audio';
 import { renderSfx } from './sfxBank';
 
 /**
  * 소리 관리 (pop-battle의 AudioManager에서 공간음을 뺀 것). 게임 코드는 play(id) · setMusic(id)만 부른다.
- * - 총소리·보스 쓰러짐은 짧은 녹음 파일(mp3 → 디코드), 나머지 효과음·배경음은 코드 합성: 오디오가 켜질 때 버퍼로 한 번 만들고 재생은 버퍼 재사용
- * - 배경음은 짧은 합성 반복곡(곡당 약 3MB)이라 디코드된 긴 BGM 문제 없음
+ * - 총소리·보스 쓰러짐은 짧은 녹음 파일(mp3 → 디코드), 나머지 효과음은 코드 합성: 오디오가 켜질 때 버퍼로 한 번 만들고 재생은 버퍼 재사용
+ * - 배경음은 실제 곡 파일(월드별 광장 8곡 + 전투, Pixabay)을 <audio> + MediaElementAudioSourceNode로 스트리밍 (디코드해 메모리에 올리지 않음,
+ *   웹게임 메모리 체크리스트). 곡마다 엘리먼트 하나를 재사용(소스 노드는 엘리먼트당 한 번만), 안 쓰는 월드 곡은 src를 비워 버퍼를 놓음.
+ *   iOS는 입력 없이 element.play()를 거부 → 첫 입력 때 전투 곡을 소리 0으로 한 번 재생·멈춰 미리 열어 둠 (포털 착지로 전투가 시작돼 입력이 없음)
  * - 버스: 효과음(압축기) · 배경음 → 마스터(음소거) → 출력
  * - 브라우저 자동 재생 정책: 첫 사용자 입력(클릭·터치·키)에서 attachUnlock이 오디오를 켬. 탭이 숨으면 멈춤
  * - 종류(채널)별 동시 재생 수·최소 간격 제한 → 연사해도 겹쳐 커지지 않음
@@ -27,9 +28,12 @@ export class AudioManager {
   private sfxBus: GainNode | null = null;
   private musicBus: GainNode | null = null;
   private readonly bank = new Map<SoundId, AudioBuffer>();
-  private readonly music = new Map<MusicId, Promise<AudioBuffer | null>>();
-  private current: { id: MusicId; src: AudioBufferSourceNode; gain: GainNode } | null = null;
+  /** 곡마다 엘리먼트 하나 (처음 필요할 때 만듦) */
+  private readonly tracks = new Map<TrackId, { el: HTMLAudioElement; gain: GainNode; stopT: number }>();
+  private current: { id: MusicId; track: TrackId } | null = null;
   private wanted: MusicId | null = null;
+  /** 광장 곡 월드 (1~8) */
+  private world = 1;
   private readonly active = new Map<string, number>();
   private readonly last = new Map<string, number>();
   private unlockOff: (() => void) | null = null;
@@ -58,6 +62,18 @@ export class AudioManager {
   /** 지금 배경음 */
   get currentMusic(): MusicId | null {
     return this.current?.id ?? null;
+  }
+
+  /** 광장 곡 월드 바꾸기 (광장 곡이 나오는 중이면 그 월드 곡으로 넘어감) */
+  setWorld(w: number): void {
+    const n = Math.max(1, Math.min(8, Math.floor(w)));
+    if (n === this.world) return;
+    this.world = n;
+    if (this.wanted === 'hub' && this.ctx) this.startMusic('hub');
+  }
+
+  private trackOf(id: MusicId): TrackId {
+    return id === 'battle' ? 'battle' : (`w${this.world}` as TrackId);
   }
 
   setMaster(v: number): void {
@@ -118,8 +134,13 @@ export class AudioManager {
     const vis = () => {
       this.hidden = document.hidden;
       if (!this.ctx) return;
-      if (this.hidden) void this.ctx.suspend();
-      else void this.ctx.resume();
+      if (this.hidden) {
+        void this.ctx.suspend();
+        for (const t of this.tracks.values()) t.el.pause();
+      } else {
+        void this.ctx.resume();
+        if (this.current) void this.tracks.get(this.current.track)?.el.play().catch(() => undefined);
+      }
     };
     document.addEventListener('visibilitychange', vis);
     this.unlockOff = () => {
@@ -151,8 +172,9 @@ export class AudioManager {
       this.musicBus.connect(this.master);
       this.applyMaster();
       void this.buildBank();
-      // 오디오가 켜지기 전에 정해 둔 곡 시작
+      // 오디오가 켜지기 전에 정해 둔 곡 시작 + 전투 곡 미리 열기 (iOS: 입력 안에서 한 번 재생해 둬야 나중에 입력 없이 재생됨)
       if (this.wanted) this.startMusic(this.wanted);
+      if (this.wanted !== 'battle') this.prime('battle');
     }
     if (this.ctx.state === 'suspended' && !this.hidden) void this.ctx.resume();
   }
@@ -188,33 +210,65 @@ export class AudioManager {
   }
 
   /**
-   * 배경음 바꾸기 (null = 끄기). 같은 곡이면 그대로 이어서. 이전 곡은 페이드아웃, 새 곡은 페이드인 → 겹쳐 두 곡이 계속 나는 일 없음.
-   * 오디오가 켜지기 전에 불러도 기억해 뒀다가 켜질 때 시작. 곡은 처음 필요할 때 구움
+   * 배경음 바꾸기 (null = 끄기). 같은 곡이면 그대로 이어서. 이전 곡은 페이드아웃, 새 곡은 페이드인.
+   * 오디오가 켜지기 전에 불러도 기억해 뒀다가 켜질 때 시작
    */
   setMusic(id: MusicId | null): void {
     if (id === this.wanted) return;
     this.wanted = id;
-    this.fadeOutCurrent();
-    if (id && this.ctx) this.startMusic(id);
+    if (!id) { this.fadeOutCurrent(); return; }
+    if (this.ctx) this.startMusic(id);
+  }
+
+  /** 곡 엘리먼트 (없으면 만들어 음악 버스에 연결) */
+  private trackEl(track: TrackId): { el: HTMLAudioElement; gain: GainNode; stopT: number } | null {
+    const ctx = this.ctx;
+    if (!ctx || !this.musicBus) return null;
+    let t = this.tracks.get(track);
+    if (!t) {
+      const el = new Audio();
+      el.crossOrigin = 'anonymous';
+      el.loop = true;
+      el.preload = 'auto';
+      el.setAttribute('playsinline', '');
+      el.src = MUSIC_FILE(track);
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      ctx.createMediaElementSource(el).connect(gain).connect(this.musicBus);
+      t = { el, gain, stopT: 0 };
+      this.tracks.set(track, t);
+    } else if (!t.el.getAttribute('src')) {
+      t.el.src = MUSIC_FILE(track);
+    }
+    return t;
+  }
+
+  /** 입력 안에서 소리 0으로 한 번 재생했다 멈춤 (iOS가 나중에 입력 없이도 재생하게) */
+  private prime(id: MusicId): void {
+    const track = this.trackOf(id);
+    const t = this.trackEl(track);
+    if (!t || !t.el.paused) return;
+    void t.el.play().then(() => { if (this.current?.track !== track) t.el.pause(); }).catch(() => undefined);
   }
 
   private startMusic(id: MusicId): void {
     const ctx = this.ctx;
+    const track = this.trackOf(id);
     if (!ctx) return;
-    void this.track(id).then((buffer) => {
-      if (!buffer || this.wanted !== id || this.current?.id === id || !this.musicBus) return;
-      this.fadeOutCurrent();
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      src.loop = true;
-      const gain = ctx.createGain();
-      const t = ctx.currentTime;
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(MUSIC[id].gain, t + MIX.musicFade);
-      src.connect(gain).connect(this.musicBus);
-      src.start(t);
-      this.current = { id, src, gain };
-    });
+    if (this.current?.track === track) {
+      this.current.id = id;
+      return;
+    }
+    this.fadeOutCurrent();
+    const t = this.trackEl(track);
+    if (!t) return;
+    clearTimeout(t.stopT);
+    const now = ctx.currentTime;
+    t.gain.gain.cancelScheduledValues(now);
+    t.gain.gain.setValueAtTime(t.gain.gain.value, now);
+    t.gain.gain.linearRampToValueAtTime(MUSIC[id].gain, now + MIX.musicFade);
+    if (!this.hidden) void t.el.play().catch((err) => console.warn(`[audio] 배경음 ${track} 재생 실패`, err));
+    this.current = { id, track };
   }
 
   private fadeOutCurrent(): void {
@@ -222,32 +276,24 @@ export class AudioManager {
     const ctx = this.ctx;
     if (!cur || !ctx) return;
     this.current = null;
-    const t = ctx.currentTime;
-    cur.gain.gain.cancelScheduledValues(t);
-    cur.gain.gain.setValueAtTime(cur.gain.gain.value, t);
-    cur.gain.gain.linearRampToValueAtTime(0, t + MIX.musicFade);
-    cur.src.stop(t + MIX.musicFade + 0.05);
-    cur.src.onended = () => {
-      cur.src.disconnect();
-      cur.gain.disconnect();
-    };
+    const t = this.tracks.get(cur.track);
+    if (!t) return;
+    const now = ctx.currentTime;
+    t.gain.gain.cancelScheduledValues(now);
+    t.gain.gain.setValueAtTime(t.gain.gain.value, now);
+    t.gain.gain.linearRampToValueAtTime(0, now + MIX.musicFade);
+    // 페이드가 끝나면 멈춤. 월드 광장 곡은 src를 비워 내려받은 버퍼를 놓음 (전투 곡은 자주 쓰니 둠)
+    t.stopT = window.setTimeout(() => {
+      if (this.current?.track === cur.track) return;
+      t.el.pause();
+      if (cur.track !== 'battle') {
+        t.el.removeAttribute('src');
+        t.el.load();
+      }
+    }, (MIX.musicFade + 0.1) * 1000);
   }
 
-  /** 곡 버퍼 (한 번만 굽고 재사용) */
-  private track(id: MusicId): Promise<AudioBuffer | null> {
-    let p = this.music.get(id);
-    if (!p) {
-      const ctx = this.ctx!;
-      p = renderMusic(id, ctx).catch((err) => {
-        console.warn(`[audio] 배경음 ${id}을 만들지 못함`, err);
-        return null;
-      });
-      this.music.set(id, p);
-    }
-    return p;
-  }
-
-  /** 효과음 전부 준비: 녹음 파일은 받아서 디코드, 나머지는 굽기 (수십 ms). 끝나면 다른 곡도 미리 구워 둠 (전환 때 기다림 없게) */
+  /** 효과음 전부 준비: 녹음 파일은 받아서 디코드, 나머지는 굽기 (수십 ms) */
   private async buildBank(): Promise<void> {
     const ctx = this.ctx!;
     const ids = Object.keys(SOUNDS) as SoundId[];
@@ -266,10 +312,6 @@ export class AudioManager {
         }
       }),
     );
-    for (const id of ['hub', 'battle'] as const) {
-      await this.track(id);
-      await new Promise((r) => setTimeout(r, 50));
-    }
   }
 
   private applyMaster(): void {
@@ -282,7 +324,8 @@ export class AudioManager {
     void this.ctx?.close();
     this.ctx = null;
     this.bank.clear();
-    this.music.clear();
+    for (const t of this.tracks.values()) { t.el.pause(); t.el.removeAttribute('src'); t.el.load(); }
+    this.tracks.clear();
     this.current = null;
   }
 }

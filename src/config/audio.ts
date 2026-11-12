@@ -1,5 +1,5 @@
 // 사운드 설정: 효과음 종류·음량·동시 재생 제한, 배경음 (pop-battle의 오디오 구조를 가져와 줄임).
-// 총소리·보스 쓰러짐·타격은 녹음 파일(짧은 mp3 → 디코드), 나머지 효과음과 배경음은 코드 합성 (audio/sfxBank.ts · audio/musicTracks.ts).
+// 총소리·보스 쓰러짐·타격은 녹음 파일(짧은 mp3 → 디코드), 나머지 효과음은 코드 합성 (audio/sfxBank.ts). 배경음은 실제 곡 파일 스트리밍 (MUSIC_FILE).
 // 오디오가 처음 켜질 때(첫 사용자 입력) 한 번 버퍼로 만들어 두고 재생 때는 버퍼만 재사용한다.
 import type { GunModel } from '../sim/guns.ts';
 
@@ -104,18 +104,19 @@ export const FIRE_SOUND: Record<GunModel, SoundId> = {
 
 /** 배경음: 곡별 음량 (전투는 효과음을 가리지 않게 낮게) */
 export const MUSIC: Record<MusicId, { gain: number }> = {
-  hub: { gain: 0.5 },
-  battle: { gain: 0.32 },
+  hub: { gain: 0.42 },
+  battle: { gain: 0.3 },
 };
+
+/** 실제 곡: 월드별 광장 곡 w1..w8 + 전투 곡 (2026-11-12, Pixabay 무료 곡, 원본 art-src/music, 변환 tools/audio/music_to_game.sh) */
+export type TrackId = 'w1' | 'w2' | 'w3' | 'w4' | 'w5' | 'w6' | 'w7' | 'w8' | 'battle';
+export const MUSIC_FILE = (id: TrackId): string => `${import.meta.env.BASE_URL}assets/audio/music/${id}.mp3`;
 
 export const MIX = {
   /** 배경음 바꿀 때 페이드 (s) */
   musicFade: 0.8,
   /** 합성 효과음 샘플레이트 (작은 버퍼, 재생 때 자동 변환) */
   sfxRate: 32000,
-  /** 배경음: 모노 24kHz (곡당 약 3MB — 짧은 합성 반복곡, 모바일 고려) */
-  musicRate: 24000,
-  musicChannels: 1,
 };
 
 /** 설정 저장 키 (localStorage) */
