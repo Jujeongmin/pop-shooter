@@ -52,3 +52,21 @@ Verse8 대시보드 VXShop에 아래 **상품 ID 그대로** 등록한다. 지�
 | char_bam | 캐릭터 BAM | 500 | 피해 8배 캐릭터 BAM을 영구히 가집니다. | Lifetime Limit 1 |
 
 상품 이미지: art-src/vxshop/<상품 ID>.png (1024×1024, Codex).
+
+### English
+
+| Product ID | Product Name | Description |
+|---|---|---|
+| pass_x2 | Attack Pass ×2 | Permanently doubles your damage. Only your highest pass applies. |
+| pass_x4 | Attack Pass ×4 | Permanently multiplies your damage by 4. Only your highest pass applies. |
+| pass_x8 | Attack Pass ×8 | Permanently multiplies your damage by 8. Only your highest pass applies. |
+| pass_x16 | Attack Pass ×16 | Permanently multiplies your damage by 16. Only your highest pass applies. |
+| pass_x32 | Attack Pass ×32 | Permanently multiplies your damage by 32. Only your highest pass applies. |
+| pass_x64 | Attack Pass ×64 | Permanently multiplies your damage by 64. Only your highest pass applies. |
+| gems_s | 100 Pop Gems | 100 Pop Gems. Use them for Gold ×2 boosts. |
+| gems_m | 550 Pop Gems | 550 Pop Gems (10% bonus). Use them for Gold ×2 boosts. |
+| gems_l | 1200 Pop Gems | 1200 Pop Gems (20% bonus). Use them for Gold ×2 boosts. |
+| char_shoni | Hero SHONI | Unlock SHONI forever, a hero who deals 5× damage. |
+| char_bam | Hero BAM | Unlock BAM forever, a hero who deals 8× damage. |
+
+SHONI·BAM 상품 이미지는 팝배틀 때 대시보드에 올린 이미지를 그대로 씀 (사용자 2026-11-12).
