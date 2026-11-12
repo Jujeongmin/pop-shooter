@@ -219,7 +219,8 @@ export class BattleScene {
     const label = stageLabel(run.stage);
     this.hud.setStage(label, isBoss(run.stage));
     if (this.introT < INTRO_SEC) {
-      this.callout.show({ title: t('battle.run'), big: t('battle.ready') });
+      // 처음 전투 띠: 자동으로 싸우니 가만히 있어도 됨 (사용자 2026-11-12)
+      this.callout.show({ title: t('battle.auto'), big: t('battle.ready') });
       return;
     }
     this.callout.show({ title: isBoss(run.stage) ? t('battle.bossIn') : t('battle.run'), big: label });

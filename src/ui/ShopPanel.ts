@@ -3,13 +3,21 @@ import { t, type StrKey } from '../i18n/i18n';
 import type { Premium } from '../platform/Premium';
 import { charMult } from '../sim/actions.ts';
 import { BOOST_AD_MS, GEM_BOOST, GEM_ITEMS, nextPassProduct, PASS_ORDER, PRODUCTS, type AdKind } from '../sim/premium.ts';
-import { bakeCharIcons } from './charIcons';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 import { Panel } from './Panel';
 
 /** 가격·팝젬 개수는 줄이지 않고 그대로 (1,000 → "1.00K"로 보이면 헷갈림) */
 const plain = (n: number): string => Math.floor(n).toLocaleString('en-US');
+
+/** 상품 그림 (VXShop 대시보드에 올린 그림의 작은 사본, art-src/vxshop → public/ui/shop 160px WebP, 사용자 2026-11-12) */
+function thumb(id: string): HTMLImageElement {
+  const img = el('img', 'shop-thumb');
+  img.src = `${import.meta.env.BASE_URL}ui/shop/${id}.webp`;
+  img.alt = '';
+  img.draggable = false;
+  return img;
+}
 
 export type Tab = 'free' | 'pass' | 'gems' | 'heroes';
 const TABS: readonly Tab[] = ['free', 'pass', 'gems', 'heroes'];
@@ -150,20 +158,17 @@ export class ShopPanel {
         const action = s.passMult >= m ? el('div', 'mentor-st', t('shop.owned'))
           : id === next ? this.gemButton(id)
           : el('div', 'mentor-st', t('shop.passNeed'));
-        b.append(this.row('bullet', t('shop.pass', { n: i + 1 }), t('shop.passDesc', { m }), action));
+        b.append(this.row(thumb(id), t('shop.pass', { n: i + 1 }), t('shop.passDesc', { m }), action));
       });
     } else if (this.tab === 'gems') {
       for (const id of ['gems_s', 'gems_m', 'gems_l']) {
         const n = (PRODUCTS[id] as { gems: number }).gems;
-        b.append(this.row('gem', t('shop.gemPack', { n: plain(n) }), t('shop.gemPackDesc'), this.vxButton(id)));
+        b.append(this.row(thumb(id), t('shop.gemPack', { n: plain(n) }), t('shop.gemPackDesc'), this.vxButton(id)));
       }
     } else {
       b.append(this.myGems());
-      const faces = bakeCharIcons(this.game.assets);
       for (const [id, c, name] of [['char_shoni', 'white', 'SHONI'], ['char_bam', 'black', 'BAM']] as const) {
-        const face = el('img', 'mentor-face');
-        face.src = faces[c];
-        face.alt = '';
+        const face = thumb(id);
         const owned = s.chars.includes(c);
         b.append(this.row(face, name, t('shop.heroDesc', { p: Math.round((charMult(c) - 1) * 100) }), owned ? el('div', 'mentor-st', t('shop.owned')) : this.gemButton(id)));
       }

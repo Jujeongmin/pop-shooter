@@ -6,14 +6,14 @@ import type { GameState } from '../sim/state.ts';
 /** 안내가 가리키는 곳 (시설 id와 같음) */
 export type GuideKind = 'altar' | 'portal' | 'upgrade' | 'range';
 
-/** 전투 판단에 넣는 탭 속도 (보통 플레이어가 치는 정도) */
-const GUIDE_TAPS = 3;
+/** 전투 판단에 넣는 탭 속도: 0 (탭으로 더 쏘기 없음, 자동 사격만 — 2026-11-12 1-1을 못 깨는데 포털 안내가 뜨던 것) */
+const GUIDE_TAPS = 0;
 /** 이 광장(월드 1)의 마지막 스테이지 */
 const HUB_LAST_STAGE = BALANCE.stage.perWorld;
 /** 튜토리얼 끝 표시 (state.tutorial) */
 export const TUTORIAL_DONE = 99;
 
-/** 지금 공격력으로 다음 스테이지를 깰 수 있는지 (자동 + 보통 탭) */
+/** 지금 공격력으로 다음 스테이지를 깰 수 있는지 (자동 사격만) */
 export function canBeatNext(s: GameState): boolean {
   const next = s.bestStage + 1;
   if (next > HUB_LAST_STAGE) return false;

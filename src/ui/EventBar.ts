@@ -1,10 +1,10 @@
 import type { Game } from '../core/Game';
 import { t, type StrKey } from '../i18n/i18n';
 import type { Premium } from '../platform/Premium';
-import { nextPassProduct, PASS_ORDER } from '../sim/premium.ts';
+import { BOOST_AD_MS, nextPassProduct, PASS_ORDER } from '../sim/premium.ts';
 import { bakeCharIcons } from './charIcons';
 import type { DailyPanel } from './DailyPanel';
-import { el, setText } from './dom';
+import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 import type { ShopPanel } from './ShopPanel';
 import { clockText } from './ShopPanel';
@@ -52,8 +52,8 @@ export class EventBar {
     this.items = {
       daily: make('gift', 'ev.daily', 'ev-daily', () => daily.open()),
       boost: make('coin', 'ev.boost', 'ev-boost', () => {
-        // 광고가 되면 바로 보기 (버튼 누름 안에서), 아니면 상점 무료 탭
-        if (prem.adsShown('boost')) void prem.watch('boost');
+        // 광고가 되면 '광고 보시겠어요?' 창 → [광고 보기] 누름 안에서 재생 (바로 틀지 않음, 사용자 2026-11-12). 아니면 상점 무료 탭
+        if (prem.adsShown('boost')) this.askBoost(ui);
         else shop.open('free');
       }),
       pass: make('bullet', 'ev.pass', 'ev-pass', () => shop.open('pass')),
@@ -68,6 +68,23 @@ export class EventBar {
       this.refresh();
     });
     prem.onChange(() => this.refresh());
+  }
+
+  /** 골드 2배 광고 확인 창 (하나만) */
+  private askBoost(ui: HTMLElement): void {
+    if (ui.querySelector('.boost-ask')) return;
+    const wrap = el('div', 'result-wrap ui-on in boost-ask');
+    const card = el('div', 'result-card boost-card');
+    const close = (): void => wrap.remove();
+    const ic = el('div', 'boost-ico');
+    ic.append(icon('coin'));
+    const yes = button(t('ev.boostYes'), () => { close(); void this.prem.watch('boost'); }, 'btn big pink');
+    const row = el('div', 'reb-btns');
+    row.append(button(t('ev.boostNo'), close, 'btn'), yes);
+    card.append(ic, el('div', 'result-title', t('ev.boost')), el('div', 'result-tip', t('ev.boostAsk', { m: BOOST_AD_MS / 60000 })), row);
+    wrap.append(card);
+    wrap.addEventListener('pointerup', (e) => { if (e.target === wrap) close(); });
+    ui.append(wrap);
   }
 
   private refresh(): void {

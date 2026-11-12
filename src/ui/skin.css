@@ -233,3 +233,27 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
   .reb-mult-v { font-size: 19px; }
   .reb-acts .btn.big { padding-top: 8px; padding-bottom: 8px; font-size: 18px; }
 }
+
+/* 골드 2배 광고 확인 창 */
+.boost-card { width: min(88vw, 360px); }
+.boost-ico { display: grid; place-items: center; }
+.boost-ico .ico { width: 56px; height: 56px; }
+
+/* 상점 상품 그림 (대시보드 그림) */
+.shop-thumb { width: 56px; height: 56px; flex: none; border-radius: 14px; border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); object-fit: cover; background: #ffd6ea; }
+@media (max-height: 460px) { .shop-thumb { width: 46px; height: 46px; border-radius: 12px; } }
+.up-row:has(> .shop-thumb) { grid-template-columns: 56px 1fr auto; }
+@media (max-height: 460px) { .up-row:has(> .shop-thumb) { grid-template-columns: 46px 1fr auto; } }
+/* 캐릭터 창: 스크롤 없이 6명 (사용자 2026-11-12). 창이 넓으면 한 줄 6칸, 좁으면(세로 폰) 3칸 × 2줄에 그림을 화면 높이에 맞춤 */
+.sheet-body:has(.char-grid) { container-type: inline-size; }
+.char-img { max-width: clamp(44px, calc((100dvh - 290px) / 2), 110px); }
+.char-card { gap: 2px; padding: 4px 3px 8px; }
+@container (min-width: 430px) {
+  .char-grid { grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .char-img { max-width: 76px; }
+  .char-name { font-size: 14px; }
+  .char-power { font-size: 11px; white-space: nowrap; }
+  .char-card .tag { font-size: 11px; padding: 2px 5px; white-space: nowrap; }
+  .char-card .tag .ico { width: 14px; height: 14px; }
+  .char-card .btn.small { padding: 5px 8px; font-size: 12px; }
+}

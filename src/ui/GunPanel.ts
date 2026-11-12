@@ -7,7 +7,7 @@ import { buyNextGun, worldUnlocked } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import { gunMult, gunPrice, GUNS } from '../sim/guns.ts';
-import { WORLD1_FACILITIES } from '../world/facilities';
+import { FOOTPRINTS, WORLD1_FACILITIES } from '../world/facilities';
 import { button, el } from './dom';
 import type { FloatText } from './FloatText';
 import { icon } from './icons';
@@ -39,12 +39,14 @@ export class GunPanel {
     this.callout = callout;
     this.panel = new Panel(ui, t('shop.title'));
     const f = WORLD1_FACILITIES.find((x) => x.id === 'guns')!;
+    const stall = FOOTPRINTS.find((x) => x.id === 'guns')!;
     this.zone = new ZoneEntry(game, callout, f, {
       color: '#ff9ec4',
       flash: 'rgba(255, 158, 196, 0.85)',
-      face: { x: f.x + 2, z: f.z },
+      // 원(가판대 앞) 가운데 서서 가판대를 바라봄
+      face: { x: stall.x, z: stall.z },
       text: null,
-      spot: { x: f.x - 0.6, z: f.z + 1 },
+      spot: { x: f.x, z: f.z + 0.2 },
       cam: { focus: -0.4, lookUp: -1.4 },
     });
     this.zone.onLanded = () => { this.render(); this.panel.open(); };

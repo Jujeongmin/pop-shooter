@@ -11,7 +11,7 @@ import { stageLabel } from '../sim/stages.ts';
 import type { GunModel } from '../sim/guns.ts';
 import { buildAltar, buildFountain, buildGunShop, buildRangeBooths, buildTravel, buildTreadmill, buildUpgrade, buildWardrobe, type FountainProps, type TreadmillProps } from './HubFacilities';
 import { ToyBuilder } from './HubProps';
-import { HUB_BOUNDS, PORTAL_GATE, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
+import { GUN_SHOP_AT, HUB_BOUNDS, PORTAL_GATE, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
 
 /** 월드 하나의 스테이지 수 (포털 기록은 이 광장 월드 안에서만) */
 const PER_WORLD = BALANCE.stage.perWorld;
@@ -86,7 +86,7 @@ export class World1Hub {
     if (th.decor !== 'town') {
       const f = (id: string): Facility => this.facilities.find((x) => x.id === id)!;
       this.themed = new ToyBuilder();
-      buildThemedBodies(this.themed, th.decor, f('upgrade'), f('guns'), this.guns);
+      buildThemedBodies(this.themed, th.decor, f('upgrade'), { ...f('guns'), ...GUN_SHOP_AT }, this.guns);
       const fc = th.facility;
       if (fc) this.themed.tint(fc.tint, fc.k * 0.4);
       this.decor.root.add(this.themed.root);
@@ -183,7 +183,7 @@ export class World1Hub {
   /** 업그레이드 기계 · 총 상점 · 환생 제단 · 탈의실 (HubFacilities, 장난감 도형) */
   private buildFacilities(): void {
     const f = (id: string): Facility => this.facilities.find((x) => x.id === id)!;
-    this.baseBodies.push(buildUpgrade(this.toys, f('upgrade'), this.colliders), buildGunShop(this.toys, f('guns'), this.colliders, this.guns));
+    this.baseBodies.push(buildUpgrade(this.toys, f('upgrade'), this.colliders), buildGunShop(this.toys, { ...f('guns'), ...GUN_SHOP_AT }, this.colliders, this.guns));
     buildAltar(this.toys, f('altar'), this.colliders);
     buildWardrobe(this.toys, f('chars'), this.colliders);
     buildTravel(this.toys, f('travel'), this.colliders);

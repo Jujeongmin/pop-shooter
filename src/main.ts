@@ -25,6 +25,7 @@ import { ResultCard } from './ui/ResultCard';
 import { ZoneCallout } from './ui/ZoneCallout';
 import { loadBricks } from './world/kit';
 import { Loading } from './ui/Loading';
+import { warmGpu } from './core/warmGpu';
 import { Tutorial } from './ui/Tutorial';
 import { applyLang } from './i18n/i18n';
 import { audio } from './audio/audio';
@@ -101,6 +102,8 @@ async function boot(): Promise<void> {
   game.occlusion.register(game.hub.root);
   const settings = new SettingsPanel(ui, guide, nickPanel);
   game.menuActions.settings = () => settings.open();
+  // 처음 보이는 순간의 텍스처 올리기·셰이더 만들기 끊김을 로딩 중에 미리 (다른 사람이 쓸 캐릭터·총 원본까지)
+  warmGpu(stage.renderer, stage.scene, stage.camera, [...Object.values(assets.characters).map((c) => c.scene), ...Object.values(assets.guns)]);
   stage.start();
   loading.done();
   // 고른 저장을 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기).
