@@ -171,7 +171,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 .ev-btn:active .ev-face { transform: translateY(3px); box-shadow: var(--shine), 0 1px 0 var(--ink); }
 .ev-face .ico { width: 36px; height: 36px; }
 .ev-img { width: 44px; height: 44px; object-fit: contain; }
-.ev-label { font-size: 12px; color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; white-space: nowrap; line-height: 1.1; }
+.ev-label { position: relative; z-index: 1; margin-top: 5px; font-size: 12px; color: #fff; -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; white-space: nowrap; line-height: 1.1; }
 .ev-dot { position: absolute; top: -3px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #ff4f5e; border: 2px solid #fff; box-shadow: 0 2px 0 var(--ink); }
 .ev-daily .ev-face { background: linear-gradient(#ffe0ee, #ffb3d1); }
 .ev-boost .ev-face { background: linear-gradient(#fff3b0, #ffd34d); }
