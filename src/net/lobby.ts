@@ -30,7 +30,7 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
   // verse가 있으면 첫 연결이 실패했어도 시작 (LobbyHub가 연결·재시도 간격을 맡음). verse 없는 빌드는 멀티 없음
   if (!net.hasVerse) return null;
   try {
-    const peers = new LobbyPeers({ assets: game.assets, parent: game.hub.root, targets: game.hub.targets, me: game.pos, coinDrop: (to) => game.hub.fountain.drop(to, null) });
+    const peers = new LobbyPeers({ assets: game.assets, parent: game.hub.root, targets: game.hub.targets, me: game.pos });
     const hub = new LobbyHub(net, {
       onPeerJoin: (p) => peers.add(p),
       onPeerLeave: (a) => peers.remove(a),
