@@ -10,7 +10,7 @@ import { gainPerShot, spdMaxed, train, type TrainKind } from '../sim/training.ts
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { pct } from '../ui/UpgradePanel';
-import { FOUNTAIN, TREADMILL, WORLD1_FACILITIES } from '../world/facilities';
+import { FOUNTAIN, FOUNTAIN_SPOTS, TREADMILL, TREADMILL_LANES, WORLD1_FACILITIES } from '../world/facilities';
 
 const FLUSH_SEC = 0.25;
 /** 러닝머신에서 달리는 속도 (걷기·달리기 클립 고르기용, m/s) */
@@ -49,7 +49,7 @@ export class Stations {
   constructor(game: Game, float: FloatText, callout: ZoneCallout) {
     this.game = game;
     this.float = float;
-    const make = (kind: Station['kind'], id: 'treadmill' | 'fountain', spot: { x: number; z: number }, face: { x: number; z: number }, color: string, title: string, landY = 0): Station => {
+    const make = (kind: Station['kind'], id: 'treadmill' | 'fountain', spot: () => { x: number; z: number }, face: { x: number; z: number }, color: string, title: string, landY = 0): Station => {
       const zone = new ZoneEntry(game, callout, WORLD1_FACILITIES.find((f) => f.id === id)!, {
         color,
         flash: 'rgba(79, 179, 255, 0.8)',
@@ -65,11 +65,20 @@ export class Stations {
     };
     this.list = [
       // 벨트 윗면(0.33m) 위에 섬
-      make('spd', 'treadmill', { x: TREADMILL.x, z: TREADMILL.z + 0.2 }, { x: TREADMILL.x, z: TREADMILL.z - 3 }, '#4f9dff', t('st.run'), BELT_Y),
-      make('coin', 'fountain', { x: FOUNTAIN.x, z: FOUNTAIN.z }, { x: FOUNTAIN.x, z: FOUNTAIN.z - 3 }, '#ffc928', t('st.coin')),
+      // 빈 벨트·빈 자리를 고름 (다른 사람과 겹치지 않게, 다 차면 아무 데나)
+      make('spd', 'treadmill', () => this.freeSpot(TREADMILL_LANES, TREADMILL.x, TREADMILL.z + 0.2), { x: TREADMILL.x, z: TREADMILL.z - 30 }, '#4f9dff', t('st.run'), BELT_Y),
+      make('coin', 'fountain', () => this.freeSpot(FOUNTAIN_SPOTS, FOUNTAIN.x, FOUNTAIN.z), { x: FOUNTAIN.x, z: FOUNTAIN.z - 3 }, '#ffc928', t('st.coin')),
     ];
     game.onTick((dt) => this.update(dt));
     document.addEventListener('visibilitychange', this.onVisibility);
+  }
+
+  /** 줄 가운데 cx에서 offsets만큼 옆 자리 중 다른 사람이 없는 곳 (내게 가까운 쪽 먼저) */
+  private freeSpot(offsets: readonly number[], cx: number, z: number): { x: number; z: number } {
+    const g = this.game;
+    const order = [...offsets].sort((a, b) => Math.abs(cx + a - g.pos.x) - Math.abs(cx + b - g.pos.x));
+    const free = order.find((dx) => !g.peerAt?.(cx + dx, z, 0.6));
+    return { x: cx + (free ?? order[0]!), z };
   }
 
   private start(st: Station): void {

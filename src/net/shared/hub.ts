@@ -77,8 +77,8 @@ export const HUB_SNAPS: ReadonlyArray<{ x: number; z: number; r: number; reach: 
   { x: -8, z: 11, r: 1, reach: 4 }, // 환생 제단
   { x: 8, z: 11, r: 1, reach: 4 }, // 캐릭터
   { x: 0, z: -6.5, r: 1, reach: 4 }, // 포털
-  { x: -12.6, z: 6.6, r: 1, reach: 4 }, // 러닝머신 (연사)
-  { x: -7.6, z: 5.6, r: 1, reach: 4 }, // 동전 분수 (골드 보너스)
+  { x: -12.6, z: 6.8, r: 2.2, reach: 5 }, // 러닝머신 세 대 (연사)
+  { x: -7.6, z: 5.6, r: 1.6, reach: 5 }, // 동전 분수 세 자리 (골드 보너스)
 ];
 
 /**

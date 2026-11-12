@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { t } from '../i18n/i18n';
 import type { GunModel } from '../sim/guns.ts';
 import type { Facility } from './facilities';
-import { FOUNTAIN, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, TREADMILL } from './facilities';
+import { FOUNTAIN, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, TREADMILL, TREADMILL_LANES } from './facilities';
 import type { ToyBuilder } from './HubProps';
 import type { Collider } from './movement';
 
@@ -116,7 +116,8 @@ export function buildAltar(b: ToyBuilder, f: Facility, colliders: Collider[]): v
     });
   });
   colliders.push({ kind: 'circle', x: f.x, z: f.z - 1.6, r: 1.8 });
-  b.sign('reb', t('fac.altar'), f.x - 2.6, 2.1, f.z - 0.6, { w: 2.3, color: '#b9a6ff', rotY: 0.3 });
+  // 제단 동쪽 (서쪽이면 러닝머신·동전 분수를 보는 카메라를 가림)
+  b.sign('reb', t('fac.altar'), f.x + 2.7, 2.1, f.z - 0.6, { w: 2.3, color: '#b9a6ff', rotY: -0.3 });
 }
 
 export function buildWardrobe(b: ToyBuilder, f: Facility, colliders: Collider[]): void {
@@ -155,14 +156,10 @@ export function buildRangeBooths(b: ToyBuilder): void {
   b.sign('target', `${t('fac.range')} · ${t('fac.rangeAtk')}`, RANGE_SPOT.x, 3.5, z, { w: 2.8, h: 0.7, color: lane.color, post: false });
 }
 
-/** 러닝머신 (연사 훈련): 벨트가 흐르고 캐릭터가 위에서 달림. 앞 = −z (손잡이·화면) */
+/** 러닝머신 세 대 (연사 훈련): 벨트가 흐르고 캐릭터가 위에서 달림. 앞 = −z (손잡이·화면). 여러 명이 각자 빈 벨트에 */
 export interface TreadmillProps { setSpeed(v: number): void }
 export function buildTreadmill(b: ToyBuilder, colliders: Collider[]): TreadmillProps {
-  const g = new THREE.Group();
-  g.position.set(TREADMILL.x, 0, TREADMILL.z);
-  b.root.add(g);
-  b.toy(b.box(1.5, 0.32, 2.8, 0.12), '#5d6a92', 0, 0.16, 0, g);
-  // 벨트: 줄무늬 텍스처가 뒤(+z)로 흐름
+  // 벨트 줄무늬 텍스처 (세 대 공유, 뒤(+z)로 흐름)
   const c = document.createElement('canvas');
   c.width = 32; c.height = 128;
   const ctx = c.getContext('2d')!;
@@ -172,17 +169,24 @@ export function buildTreadmill(b: ToyBuilder, colliders: Collider[]): TreadmillP
   const tex = b.own(new THREE.CanvasTexture(c));
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(1, 3);
-  const belt = b.toy(new THREE.PlaneGeometry(1.2, 2.5), b.own(new THREE.MeshBasicMaterial({ map: tex })), 0, 0.33, 0.05, g, false);
-  belt.rotation.x = -Math.PI / 2;
-  // 손잡이 + 화면 (앞)
-  for (const x of [-0.65, 0.65]) b.toy(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 10), '#dfe5f2', x, 0.95, -1.15, g);
-  b.toy(b.box(1.45, 0.12, 0.14, 0.05), '#4f9dff', 0, 1.6, -1.15, g);
-  b.toy(b.box(0.9, 0.45, 0.12, 0.06), '#bfeaff', 0, 1.82, -1.2, g);
-  let speed = 0;
+  const beltMat = b.own(new THREE.MeshBasicMaterial({ map: tex }));
+  for (const dx of TREADMILL_LANES) {
+    const g = new THREE.Group();
+    g.position.set(TREADMILL.x + dx, 0, TREADMILL.z);
+    b.root.add(g);
+    b.toy(b.box(1.45, 0.32, 2.8, 0.12), '#5d6a92', 0, 0.16, 0, g);
+    const belt = b.toy(new THREE.PlaneGeometry(1.15, 2.5), beltMat, 0, 0.33, 0.05, g, false);
+    belt.rotation.x = -Math.PI / 2;
+    for (const x of [-0.62, 0.62]) b.toy(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 10), '#dfe5f2', x, 0.95, -1.15, g);
+    b.toy(b.box(1.4, 0.12, 0.14, 0.05), '#4f9dff', 0, 1.6, -1.15, g);
+    b.toy(b.box(0.85, 0.45, 0.12, 0.06), '#bfeaff', 0, 1.82, -1.2, g);
+    colliders.push({ kind: 'box', x: TREADMILL.x + dx, z: TREADMILL.z - 1.2, hx: 0.72, hz: 0.12 });
+  }
+  let speed = 0.6;
   b.animators.push((dt) => { tex.offset.y -= dt * speed * 0.9; });
-  colliders.push({ kind: 'box', x: TREADMILL.x, z: TREADMILL.z - 1.2, hx: 0.75, hz: 0.12 });
-  b.sign('timer', t('fac.treadmill'), TREADMILL.x + 1.9, 2.0, TREADMILL.z - 0.6, { w: 2.0, color: '#4f9dff', rotY: -0.35 });
-  return { setSpeed: (v) => { speed = v; } };
+  // 간판: 가운데 러닝머신 화면 위 (기둥 없음)
+  b.sign('timer', t('fac.treadmill'), TREADMILL.x, 2.55, TREADMILL.z - 1.3, { w: 2.2, color: '#4f9dff', post: false });
+  return { setSpeed: (v) => { speed = Math.max(0.6, v); } };
 }
 
 /** 동전 분수 (골드 보너스 훈련): 금색 기계 꼭대기 관에서 동전이 떨어지고 캐릭터가 받음. 기계는 서는 자리 북쪽 */

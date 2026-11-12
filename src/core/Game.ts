@@ -67,6 +67,8 @@ export class Game {
   private readonly stateListeners: ((s: GameState) => void)[] = [];
   readonly ui: HTMLElement;
   readonly hud: Hud;
+  /** 광장 멀티: 그 자리에 다른 사람이 서 있는지 (없으면 혼자) */
+  peerAt: ((x: number, z: number, r: number) => boolean) | null = null;
   private lockHint: HTMLDivElement | null = null;
   private lockHintTouch: boolean | null = null;
   readonly saver: AutoSaver;
