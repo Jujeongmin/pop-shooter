@@ -79,6 +79,8 @@ export class BattleScene {
   private ringMat!: THREE.MeshStandardMaterial;
   private blocks!: THREE.InstancedMesh;
   private themeWorld = 1;
+  /** 월드 클리어 축하 시간 (−1 = 안 함) */
+  private cheerT = -1;
   /** 이번 연속 도전으로 새로 열린 월드 (결과 카드 닫으면 그 광장으로) */
   private opened = 0;
   private hurtT = 1;
@@ -251,10 +253,23 @@ export class BattleScene {
     this.callout.flash('rgba(255, 211, 77, 0.9)');
     this.float.show(t('battle.cleared', { s: stageLabel(stage) }), _chest.set(BOSS_AT.x, 3, BOSS_AT.z), 'coin big');
     if (run.done) this.endT = 0;
+    if (run.done === 'worldClear') {
+      this.cheerT = 0;
+      this.game.pose.aimAt = null;
+    }
   }
 
   private update(dt: number): void {
     this.clock += dt;
+    // 월드 클리어 축하: 만세 + 통통 점프 (결과 카드가 닫힐 때까지, 사용자 2026-11-12)
+    if (this.cheerT >= 0) {
+      const g = this.game;
+      this.cheerT += dt;
+      g.pose.cheer = Math.min(1, this.cheerT * 4);
+      const hop = Math.abs(Math.sin(this.cheerT * Math.PI * 1.4)) * 0.55;
+      g.pos.y = hop;
+      g.pose.grounded = hop < 0.05;
+    }
     this.boss?.update(dt);
     if (this.dying) {
       this.dying.update(dt);
@@ -408,6 +423,10 @@ export class BattleScene {
     g.pose.aimAt = null;
     g.pose.kick = 0;
     g.pose.dead = false;
+    this.cheerT = -1;
+    g.pose.cheer = 0;
+    g.pose.grounded = true;
+    g.pos.y = 0;
     for (const toy of this.toys) { toy.t = FLIGHT; toy.mesh.visible = false; }
     g.cam.focus = 0;
     g.cam.lookUp = 0;

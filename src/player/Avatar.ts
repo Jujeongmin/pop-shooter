@@ -7,6 +7,7 @@ import type { CharId } from '../sim/state.ts';
 import { PlayerAvatar, type AvatarFrame } from './PlayerAvatar';
 import type { TrainKind } from '../sim/training.ts';
 import { makeGlove, makeGoggles, makePiggy } from './GearVisual';
+import { applyCheer, cheerBones } from './cheerPose';
 
 export interface AvatarPose {
   pos: THREE.Vector3;
@@ -21,6 +22,8 @@ export interface AvatarPose {
   grounded?: boolean;
   /** 쓰러짐 (사망 클립) */
   dead?: boolean;
+  /** 만세 자세 섞기 0..1 (동전 분수·월드 클리어). 0.3 넘으면 총 숨김 */
+  cheer?: number;
 }
 
 const _dir = new THREE.Vector3();
@@ -46,6 +49,8 @@ export class Avatar {
   private gunObj: THREE.Object3D;
   private readonly frame: AvatarFrame;
   private airTime = 0;
+  private cheerB: ReturnType<typeof cheerBones> | undefined;
+  private clock = 0;
   /** 붙인 장비 (종류별 단계와 오브젝트). 도형·재질은 GearVisual 공유라 떼기만 함 */
   private readonly gear: Record<TrainKind, { tier: number; objs: THREE.Object3D[] }> = {
     atk: { tier: 0, objs: [] }, spd: { tier: 0, objs: [] }, coin: { tier: 0, objs: [] },
@@ -114,6 +119,13 @@ export class Avatar {
       f.pitch = -0.1;
     }
     this.avatar.update(f);
+    this.clock += dt;
+    const cheer = p.cheer ?? 0;
+    this.gunObj.visible = cheer < 0.3;
+    if (cheer > 0) {
+      if (this.cheerB === undefined) this.cheerB = cheerBones(this.root);
+      if (this.cheerB) applyCheer(this.root, this.cheerB, p.yaw, cheer, this.clock);
+    }
   }
 
   /** 머리 꼭대기 높이 (월드 y, 마지막 update 기준) — 이름표 자리 */

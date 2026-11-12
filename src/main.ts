@@ -33,6 +33,7 @@ import { UpgradePanel } from './ui/UpgradePanel';
 import { GunPanel } from './ui/GunPanel';
 import { RebirthPanel } from './ui/RebirthPanel';
 import { TravelPanel } from './ui/TravelPanel';
+import { startKeepAwake } from './platform/keepAwake';
 import { CharacterPanel } from './ui/CharacterPanel';
 import { showOfflineReward } from './ui/OfflinePanel';
 import { Premium } from './platform/Premium';
@@ -58,6 +59,8 @@ async function boot(): Promise<void> {
   // 서버 저장을 실제로 읽었을 때만 서버에 씀 (읽기 실패한 채 쓰면 새 판·옛 사본으로 서버 저장을 덮음)
   // 서버에 연결됐는데 저장을 못 읽은 판은 계정 사본에도 쓰지 않음(손님 키로): 다음 접속 때 '더 새 사본'으로 서버 진행을 덮지 않게
   const saveAccount = save.cloudOk || !cloud.online ? save.account : null;
+  // 모바일 화면 꺼짐 방지 (iframe이면 Wake Lock 대신 무음 영상)
+  startKeepAwake();
   const game = new Game(stage, assets, kit, save.state, ui, { account: saveAccount, cloud: save.cloudOk ? cloud : null });
   const fx = new HitFx(stage.scene);
   const float = new FloatText(ui, stage.camera);

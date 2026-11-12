@@ -1,9 +1,9 @@
 // 광장 멀티 공용 규칙 (서버·클라이언트, 순수 함수·데이터). pop-battle protocol.ts의 허브 부분을 복사해 고침 (2026-11-11).
-// 광장 룸 = 월드별 로비 룸 w<월드>-<번호> (정원 8). 광장에서는 서로 보이기만 함: 충돌 없음, 전투·훈련은 혼자.
+// 광장 룸 = 월드별 로비 룸 w<월드>-<번호> (정원 16, 사용자 2026-11-12). 광장에서는 서로 보이기만 함: 충돌 없음, 전투·훈련은 혼자.
 // 서버는 물리가 없어 위치는 형식·범위·빈도·속도만 검사. 값은 모두 서버가 다시 검사 (sanitize*), 클라이언트 검사는 편의용.
 
 /** 광장 인스턴스 정원 */
-export const HUB_MAX_PLAYERS = 8;
+export const HUB_MAX_PLAYERS = 16;
 /** 월드 수 (balance.ts stage.worlds). 룸 id에는 월드 번호를 둠 */
 export const HUB_WORLDS = 8;
 /** 지금 광장이 열린 월드 (서버가 이 밖의 월드 룸은 광장으로 치지 않음 → 장부 문서·룸이 마구 생기지 않게). 월드를 열 때 여기에 추가 */
@@ -161,7 +161,7 @@ export function sanitizeHubPacket(pkt: unknown): HubPacket | null {
   const r3 = (v: number) => Math.round(v * 1000) / 1000;
   const cx = Math.max(-hx, Math.min(hx, x!));
   const cz = Math.max(-hz, Math.min(hz, z!));
-  return [Math.floor(q!), Math.floor(t!), r3(cx), r3(cz), r3(Math.atan2(Math.sin(yaw!), Math.cos(yaw!))), r2(vx!), r2(vz!), Math.round(f!) & 0x3];
+  return [Math.floor(q!), Math.floor(t!), r3(cx), r3(cz), r3(Math.atan2(Math.sin(yaw!), Math.cos(yaw!))), r2(vx!), r2(vz!), Math.round(f!) & 0x7];
 }
 
 /** 순간이동 허용 구역으로의 이동인지 */

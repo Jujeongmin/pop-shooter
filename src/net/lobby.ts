@@ -30,7 +30,7 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
   // verse가 있으면 첫 연결이 실패했어도 시작 (LobbyHub가 연결·재시도 간격을 맡음). verse 없는 빌드는 멀티 없음
   if (!net.hasVerse) return null;
   try {
-    const peers = new LobbyPeers({ assets: game.assets, parent: game.hub.root, targets: game.hub.targets });
+    const peers = new LobbyPeers({ assets: game.assets, parent: game.hub.root, targets: game.hub.targets, me: game.pos });
     const hub = new LobbyHub(net, {
       onPeerJoin: (p) => peers.add(p),
       onPeerLeave: (a) => peers.remove(a),
@@ -63,7 +63,8 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
           local.yaw = game.yaw;
           local.vx = v.x;
           local.vz = v.z;
-          local.f = (moving ? 1 : 0) | (st === 'training' && !moving ? 2 : 0);
+          // 비트: 1 걷기, 2 훈련 중 서 있음, 4 만세 (동전 분수, 다른 사람 화면에도 만세)
+          local.f = (moving ? 1 : 0) | (st === 'training' && !moving ? 2 : 0) | (game.pose.cheer > 0.5 ? 4 : 0);
           l = local;
         }
         hub.update(dt, l);

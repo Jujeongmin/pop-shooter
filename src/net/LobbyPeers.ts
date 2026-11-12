@@ -31,7 +31,21 @@ export interface LobbyPeersContext {
   readonly parent: THREE.Object3D;
   /** 사격장 과녁 (훈련 중인 사람이 겨눔) */
   readonly targets: readonly THREE.Object3D[];
+  /** 내 위치 (가까운 사람부터 그리기) */
+  readonly me?: { readonly x: number; readonly z: number };
 }
+
+/**
+ * 내 화면에 캐릭터로 그리는 다른 사람 수 (사용자 2026-11-12: 방 16명, 렉 없이). 방·서버·상대 화면과 무관한 내 기기 설정:
+ * 터치 기기(폰·태블릿) 9명(나 포함 10), 그 밖(PC) 15명(전원). 넘는 사람은 이름표만 보임.
+ */
+const DRAW_BUDGET = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 9 : 15;
+/** 이 거리(m)보다 멀면 오라·발사 연출 생략 */
+const FAR_FX = 18;
+/** 가까운 순서 다시 고르는 간격 (초) */
+const PICK_SEC = 0.5;
+/** 캐릭터를 안 그릴 때 이름표 높이 (m) */
+const PLATE_Y = 2.1;
 
 interface Item {
   peer: HubPeer;
@@ -50,6 +64,11 @@ interface Item {
   kick: number;
   /** DPS 오라 (광장 root 아래) */
   aura: PowerAura;
+  /** 만세 섞기 0..1 (패킷 비트 4) */
+  cheer: number;
+  /** 내 화면에 캐릭터로 그리는지 (DRAW_BUDGET 안), 나와의 거리 제곱 */
+  drawn: boolean;
+  dist2: number;
 }
 
 /** 남의 훈련 발사 연출 빈도 (초당, 실제 발사 속도와 무관한 고정값 — 가볍게) */
@@ -141,6 +160,9 @@ export class LobbyPeers {
   /** 남의 발사 연출 전용 (내 훈련 연출 풀을 빼앗지 않게). 광장 root 아래 */
   private readonly fx: HitFx;
   private disposed = false;
+  private pickT = 0;
+  /** 정렬용 (매번 새 배열 안 만듦) */
+  private readonly order: Item[] = [];
 
   private readonly ctx: LobbyPeersContext;
 
@@ -171,6 +193,9 @@ export class LobbyPeers {
       target: Math.floor(Math.random() * 3),
       kick: 0,
       aura: new PowerAura(),
+      cheer: 0,
+      drawn: true,
+      dist2: 0,
     };
     item.aura.setPower(peer.power);
     this.ctx.parent.add(item.aura.root);
@@ -220,6 +245,8 @@ export class LobbyPeers {
     this.fx.update(dt);
     if (this.items.size === 0) return;
     const renderTime = performance.now() - HUB_TIMING.interpDelayMs;
+    this.pickT -= dt;
+    if (this.pickT <= 0) { this.pickT = PICK_SEC; this.pickDrawn(); }
     const targets = this.ctx.targets;
     // 고정 배열 index 순회 (매 프레임 반복자 객체 없음)
     const list = this.list;
@@ -247,10 +274,20 @@ export class LobbyPeers {
         p.velocity.set(s.vx, 0, s.vz);
         p.yaw = s.yaw;
       }
-      item.avatar.root.visible = true;
       label.visible = true;
+      const me = this.ctx.me;
+      item.dist2 = me ? (p.pos.x - me.x) ** 2 + (p.pos.z - me.z) ** 2 : 0;
+      if (!item.drawn) {
+        // 그리기 예산 밖: 캐릭터·오라 숨기고 이름표만
+        item.avatar.root.visible = false;
+        item.aura.root.visible = false;
+        label.position.set(p.pos.x, PLATE_Y + LABEL_LIFT, p.pos.z);
+        continue;
+      }
+      item.avatar.root.visible = true;
+      const near = item.dist2 < FAR_FX * FAR_FX;
       // 훈련 중 + 서 있음(비트 2): 과녁을 돌아가며 쏘는 연출
-      const firing = status === 'training' && (s.f & 2) !== 0 && s.vx * s.vx + s.vz * s.vz < 0.04 && targets.length > 0;
+      const firing = near && status === 'training' && (s.f & 2) !== 0 && (s.f & 4) === 0 && s.vx * s.vx + s.vz * s.vz < 0.04 && targets.length > 0;
       if (firing) {
         const tg = targets[item.target % targets.length]!;
         item.aim.set(tg.position.x, 1.6, tg.position.z);
@@ -269,11 +306,29 @@ export class LobbyPeers {
       }
       item.kick = Math.max(0, item.kick - dt * 0.6);
       p.kick = item.kick;
+      // 만세 (동전 분수): 비트 4, 서서히 올리고 내림
+      const cheering = status === 'training' && (s.f & 4) !== 0;
+      item.cheer = cheering ? Math.min(1, item.cheer + dt * 4) : Math.max(0, item.cheer - dt * 5);
+      p.cheer = item.cheer;
       item.avatar.update(dt, p);
-      item.aura.root.visible = true;
-      item.aura.update(dt, p.pos.x, 0, p.pos.z);
+      item.aura.root.visible = near;
+      if (near) item.aura.update(dt, p.pos.x, 0, p.pos.z);
       label.position.set(p.pos.x, item.avatar.headTop() + LABEL_LIFT, p.pos.z);
     }
+  }
+
+  /** 나와 가까운 순서로 DRAW_BUDGET명만 캐릭터로 그림 (거리는 지난 프레임 값) */
+  private pickDrawn(): void {
+    const list = this.list;
+    if (list.length <= DRAW_BUDGET) {
+      for (let i = 0; i < list.length; i++) list[i]!.drawn = true;
+      return;
+    }
+    const o = this.order;
+    o.length = 0;
+    for (let i = 0; i < list.length; i++) o.push(list[i]!);
+    o.sort((a, b) => a.dist2 - b.dist2);
+    for (let i = 0; i < o.length; i++) o[i]!.drawn = i < DRAW_BUDGET;
   }
 
   dispose(): void {

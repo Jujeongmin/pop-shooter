@@ -96,6 +96,7 @@ export class Stations {
     st.zone.leave();
     this.game.tapHandler = null;
     if (st.kind === 'spd') this.game.hub.treadmill.setSpeed(0);
+    if (st.kind === 'coin') this.game.pose.cheer = 0;
   }
 
   /** 동작 한 번: 러닝머신 = 한 걸음, 동전 분수 = 동전 하나 떨어짐(받으면 셈) */
@@ -144,6 +145,12 @@ export class Stations {
           g.pos.y = BELT_Y;
         }
         g.hub.treadmill.setSpeed(BALANCE.train.actionsPerSec + st.recent);
+      }
+      // 동전 분수: 서서 받는 동안 만세 (팝배틀 만세 자세, 사용자 2026-11-12), 걸으면 내림
+      if (st.kind === 'coin') {
+        g.pose.cheer = walking ? Math.max(0, g.pose.cheer - dt * 5) : Math.min(1, g.pose.cheer + dt * 4);
+        // 만세할 때는 분수를 등지고 바깥(카메라 쪽)을 봄 (사용자 2026-11-12: 회전 반대로)
+        if (!walking && !g.controls.move().x && !g.controls.move().y) g.yaw = Math.atan2(g.pos.x - FOUNTAIN.x, g.pos.z - (FOUNTAIN.z - 1.5));
       }
       if (!walking) {
         st.acc += BALANCE.train.actionsPerSec * dt;

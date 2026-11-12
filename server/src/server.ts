@@ -4,7 +4,7 @@
  *    - 저장값은 sim/normalize로 형식·범위를 고친 뒤 저장, lastSeen은 서버 시각으로 찍음 (오프라인 보상 = 서버 시각 기준).
  *    - 코인 증가량 상한 검사(스펙 8장)는 아직 없음 → 기록은 공식 랭킹이 아님.
  *    위치·전투 중 상태는 저장하지 않음: 다시 켜면 늘 광장 시작 지점, 끝나지 않은 연속 도전은 버려짐.
- * 2) 광장 멀티 (월드별 룸 w<월드>-<번호>, 정원 8): 서로 보이기만 함 (충돌 없음, 전투·훈련은 혼자). pop-battle 허브를 복사해 고침.
+ * 2) 광장 멀티 (월드별 룸 w<월드>-<번호>, 정원 16): 서로 보이기만 함 (충돌 없음, 전투·훈련은 혼자). pop-battle 허브를 복사해 고침.
  * 3) 닉네임 (계정별 글로벌 사용자 상태 nick + 중복 방지 컬렉션 ps_nick). pop-battle에서 복사.
  *
  * 공통 규칙 (verse8-upload 4장): 계정은 인자가 아니라 $sender.account (플랫폼이 인증, 클라이언트가 못 바꿈).
@@ -464,7 +464,7 @@ export class Server {
         fail = 'no_reservation';
         return false;
       }
-      // 이미 접속(a)·재접속 대기(d) 중인 멤버는 자리가 있음. 예약(r)만 있으면 정원 확인 (hubFind가 8명을 넘겨 주지 않지만 방어)
+      // 이미 접속(a)·재접속 대기(d) 중인 멤버는 자리가 있음. 예약(r)만 있으면 정원 확인 (hubFind가 정원을 넘겨 주지 않지만 방어)
       if (mine.a === undefined && mine.d === undefined && hubSeats(book[roomId], me) >= HUB_MAX_PLAYERS) {
         fail = 'full';
         count = hubSeats(book[roomId], me);
