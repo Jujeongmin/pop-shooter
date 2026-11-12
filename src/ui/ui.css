@@ -170,6 +170,8 @@
 .reb-list.keep { background: #e2f6e4; }
 .reb-list-t { font-size: 15px; margin-bottom: 2px; }
 .reb-go { align-self: center; }
+.reb-skip { align-self: center; display: inline-flex; align-items: center; gap: 6px; margin-top: -2px; }
+.reb-skip .ico { width: 20px; height: 20px; }
 .reb-confirm { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .reb-sure { font-size: 19px; }
 .reb-btns { display: flex; gap: 10px; }

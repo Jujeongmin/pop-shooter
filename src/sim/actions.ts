@@ -112,9 +112,17 @@ export function canRebirth(s: GameState): boolean {
   return s.trAtk >= rebirthReq(s);
 }
 
-/** 훈련치(공격·연사·코인)와 이번 회차 기록만 초기화, 환생 배율 +1단계. 유지: 골드·총·기구·장비·기록·팝젬·캐릭터 */
-export function doRebirth(s: GameState): GameState | null {
-  if (!canRebirth(s)) return null;
+/** 팝젬으로 환생 조건 건너뛰는 값 (환생할수록 비쌈) */
+export function skipRebirthGems(s: GameState): number {
+  return BALANCE.skipRebirth.base + BALANCE.skipRebirth.step * s.rebirths;
+}
+
+/**
+ * 훈련치(공격·연사·코인)와 이번 회차 기록만 초기화, 환생 배율 +1단계. 유지: 골드·총·기구·장비·기록·팝젬·캐릭터.
+ * skip = 서버가 팝젬을 받고 건너뛰기를 허락함 (조건 검사 안 함, 서버 checkSave가 건너뛰기 1회를 씀)
+ */
+export function doRebirth(s: GameState, skip = false): GameState | null {
+  if (!skip && !canRebirth(s)) return null;
   return {
     ...s,
     trAtk: 0, trSpd: 0, trCoin: 0, runBest: 0,

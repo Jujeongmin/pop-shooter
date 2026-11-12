@@ -32,6 +32,8 @@ export const BALANCE = {
   charMult: { blue: 1, yellow: 1.5, red: 2, pink: 3, white: 5, black: 8 },
   offline: { rate: 0.5, capSec: 7200, goldRate: 0.25 },
   gems: { worldBossFirst: 50, perRebirth: 10 },
+  /** 팝젬으로 환생 조건 건너뛰기 (키보드 탈출 Skip Rebirth, 사용자 2026-11-12): 값 = base + step × 환생 횟수 */
+  skipRebirth: { base: 100, step: 50 },
   boost: { coinMult: 2 },
   /**
    * 훈련 (training.ts). gain = 한 발에 오르는 양 (공격 = 점수, 연사·코인 = %),

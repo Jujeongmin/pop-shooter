@@ -74,7 +74,7 @@ async function boot(): Promise<void> {
   new MentorNpcs(game);
   new UpgradePanel(game, ui, callout, float);
   new GunPanel(game, ui, callout, float);
-  new RebirthPanel(game, ui, callout, float);
+  const rebirthPanel = new RebirthPanel(game, ui, callout, float);
   new CharacterPanel(game, ui, callout);
   const guide = new Tutorial(game, ui);
   const lobbyApi = net.hasVerse ? new LobbyApi(net) : null;
@@ -97,6 +97,7 @@ async function boot(): Promise<void> {
   // 프리미엄 (광고·결제): 서버 값 받아 두기 (서버 없으면 버튼 없음)
   const prem = new Premium(game, save.cloudOk ? net : null);
   void prem.refresh();
+  rebirthPanel.prem = prem;
   const shop = new ShopPanel(game, ui, prem);
   game.menuActions.shop = () => shop.open();
   if (!showOfflineReward(game, ui, save.now, prem)) game.saver.saveNow();

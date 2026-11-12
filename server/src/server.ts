@@ -13,10 +13,10 @@
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
 import { allowedChars, checkSave } from '../../src/sim/econ.ts';
-import { AD_KINDS, AD_LIMIT, claimAd, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
+import { AD_KINDS, AD_LIMIT, buySkipRebirth, claimAd, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
 import type { CharId, GameState } from '../../src/sim/state.ts';
-import { damagePerShot } from '../../src/sim/actions.ts';
+import { damagePerShot, skipRebirthGems } from '../../src/sim/actions.ts';
 import {
   HUB_MAX_PLAYERS,
   HUB_TIMING,
@@ -338,6 +338,28 @@ export class Server {
       const next = spendGemBoost(premOf(st, prev), now);
       if (!next) return { ok: false };
       await $global.updateMyState({ prem: next });
+      return { ok: true, prem: premView(next, prev, now) };
+    });
+  }
+
+  /**
+   * 팝젬으로 환생 조건 건너뛰기 (키보드 탈출 Skip Rebirth): 값은 서버 저장의 환생 횟수로 계산, 팝젬을 빼고 skip 1회.
+   * 클라이언트는 성공하면 바로 환생해 저장 → checkSave가 skip을 씀. 이미 하나 있으면 다시 안 팖 (팝젬 이중 차감 방지)
+   */
+  async skipRebirth(): Promise<{ ok: boolean; reason?: string; prem?: PremView }> {
+    const account = $sender.account;
+    return $lock(`save:${account}`, async () => {
+      const now = Date.now();
+      const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+      const raw = saveOf(st);
+      const prev = raw ? normalizeState(raw, now) : null;
+      if (!prev) return { ok: false, reason: 'no_save' };
+      const prem = premOf(st, prev);
+      if (prem.skip > 0) return { ok: true, prem: premView(prem, prev, now) };
+      const next = buySkipRebirth(prem, skipRebirthGems(prev));
+      if (!next) return { ok: false, reason: 'gems', prem: premView(prem, prev, now) };
+      await $global.updateMyState({ prem: next });
+      slog('skip_rebirth', '-', account);
       return { ok: true, prem: premView(next, prev, now) };
     });
   }

@@ -11,7 +11,7 @@ import { gainPerShot, TRAIN_KINDS, trainValue, trainWorth, type TrainKind } from
  * 프리미엄 값(팝젬·패스·부스트·유료 캐릭터)은 서버 소유: 클라이언트 값 대신 Premium으로 덮어씀.
  * - 훈련치: 늘어난 양 ≤ 여유 × 그 시간 최대 발 수 × 한 발 최대 양(기구·장비는 이전·지금 중 큰 쪽, 가장 높은 월드 훈련장) + 바닥값. 넘으면 자름.
  * - 골드: "가치" = 골드 + 산 총·기구·장비 값. 늘어난 가치 ≤ 여유 × (새 첫 클리어 + 반복 도전 한도 + 오프라인 한도) + 바닥값.
- *   넘으면 골드를 자름. 산 것 값만으로 넘거나, 깰 수 없는 스테이지·조건 안 된 환생이면 거절 (이전 저장 유지).
+ *   넘으면 골드를 자름. 산 것 값만으로 넘거나, 깰 수 없는 스테이지·조건 안 된 환생(팝젬 건너뛰기 없음)이면 거절 (이전 저장 유지).
  */
 
 /** 서버가 가진 프리미엄 값 */
@@ -25,6 +25,8 @@ export interface Premium {
   paid: CharId[];
   /** 광고로 받은 오프라인 보상 2배분: 다음 저장에서 그만큼 골드를 더 허용 (쓰고 나면 0) */
   extra?: number;
+  /** 팝젬으로 산 환생 건너뛰기 횟수: 조건 안 된 환생을 한 번 허용하고 1 줄임 */
+  skip?: number;
 }
 
 export const MARGIN = 1.5;
@@ -114,7 +116,12 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
     const cap = (rebirthGain === 1 ? 0 : trainValue(prev, k)) + room;
     if (trainValue(s, k) > cap) { s = { ...s, [TR_FIELD[k]]: cap }; clamped = true; }
   }
-  if (rebirthGain === 1 && prevUp.trAtk < rebirthReq(prev)) return { ok: false, reason: 'rebirth_early' };
+  // 조건 안 된 환생은 팝젬으로 산 건너뛰기가 있어야 (하나 씀)
+  let skip = prem.skip ?? 0;
+  if (rebirthGain === 1 && prevUp.trAtk < rebirthReq(prev)) {
+    if (skip < 1) return { ok: false, reason: 'rebirth_early' };
+    skip -= 1;
+  }
   // 새로 깬 스테이지는 그 사이 능력치(이전 + 훈련 한도, 지금 중 센 쪽)로 제한 시간 안에 깰 수 있어야
   const dps = Math.max(maxDps(prevUp), maxDps(s));
   for (let st = bestPrev + 1; st <= s.bestStage; st++) {
@@ -134,5 +141,5 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
     s = { ...s, coins: Math.max(0, allowed - lv) };
     clamped = true;
   }
-  return { ok: true, state: s, clamped, prem: { ...prem2, extra: 0 } };
+  return { ok: true, state: s, clamped, prem: { ...prem2, extra: 0, skip } };
 }

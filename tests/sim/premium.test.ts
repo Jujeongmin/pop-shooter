@@ -76,3 +76,28 @@ test('purchases: passes keep the highest, gems add, characters unlock, one grant
   assert.equal(nextPassProduct(64), null);
   assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(dayKey(NOW)));
 });
+
+test('skip rebirth: gems buy one skip, the next early rebirth save uses it', async () => {
+  const { buySkipRebirth } = await import('../../src/sim/premium.ts');
+  const { checkSave } = await import('../../src/sim/econ.ts');
+  const { doRebirth, skipRebirthGems } = await import('../../src/sim/actions.ts');
+  const { newState } = await import('../../src/sim/state.ts');
+  const prev = { ...newState(NOW), trAtk: 10, rebirths: 2, tokens: 2 };
+  const price = skipRebirthGems(prev);
+  assert.ok(price > skipRebirthGems({ ...prev, rebirths: 0 }), 'gets pricier');
+  assert.equal(buySkipRebirth({ ...readPrem(null), gems: price - 1 }, price), null, 'not enough gems');
+  const p = buySkipRebirth({ ...readPrem(null), gems: price + 5 }, price)!;
+  assert.deepEqual([p.gems, p.skip], [5, 1]);
+  assert.equal(buySkipRebirth(p, price), null, 'only one skip at a time');
+  assert.equal(doRebirth(prev), null);
+  const next = doRebirth(prev, true)!;
+  // 조건 안 된 환생: skip 없으면 거절, 있으면 통과하고 skip 0
+  assert.equal(checkSave(prev, next, 5, { ...p, skip: 0 }, NOW).ok, false);
+  const r = checkSave(prev, next, 5, p, NOW);
+  assert.ok(r.ok);
+  if (r.ok) { assert.equal(r.state.rebirths, 3); assert.equal(r.prem.skip, 0); }
+  // 정상 환생은 skip을 안 씀
+  const fair = { ...prev, trAtk: 1e30 };
+  const r2 = checkSave(fair, doRebirth(fair)!, 5, p, NOW);
+  assert.ok(r2.ok && r2.prem.skip === 1);
+});

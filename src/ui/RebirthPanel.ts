@@ -3,7 +3,8 @@ import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
-import { canRebirth, doRebirth, rebirthReq } from '../sim/actions.ts';
+import type { Premium } from '../platform/Premium';
+import { canRebirth, doRebirth, rebirthReq, skipRebirthGems } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
@@ -24,6 +25,7 @@ const mult = (tokens: number, pass: number): string => `×${formatMult(rebirthMu
  * 환생 제단 (키보드 탈출 방식): 구역에 들어가면 폴짝 + 아래 창. 배율 지금 → 다음(환생마다 ×multGrowth), 받는 팝젬,
  * 초기화·유지 목록, 조건 = 공격력 레벨 진행 막대(환생할수록 필요 레벨이 오름).
  * [환생하기] → 한 번 더 확인 → 화면 하얗게 + 캐릭터 폴짝 + 상태 적용·즉시 저장.
+ * 조건이 안 되면 [팝젬 N 바로 환생] (키보드 탈출 Skip Rebirth): 확인 → 서버가 팝젬을 빼고 허락 → 같은 환생.
  */
 export class RebirthPanel {
   private readonly game: Game;
@@ -31,8 +33,13 @@ export class RebirthPanel {
   private readonly float: FloatText;
   private readonly callout: ZoneCallout;
   private readonly zone: ZoneEntry;
-  private confirming = false;
+  /** 확인 중인 환생: 일반 / 팝젬 건너뛰기 */
+  private confirming: false | 'normal' | 'skip' = false;
   private hopT = HOP_SEC;
+  /** 서버 프리미엄 (없으면 건너뛰기 버튼 없음) */
+  prem: Premium | null = null;
+  private busy = false;
+  private msg = '';
 
   constructor(game: Game, ui: HTMLElement, callout: ZoneCallout, float: FloatText) {
     this.game = game;
@@ -48,7 +55,7 @@ export class RebirthPanel {
       cam: { focus: -0.4, lookUp: -1.4 },
       text: null,
     });
-    this.zone.onLanded = () => { this.confirming = false; this.render(); this.panel.open(); };
+    this.zone.onLanded = () => { this.confirming = false; this.msg = ''; this.render(); this.panel.open(); };
     game.facilityActions.altar = () => this.zone.enter();
     game.facilityLeave.altar = () => { this.zone.leave(); this.panel.close(); };
     game.onTick((dt) => this.update(dt));
@@ -88,23 +95,54 @@ export class RebirthPanel {
     price.append(bar);
     const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: formatNum(need - s.trAtk) }));
     b.append(card, gems, lists, price, tip);
-    if (!this.confirming || !can) {
-      const go = button(t('reb.go'), () => { this.confirming = true; this.render(); }, 'btn big reb-go');
-      go.disabled = !can;
-      b.append(go);
-    } else {
+    const skipGems = skipRebirthGems(s);
+    if (this.confirming === 'skip' && !can) {
+      const row = el('div', 'reb-confirm');
+      row.append(el('div', 'reb-sure', t('reb.skipSure', { n: formatNum(skipGems) })));
+      const btns = el('div', 'reb-btns');
+      const yes = button(t('reb.yes'), () => void this.skip(), 'btn pink');
+      yes.disabled = this.busy;
+      btns.append(button(t('reb.no'), () => { this.confirming = false; this.render(); }, 'btn'), yes);
+      row.append(btns);
+      b.append(row);
+    } else if (this.confirming === 'normal' && can) {
       const row = el('div', 'reb-confirm');
       row.append(el('div', 'reb-sure', t('reb.sure')));
       const btns = el('div', 'reb-btns');
-      btns.append(button(t('reb.no'), () => { this.confirming = false; this.render(); }, 'btn'), button(t('reb.yes'), () => this.rebirth(), 'btn pink'));
+      btns.append(button(t('reb.no'), () => { this.confirming = false; this.render(); }, 'btn'), button(t('reb.yes'), () => this.rebirth(false), 'btn pink'));
       row.append(btns);
       b.append(row);
+    } else {
+      const go = button(t('reb.go'), () => { this.confirming = 'normal'; this.render(); }, 'btn big reb-go');
+      go.disabled = !can;
+      b.append(go);
+      // 조건이 안 되면 팝젬으로 바로 환생 (서버 연결 때만)
+      if (!can && this.prem?.online) {
+        const sk = button(t('reb.skip', { n: formatNum(skipGems) }), () => { this.msg = ''; this.confirming = 'skip'; this.render(); }, 'btn reb-skip');
+        sk.prepend(icon('gem'));
+        sk.disabled = s.gems < skipGems;
+        b.append(sk);
+      }
     }
+    if (this.msg) b.append(el('div', 'reb-tip', this.msg));
   }
 
-  private rebirth(): void {
+  /** 팝젬 건너뛰기: 서버가 팝젬을 빼고 허락하면 조건 없이 환생 + 즉시 저장 (서버 checkSave가 건너뛰기 1회를 씀) */
+  private async skip(): Promise<void> {
+    if (!this.prem || this.busy) return;
+    this.busy = true;
+    this.render();
+    const r = await this.prem.skipRebirth();
+    this.busy = false;
+    if (r === 'ok') { this.rebirth(true); return; }
+    this.confirming = false;
+    this.msg = t(r === 'gems' ? 'shop.gemShort' : 'reb.skipFail');
+    this.render();
+  }
+
+  private rebirth(skip: boolean): void {
     const g = this.game;
-    const next = doRebirth(g.state);
+    const next = doRebirth(g.state, skip);
     if (!next) return;
     g.setState(next, true);
     audio.play('rebirth');

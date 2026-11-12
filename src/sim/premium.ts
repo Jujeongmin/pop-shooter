@@ -6,7 +6,7 @@ import type { CharId } from './state.ts';
  * - 리워드 광고 3종: 골드 2배 15분(누적 최대 2시간) / 오프라인 보상 2배(서버가 계산한 오프라인 골드만큼 다음 저장에서 더 허용) / 하루 선물(팝젬).
  *   종류별 하루 횟수, 광고 id 하나에 한 번만 (기록은 최근 50개).
  * - VX 상품: 공격력 패스(순서대로만 구매, 단계마다 ×2 → passMult = 산 단계의 최고 배율; 순서가 뒤바뀌어 도착해도 max라 같음), 팝젬 묶음(반복 구매), 유료 캐릭터. 결제 id 하나에 한 번만 (최근 50개).
- * - 팝젬으로 골드 2배 30분.
+ * - 팝젬으로 골드 2배 30분, 팝젬으로 환생 조건 건너뛰기(skip 1회, 다음 저장에서 씀).
  */
 
 export type AdKind = 'boost' | 'offline' | 'gift';
@@ -40,6 +40,7 @@ const PAID: readonly CharId[] = ['white', 'black'];
 /** 서버가 가진 프리미엄 전부 (econ Premium + 광고·결제 기록) */
 export interface PremState extends Premium {
   extra: number;
+  skip: number;
   adIds: string[];
   buys: string[];
   adDay: string;
@@ -63,6 +64,7 @@ export function readPrem(raw: unknown): PremState {
     boostUntil: num(p.boostUntil, 0),
     paid: strs(p.paid).filter((c): c is CharId => PAID.includes(c as CharId)),
     extra: num(p.extra, 0),
+    skip: Math.min(5, Math.floor(num(p.skip, 0))),
     adIds: strs(p.adIds),
     buys: strs(p.buys),
     adDay: typeof p.adDay === 'string' ? p.adDay : '',
@@ -95,6 +97,12 @@ export function claimAd(p: PremState, kind: AdKind, adId: string, now: number, o
 export function spendGemBoost(p: PremState, now: number): PremState | null {
   if (p.gems < GEM_BOOST.gems || p.boostUntil >= now + BOOST_CAP_MS) return null;
   return { ...p, gems: p.gems - GEM_BOOST.gems, boostUntil: addBoost(p.boostUntil, now, GEM_BOOST.ms) };
+}
+
+/** 팝젬으로 환생 건너뛰기 1회 사기 (모자라거나 이미 가지고 있으면 null). 다음 저장의 조건 안 된 환생 한 번에 씀 */
+export function buySkipRebirth(p: PremState, gems: number): PremState | null {
+  if (!(gems > 0) || p.gems < gems || p.skip > 0) return null;
+  return { ...p, gems: p.gems - gems, skip: 1 };
 }
 
 /** 결제 지급 (서버 $onItemPurchased). 같은 결제 id는 한 번만 */
