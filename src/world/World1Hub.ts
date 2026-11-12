@@ -48,6 +48,12 @@ export class World1Hub {
   private decor: HubDecor;
   private readonly kit: Record<BrickName, KitModel>;
   private best = 0;
+  /** 월드마다 색이 바뀌는 포털·과녁 재질 (이 광장 소유, applyLook에서 색만 바꿈) */
+  private readonly portalRingMat = new THREE.MeshStandardMaterial({ color: '#ffd34d', roughness: 0.55 });
+  private readonly portalBaseMat = new THREE.MeshStandardMaterial({ color: '#ffe9b8', roughness: 0.55 });
+  private readonly targetMats = [new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.55 }), new THREE.MeshStandardMaterial({ color: '#ff6b6b', roughness: 0.55 })] as const;
+  private swirlCanvas: HTMLCanvasElement | null = null;
+  private swirlTex: THREE.CanvasTexture | null = null;
 
   constructor(kit: Record<BrickName, KitModel>, guns: Record<GunModel, THREE.Object3D> | null = null, world = 1) {
     this.guns = guns;
@@ -58,7 +64,41 @@ export class World1Hub {
     this.root.add(this.toys.root);
     this.buildRange();
     this.buildFacilities();
+    this.owned.push(this.portalRingMat, this.portalBaseMat, ...this.targetMats);
     this.buildPortal();
+    this.applyLook(world);
+  }
+
+  /** 월드 색: 시설 재질 섞기 + 포털 고리·받침·소용돌이 + 과녁 */
+  private applyLook(world: number): void {
+    const th = themeOf(world);
+    this.toys.tint(th.facility?.tint ?? null, th.facility?.k ?? 0);
+    this.portalRingMat.color.set(th.portal.ring);
+    this.portalBaseMat.color.set(th.portal.base);
+    this.targetMats[0].color.set(th.target[0]);
+    this.targetMats[1].color.set(th.target[1]);
+    const c = this.swirlCanvas;
+    if (!c || !this.swirlTex) return;
+    // 소용돌이 다시 그림 (같은 캔버스·텍스처, 새로 만들지 않음)
+    const ctx = c.getContext('2d')!;
+    const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.35, th.portal.swirl[0]);
+    grad.addColorStop(1, th.portal.swirl[1]);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 6;
+    for (let k = 0; k < 4; k++) {
+      ctx.beginPath();
+      for (let t = 0; t < 1; t += 0.02) {
+        const a = k * Math.PI / 2 + t * Math.PI * 2.2;
+        const r = 6 + t * 58;
+        ctx[t === 0 ? 'moveTo' : 'lineTo'](64 + Math.cos(a) * r, 64 + Math.sin(a) * r);
+      }
+      ctx.stroke();
+    }
+    this.swirlTex.needsUpdate = true;
   }
 
   private mat(color: string): THREE.MeshStandardMaterial {
@@ -100,8 +140,7 @@ export class World1Hub {
     const discs = [0, 1, 2, 3].map((k) => new THREE.CylinderGeometry((0.7 - k * 0.16) * 1.4, (0.7 - k * 0.16) * 1.4, 0.12 + k * 0.02, 28));
     this.owned.push(...discs);
     for (let i = -1; i <= 1; i++) {
-      const lane = RANGE_LANES[0];
-      const ringColors = ['#ffffff', lane.color, '#ffffff', lane.color];
+      const ringMats = [this.targetMats[0], this.targetMats[1], this.targetMats[0], this.targetMats[1]];
       const t = new THREE.Group();
       t.position.set(RANGE_TARGET.x + i * 2, 0, RANGE_TARGET.z);
       const p = new THREE.Mesh(post, this.mat('#c98a5a'));
@@ -109,7 +148,7 @@ export class World1Hub {
       p.position.set(0, 0.6, -0.19);
       t.add(p);
       discs.forEach((g, k) => {
-        const d = new THREE.Mesh(g, this.mat(ringColors[k]!));
+        const d = new THREE.Mesh(g, ringMats[k]!);
         d.rotation.x = Math.PI / 2;
         d.position.y = 1.6;
         d.castShadow = true;
@@ -137,32 +176,16 @@ export class World1Hub {
   /** 월드 포털: 받침 + 세운 고리 + 안쪽 소용돌이(돌아감) + 위에 최고 기록 */
   private buildPortal(): void {
     const g = PORTAL_GATE;
-    this.mesh(new THREE.CylinderGeometry(3.2, 3.5, 0.3, 40), '#ffe9b8', g.x, 0.15, g.z).castShadow = false;
-    const ring = this.mesh(new THREE.TorusGeometry(2.2, 0.32, 16, 48), '#ffd34d', g.x, 2.6, g.z);
+    this.mesh(new THREE.CylinderGeometry(3.2, 3.5, 0.3, 40), '', g.x, 0.15, g.z, this.portalBaseMat).castShadow = false;
+    const ring = this.mesh(new THREE.TorusGeometry(2.2, 0.32, 16, 48), '', g.x, 2.6, g.z, this.portalRingMat);
     ring.castShadow = true;
     // 소용돌이 텍스처 (캔버스 한 번, 직접 소유)
     const c = document.createElement('canvas');
     c.width = c.height = 128;
-    const ctx = c.getContext('2d')!;
-    const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 64);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.35, '#b9a6ff');
-    grad.addColorStop(1, '#6b5bd6');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 128, 128);
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-    ctx.lineWidth = 6;
-    for (let k = 0; k < 4; k++) {
-      ctx.beginPath();
-      for (let t = 0; t < 1; t += 0.02) {
-        const a = k * Math.PI / 2 + t * Math.PI * 2.2;
-        const r = 6 + t * 58;
-        ctx[t === 0 ? 'moveTo' : 'lineTo'](64 + Math.cos(a) * r, 64 + Math.sin(a) * r);
-      }
-      ctx.stroke();
-    }
+    this.swirlCanvas = c;
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
+    this.swirlTex = tex;
     const swirlMat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
     this.owned.push(tex, swirlMat);
     this.swirl = this.mesh(new THREE.CircleGeometry(2.05, 48), '', g.x, 2.6, g.z, swirlMat);
@@ -186,6 +209,7 @@ export class World1Hub {
     this.decor = new HubDecor(themeOf(world), this.kit);
     this.root.add(this.decor.root);
     old.dispose();
+    this.applyLook(world);
     this.setBest(this.best);
     return old.root;
   }

@@ -63,6 +63,16 @@ export class ToyBuilder {
     return m;
   }
 
+  /** 모든 시설 재질 색을 원래 색에서 tint 쪽으로 k만큼 (월드 테마, k = 0이면 원래대로). 원래 색은 처음 한 번 기억 */
+  tint(color: string | null, k: number): void {
+    const t = new THREE.Color(color ?? '#ffffff');
+    for (const m of this.mats.values()) {
+      const orig = (m.userData.orig as THREE.Color | undefined) ?? (m.userData.orig = m.color.clone());
+      m.color.copy(orig);
+      if (color && k > 0) m.color.lerp(t, k);
+    }
+  }
+
   own<T extends { dispose(): void }>(o: T): T {
     this.owned.push(o);
     return o;

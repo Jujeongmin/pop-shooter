@@ -60,6 +60,21 @@ export const WORLD1_FACILITIES: readonly Facility[] = [
   { id: 'travel', x: TRAVEL_SPOT.x, z: TRAVEL_SPOT.z, radius: 2.2, label: t('fac.travel') },
 ];
 
+/**
+ * 시설 몸체 자리·크기 (월드별 꾸미기 HubDecor가 씀, 2026-11-12 실측 = 간판 제외 실제 도형 범위).
+ * cap = 위에 지붕류를 씌워도 되는지 (떠서 도는 고리·지구본·동전 꼭대기는 안 씌움).
+ */
+export interface Footprint { id: string; x: number; z: number; w: number; d: number; h: number; cap: boolean }
+export const FOOTPRINTS: readonly Footprint[] = [
+  { id: 'upgrade', x: 13, z: 2.4, w: 2.4, d: 1.8, h: 3.0, cap: true },
+  { id: 'guns', x: 8.8, z: -4.9, w: 3.6, d: 1.8, h: 3.2, cap: true },
+  { id: 'chars', x: 11.3, z: 14, w: 4.0, d: 1.8, h: 2.8, cap: true },
+  { id: 'altar', x: -11, z: 15.4, w: 3.9, d: 3.9, h: 3.0, cap: false },
+  { id: 'travel', x: -17, z: -16.6, w: 3.6, d: 3.6, h: 2.9, cap: false },
+  { id: 'treadmill', x: -18.5, z: 10, w: 4.8, d: 2.8, h: 2.0, cap: false },
+  { id: 'fountain', x: -9.5, z: 7.5, w: 2.1, d: 2.1, h: 3.8, cap: false },
+];
+
 export function nearestFacility(x: number, z: number, list: readonly Facility[]): Facility | null {
   let best: Facility | null = null;
   let bestD = Infinity;

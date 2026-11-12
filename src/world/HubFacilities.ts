@@ -212,6 +212,9 @@ export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainPro
   // 앞으로 휘어진 관 (서는 자리 위에서 끝남)
   const spout = b.toy(new THREE.TorusGeometry(0.75, 0.14, 12, 24, Math.PI / 2), '#ffc928', 0, 2.2, 0.75, body);
   spout.rotation.set(0, Math.PI / 2, 0);
+  // 관 끝 마감: 열린 끝으로 외곽선 안쪽(남색)이 보이던 것을 막음 (사용자 2026-11-12) + 동전 나오는 주둥이
+  b.toy(new THREE.SphereGeometry(0.15, 16, 12), '#ffc928', 0, 2.95, 0.75, body);
+  b.toy(new THREE.CylinderGeometry(0.17, 0.2, 0.16, 16), '#ffffff', 0, 2.86, 0.78, body);
   // 꼭대기에서 도는 큰 동전 (늘 움직여서 동전 분수인 걸 알아보게)
   const coinMat = b.mat('#ffd34d', { emissive: '#ffb000', metal: 0.4, rough: 0.3 });
   const topper = b.toy(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 28), coinMat, 0, 3.35, 0, body);
