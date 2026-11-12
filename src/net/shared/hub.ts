@@ -73,7 +73,7 @@ export const HUB_SNAPS: ReadonlyArray<{ x: number; z: number; r: number; reach: 
   { x: 0, z: -7.3, r: 1, reach: Infinity }, // 전투 복귀 (PORTAL_SPOT.z + 3.2)
   { x: -14, z: 0, r: 3, reach: 7 }, // 사격장 판
   { x: 13, z: 4, r: 1, reach: 4 }, // 업그레이드
-  { x: 7, z: -5, r: 1, reach: 4 }, // 총
+  { x: 8.8, z: -1.3, r: 1, reach: 4 }, // 총 (가판대 앞 원, 2026-11-12)
   { x: -11, z: 17, r: 1, reach: 4 }, // 환생 제단
   { x: 11, z: 16, r: 1, reach: 4 }, // 캐릭터
   { x: 0, z: -10.5, r: 1, reach: 4 }, // 포털
