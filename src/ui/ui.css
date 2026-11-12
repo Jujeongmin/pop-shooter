@@ -113,7 +113,7 @@
 .lang-btn:lang(ja), .lang-btn:lang(zh-TW), .lang-btn:lang(zh-CN) { font-family: system-ui, sans-serif; font-weight: 700; }
 
 /* 시설 창 (아래 시트) */
-.sheet { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100vw, 520px); max-height: 54vh; display: flex; flex-direction: column; background: var(--paper); border-radius: 26px 26px 0 0; box-shadow: 0 -6px 0 rgba(43,58,103,.12), 0 -10px 30px rgba(43,58,103,.18); color: var(--ink); padding-bottom: env(safe-area-inset-bottom); }
+.sheet { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100vw, 520px); max-height: 54vh; display: flex; flex-direction: column; background: var(--paper); border-radius: 26px 26px 0 0; box-shadow: 0 -6px 0 rgba(43,58,103,.12), 0 -10px 30px rgba(43,58,103,.18); color: var(--ink); }
 .sheet.in { animation: sheet-up .32s cubic-bezier(.2, 1.3, .4, 1) both; }
 .sheet.out { animation: sheet-down .2s ease-in both; }
 @keyframes sheet-up { from { transform: translate(-50%, 100%) } to { transform: translate(-50%, 0) } }
