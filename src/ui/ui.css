@@ -306,3 +306,7 @@
 .travel-row.locked .travel-img { filter: grayscale(.7) brightness(.9); }
 .travel-lock { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
 .travel-lock .ico { width: 18px; height: 18px; }
+/* 가운데 칸이 남는 폭을 다 써서 오른쪽 안내(잠김·이동 버튼)가 맨 오른쪽에 붙게 */
+.travel-row .up-mid { flex: 1; min-width: 0; }
+.travel-row > .mentor-st, .travel-row > .btn { flex: none; margin-left: auto; text-align: right; }
+.travel-lock { justify-content: flex-end; }
