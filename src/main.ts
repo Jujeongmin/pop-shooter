@@ -33,6 +33,8 @@ import { GunPanel } from './ui/GunPanel';
 import { RebirthPanel } from './ui/RebirthPanel';
 import { CharacterPanel } from './ui/CharacterPanel';
 import { showOfflineReward } from './ui/OfflinePanel';
+import { Premium } from './platform/Premium';
+import { ShopPanel } from './ui/ShopPanel';
 
 async function boot(): Promise<void> {
   const ui = document.getElementById('ui')!;
@@ -92,7 +94,12 @@ async function boot(): Promise<void> {
   loading.done();
   // 고른 저장을 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기).
   // 오프라인 보상 창이 떠 있으면 [받기] 때 저장 (먼저 저장하면 lastSeen이 갱신돼 받기 전에 페이지를 닫으면 보상이 사라짐)
-  if (!showOfflineReward(game, ui, save.now)) game.saver.saveNow();
+  // 프리미엄 (광고·결제): 서버 값 받아 두기 (서버 없으면 버튼 없음)
+  const prem = new Premium(game, save.cloudOk ? net : null);
+  void prem.refresh();
+  const shop = new ShopPanel(game, ui, prem);
+  game.menuActions.shop = () => shop.open();
+  if (!showOfflineReward(game, ui, save.now, prem)) game.saver.saveNow();
   // 광장 멀티 (서버에 연결됐을 때만, 실패해도 혼자 게임은 그대로)
   const lobby = startLobby(game, net, cloud, training);
   // 첫 접속이면 닉네임 정하기 (서버 연결 뒤, 오프라인 보상 창과 겹치지 않게 조금 뒤)

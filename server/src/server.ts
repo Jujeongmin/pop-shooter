@@ -12,7 +12,9 @@
  * 요청마다 새 인스턴스라 상태는 모듈 변수에 두지 않음.
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
-import { allowedChars, checkSave, PAID_CHARS, type Premium } from '../../src/sim/econ.ts';
+import { allowedChars, checkSave } from '../../src/sim/econ.ts';
+import { AD_KINDS, AD_LIMIT, claimAd, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
+import { offlineReward } from '../../src/sim/offline.ts';
 import type { CharId, GameState } from '../../src/sim/state.ts';
 import { damagePerShot } from '../../src/sim/actions.ts';
 import {
@@ -38,26 +40,52 @@ interface SaveWriteResult {
   ok: boolean;
   reason?: string;
   now: number;
-  prem?: { gems: number; passMult: number; boostUntil: number; chars: string[]; char: string };
+  prem?: PremView;
   coins?: number;
   fix?: Record<string, unknown>;
 }
 
-/** 서버 프리미엄 (글로벌 사용자 상태 prem). 처음이면 기존 저장의 팝젬·패스·부스트로 시작 (한 번만 믿음) */
-function premOf(st: Record<string, unknown>, prev: GameState | null): Premium {
-  const p = st.prem && typeof st.prem === 'object' ? (st.prem as Record<string, unknown>) : null;
-  const num = (v: unknown, d: number): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : d);
-  if (p) {
-    const paid = Array.isArray(p.paid) ? (p.paid.filter((c) => PAID_CHARS.includes(c as CharId)) as CharId[]) : [];
-    return { gems: Math.floor(num(p.gems, 0)), passMult: num(p.passMult, 1) || 1, boostUntil: num(p.boostUntil, 0), paid };
-  }
-  return { gems: prev ? Math.min(prev.gems, 1000) : 0, passMult: 1, boostUntil: 0, paid: [] };
+/** 화면에 돌려주는 프리미엄 (광고 남은 횟수 포함, 기록 id는 안 줌) */
+interface PremView {
+  gems: number; passMult: number; boostUntil: number; chars: string[]; char: string; ads: Record<AdKind, number>;
 }
 
-function premView(p: Premium, s: GameState | null): NonNullable<SaveWriteResult['prem']> {
-  const chars = allowedChars(s?.bestStage ?? 0, p.paid);
-  return { gems: p.gems, passMult: p.passMult, boostUntil: p.boostUntil, chars, char: s && chars.includes(s.char) ? s.char : 'blue' };
+/** 서버 프리미엄 (글로벌 사용자 상태 prem, sim/premium). 처음이면 기존 저장의 팝젬만 이어받음 (최대 1000, 한 번만 믿음) */
+function premOf(st: Record<string, unknown>, prev: GameState | null): PremState {
+  if (st.prem && typeof st.prem === 'object') return readPrem(st.prem);
+  return readPrem({ gems: prev ? Math.min(prev.gems, 1000) : 0 });
 }
+
+function premView(p: PremState, s: GameState | null, now = Date.now()): PremView {
+  const chars = allowedChars(s?.bestStage ?? 0, p.paid);
+  const today = p.adDay === dayKey(now);
+  const ads = {} as Record<AdKind, number>;
+  for (const k of AD_KINDS) ads[k] = AD_LIMIT[k] - (today ? p.adUsed[k] : 0);
+  return { gems: p.gems, passMult: p.passMult, boostUntil: p.boostUntil, chars, char: s && chars.includes(s.char) ? s.char : 'blue', ads };
+}
+
+/**
+ * Verse8 광고 검증 (docs.verse8.io 광고 서버 검증): 끝까지 봄 / 아직 모름 / 안 봄 / 확인 불가(게임 서버에 fetch가 없거나 실패).
+ * 읽기만 하므로 두 번 물어도 안전. monster-bbq와 같은 방식.
+ */
+type AdCheck = 'verified' | 'pending' | 'rejected' | 'unknown';
+const AD_VERIFIER = 'https://ads-verifier.verse8.io/ads/status?requestId=';
+async function checkAd(requestId: string): Promise<AdCheck> {
+  const get = (globalThis as { fetch?: (url: string) => Promise<{ status: number; json(): Promise<unknown> }> }).fetch;
+  if (typeof get !== 'function') return 'unknown';
+  try {
+    const res = await get(AD_VERIFIER + encodeURIComponent(requestId));
+    if (res.status === 202) return 'pending';
+    if (res.status === 404) return 'rejected';
+    if (res.status !== 200) return 'unknown';
+    const body = (await res.json()) as { status?: unknown } | null;
+    return body?.status === 'verified' ? 'verified' : body?.status === 'pending' ? 'pending' : 'rejected';
+  } catch {
+    return 'unknown';
+  }
+}
+
+const isAdId = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 128 && /^[A-Za-z0-9_.:-]+$/.test(v);
 
 /** 저장 한 건 최대 크기 (문서 1MB 한도보다 훨씬 작게) */
 const MAX_SAVE_CHARS = 20000;
@@ -247,7 +275,9 @@ export class Server {
         return { ok: false, reason: r.reason, now, prem: premView(prem, prev), fix: prev ? { ...prev } as unknown as Record<string, unknown> : undefined };
       }
       const saved = { ...r.state, lastSeen: now };
-      await $global.updateMyState({ save: saved, prem: r.prem });
+      // checkSave는 econ Premium 형태로 돌려줌 → 광고·결제 기록까지 담은 PremState로 (필드는 그대로 실려 있음)
+      const premNext = readPrem(r.prem);
+      await $global.updateMyState({ save: saved, prem: premNext });
       if (r.clamped) slog('save_clamped', '-', account);
       // 기록판 한 줄 (계정마다 하나, 항목당 문서 하나라 커지지 않음). 실패해도 저장은 그대로
       try {
@@ -258,7 +288,73 @@ export class Server {
         if (found[0]) await $global.updateCollectionItem(RANK_COLLECTION, { __id: found[0].__id, ...row });
         else await $global.addCollectionItem(RANK_COLLECTION, row);
       } catch { /* 기록판은 다음 저장 때 다시 */ }
-      return { ok: true, now, prem: premView(r.prem, saved), coins: r.clamped ? saved.coins : undefined };
+      return { ok: true, now, prem: premView(premNext, saved), coins: r.clamped ? saved.coins : undefined };
+    });
+  }
+
+  /** 프리미엄 지금 값 (팝젬·패스·부스트·캐릭터·오늘 남은 광고 횟수). 결제 뒤 다시 확인용 */
+  async premGet(): Promise<{ ok: true; prem: PremView; now: number }> {
+    const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+    const raw = saveOf(st);
+    const prev = raw ? normalizeState(raw, Date.now()) : null;
+    return { ok: true, prem: premView(premOf(st, prev), prev), now: Date.now() };
+  }
+
+  /**
+   * 리워드 광고 보상 (계획 3, verse8-upload 6장): 광고 id를 Verse8 검증기로 확인. 아직 확인 중이면 pending (클라이언트가 잠시 뒤 다시,
+   * 마지막 시도(last)나 검증기에 못 닿으면 하루 횟수만이 한도). 같은 id는 한 번만, 계정 락 안에서.
+   * offline = 서버가 마지막 저장 시각으로 계산한 오프라인 골드만큼 다음 저장에서 더 허용 (클라이언트가 2배로 받음).
+   */
+  async adClaim(kind: unknown, requestId: unknown, last: unknown): Promise<{ status: 'granted' | 'pending'; prem?: PremView; reason?: string }> {
+    if (!(AD_KINDS as readonly unknown[]).includes(kind)) throw new Error('bad_kind');
+    if (!isAdId(requestId)) throw new Error('bad_ad');
+    const check = await checkAd(requestId);
+    if (check === 'rejected') throw new Error('ad_not_watched');
+    if (check === 'pending' && last !== true) return { status: 'pending' };
+    const account = $sender.account;
+    return $lock(`save:${account}`, async () => {
+      const now = Date.now();
+      const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+      const raw = saveOf(st);
+      const prev = raw ? normalizeState(raw, now) : null;
+      const prem = premOf(st, prev);
+      const offline = kind === 'offline' && prev ? offlineReward(prev, now).coins : 0;
+      const r = claimAd(prem, kind as AdKind, requestId, now, offline);
+      if (!r.ok) throw new Error(`ad_${r.reason}`);
+      await $global.updateMyState({ prem: r.prem });
+      slog(`ad_${kind as string}`, '-', account);
+      return { status: 'granted' as const, prem: premView(r.prem, prev, now) };
+    });
+  }
+
+  /** 팝젬으로 골드 2배 30분 */
+  async gemBoost(): Promise<{ ok: boolean; prem?: PremView }> {
+    const account = $sender.account;
+    return $lock(`save:${account}`, async () => {
+      const now = Date.now();
+      const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+      const raw = saveOf(st);
+      const prev = raw ? normalizeState(raw, now) : null;
+      const next = spendGemBoost(premOf(st, prev), now);
+      if (!next) return { ok: false };
+      await $global.updateMyState({ prem: next });
+      return { ok: true, prem: premView(next, prev, now) };
+    });
+  }
+
+  /** VXShop 결제 웹훅 (Verse8이 부름): 저장과 같은 락, 같은 purchaseId는 한 번만 (sim/premium grantPurchase) */
+  async $onItemPurchased(p: { account: string; purchaseId: string; productId: string; quantity: number }): Promise<{ success: boolean }> {
+    if (!p || typeof p.account !== 'string' || typeof p.purchaseId !== 'string' || typeof p.productId !== 'string') return { success: false };
+    return $lock(`save:${p.account}`, async () => {
+      const st = ((await $global.getUserState(p.account)) || {}) as Record<string, unknown>;
+      const raw = saveOf(st);
+      const prev = raw ? normalizeState(raw, Date.now()) : null;
+      const r = grantPurchase(premOf(st, prev), p.productId, p.purchaseId, p.quantity);
+      // 이미 준 결제 id면 성공으로 답함 (Verse8이 다시 보내도 한 번만)
+      if (!r.ok) return { success: premOf(st, prev).buys.includes(p.purchaseId) };
+      await $global.updateUserState(p.account, { prem: r.prem });
+      slog(`buy_${p.productId}`, '-', p.account);
+      return { success: true };
     });
   }
 

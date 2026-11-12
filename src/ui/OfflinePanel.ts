@@ -1,5 +1,6 @@
 import type { Game } from '../core/Game';
-import { t } from '../i18n/i18n';
+import { t, type StrKey } from '../i18n/i18n';
+import type { Premium } from '../platform/Premium';
 import { addCoins } from '../sim/actions.ts';
 import { formatNum } from '../sim/format.ts';
 import { offlineReward } from '../sim/offline.ts';
@@ -18,10 +19,10 @@ export function durationText(sec: number): string {
 
 /**
  * 오프라인 보상: 게임 시작 때 한 번. offlineReward(저장된 lastSeen 기준)가 있으면 "자리 비운 동안" 창 → [받기].
- * 받으면 골드 + 공격 훈련(가장 높은 월드 훈련장) + 즉시 저장(lastSeen 갱신). 광고 2배 버튼은 계획 3.
+ * 받으면 골드 + 공격 훈련(가장 높은 월드 훈련장) + 즉시 저장(lastSeen 갱신). [광고 보고 2배] = 서버가 오프라인 골드만큼 더 허용(adClaim offline) → 골드·훈련 2배.
  * 창이 떠 있는 동안: 저장 보류(받기 전에 닫아도 다음에 다시 받게), 이동 잠금. 창을 띄웠으면 true.
  */
-export function showOfflineReward(game: Game, ui: HTMLElement, now: number): boolean {
+export function showOfflineReward(game: Game, ui: HTMLElement, now: number, prem: Premium | null = null): boolean {
   const r = offlineReward(game.state, now);
   if (r.seconds < MIN_SEC || !(r.coins > 0 || r.shots > 0)) return false;
   const atkGain = gainPerShot(game.state, 'atk', r.world) * r.shots;
@@ -35,12 +36,25 @@ export function showOfflineReward(game: Game, ui: HTMLElement, now: number): boo
   const coin = el('div', 'result-coins');
   if (r.coins > 0) coin.append(icon('coin', 'big'), el('span', '', `+${formatNum(r.coins)}`));
   coin.append(icon('bullet', 'big'), el('span', '', `+${formatNum(atkGain)}`));
-  card.append(coin, button(t('off.claim'), () => {
+  const give = (mult: number): void => {
     if (!wrap.isConnected) return;
     wrap.remove();
     game.saver.hold = false;
-    game.setState(train(addCoins(game.state, r.coins), 'atk', r.shots, r.world), true);
-  }, 'btn big'));
+    game.setState(train(addCoins(game.state, r.coins * mult), 'atk', r.shots * mult, r.world), true);
+  };
+  const row = el('div', 'reb-btns');
+  row.append(button(t('off.claim'), () => give(1), 'btn big'));
+  if (prem && r.coins > 0 && prem.adsShown('offline')) {
+    const ad = button(t('off.ad2x'), () => {
+      ad.disabled = true;
+      void prem.watch('offline').then((res) => {
+        if (res === 'granted') give(2);
+        else { ad.disabled = false; ad.textContent = t(`shop.ad.${res}` as StrKey); }
+      });
+    }, 'btn big pink');
+    row.append(ad);
+  }
+  card.append(coin, row);
   wrap.append(card);
   ui.append(wrap);
   return true;

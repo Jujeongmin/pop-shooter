@@ -284,3 +284,11 @@
 
 /* 탭·구매 단위: 마우스로 누른 뒤 남는 검은 포커스 테두리 없앰 (키보드 포커스는 유지) */
 .tabs button:focus:not(:focus-visible), .seg button:focus:not(:focus-visible) { outline: none; }
+
+/* 상점 (계획 3) */
+.shop-btn { display: inline-flex; align-items: center; gap: 4px; }
+.shop-btn .ico { width: 18px; height: 18px; }
+.boost-pill .val { color: #e08a00; }
+.shop-body { display: flex; flex-direction: column; gap: 8px; }
+.shop-msg { min-height: 1.2em; color: var(--ink); }
+.btn.buy .ico { width: 18px; height: 18px; vertical-align: -3px; margin-right: 3px; }

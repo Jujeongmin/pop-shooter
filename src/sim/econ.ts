@@ -23,6 +23,8 @@ export interface Premium {
   boostUntil: number;
   /** VX로 산 캐릭터 */
   paid: CharId[];
+  /** 광고로 받은 오프라인 보상 2배분: 다음 저장에서 그만큼 골드를 더 허용 (쓰고 나면 0) */
+  extra?: number;
 }
 
 export const MARGIN = 1.5;
@@ -125,12 +127,12 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
   for (let st = bestPrev + 1; st <= s.bestStage; st++) firsts += firstClearCoins(st);
   const best = Math.max(1, s.bestStage);
   const earn = gm * (firsts + (dt / RUN_GAP_SEC) * replayCoins(best) + (dt * replayCoins(best) * BALANCE.offline.goldRate) / stageTime(best));
-  const allowed = worth(prev) + MARGIN * earn + FLOOR;
+  const allowed = worth(prev) + MARGIN * earn + FLOOR + (prem.extra ?? 0);
   const lv = levelWorth(s);
   if (lv > allowed) return { ok: false, reason: 'levels' };
   if (s.coins + lv > allowed) {
     s = { ...s, coins: Math.max(0, allowed - lv) };
     clamped = true;
   }
-  return { ok: true, state: s, clamped, prem: prem2 };
+  return { ok: true, state: s, clamped, prem: { ...prem2, extra: 0 } };
 }

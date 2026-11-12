@@ -13,7 +13,7 @@ function multText(m: number): string {
 }
 
 export interface HudActions {
-  menu: (which: 'settings') => void;
+  menu: (which: 'settings' | 'shop') => void;
 }
 
 /** 광장 HUD: 위 = 코인·팝젬·환생 배율, 왼쪽 = 능력치. 시설은 들어가면 바로 동작(버튼 없음) */
@@ -41,7 +41,14 @@ export class Hud {
     this.gems = pill('gem');
     this.mult = pill('reb');
     const menu = el('div', 'hud-menu');
-    menu.append(button(t('hud.settings'), () => actions.menu('settings'), 'btn small'));
+    // 골드 2배 남은 시간 (켜져 있을 때만)
+    this.boostEl = el('div', 'pill boost-pill');
+    this.boostEl.append(icon('coin'), el('span', 'val', ''));
+    this.boostEl.hidden = true;
+    top.appendChild(this.boostEl);
+    const shop = button(t('hud.shop'), () => actions.menu('shop'), 'btn small shop-btn');
+    shop.prepend(icon('gem'));
+    menu.append(shop, button(t('hud.settings'), () => actions.menu('settings'), 'btn small'));
     top.appendChild(menu);
 
     const stats = el('div', 'hud-stats');
@@ -98,6 +105,20 @@ export class Hud {
       // 연사·골드는 지금 배율로 (처음 '+0%'가 '0% 오름'으로 읽혀서, 사용자 2026-11-12)
       setText(b.v, k === 'atk' ? `+${formatNum(v)}` : `×${multText(1 + Math.min(v, k === 'spd' ? BALANCE.train.spdMax : v) / 100)}`);
     }
+  }
+
+  private readonly boostEl: HTMLDivElement;
+
+  /** 골드 2배 남은 시간 (매 프레임 불러도 글자가 바뀔 때만 씀) */
+  boost(leftMs: number): void {
+    const on = leftMs > 0;
+    if (this.boostEl.hidden === on) this.boostEl.hidden = !on;
+    if (!on) return;
+    const s = Math.ceil(leftMs / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = String(s % 60).padStart(2, '0');
+    setText(this.boostEl.lastElementChild as HTMLElement, `×2 ${h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`}`);
   }
 
   setVisible(on: boolean): void {

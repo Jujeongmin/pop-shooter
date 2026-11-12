@@ -33,7 +33,7 @@ export function gearTiers(s: GameState): GearTiers {
 
 export type GameMode = 'hub' | 'training' | 'battle';
 export type FacilityKind = Facility['id'];
-export type MenuKind = 'settings';
+export type MenuKind = 'settings' | 'shop';
 
 /** 광장 이동 · 카메라 · (뒤 Task) 훈련·전투 흐름 */
 export class Game {
@@ -209,6 +209,7 @@ export class Game {
     this.hub.update(dt, this.stage.camera.position);
     for (const t of this.tickers) t(dt);
     this.hud.update(this.state);
+    this.hud.boost(this.state.boostUntil - Date.now());
     this.updateAvatar(dt);
     this.cam.update(dt, this.pos);
     // 카메라와 나 사이 구조물 반투명 (광장에서만)
