@@ -26,7 +26,7 @@ export class Hud {
   private readonly sps: HTMLSpanElement;
   private readonly dps: HTMLSpanElement;
   /** 훈련 (공격·연사·코인): 공격 막대 = 환생까지, 연사 막대 = 최대(초당 12발)까지, 코인 = 숫자만 (한도 없음) */
-  private readonly bars = new Map<TrainKind, { fill: HTMLDivElement; v: HTMLSpanElement }>();
+  private readonly bars = new Map<TrainKind, { fill: HTMLDivElement; v: HTMLSpanElement; sign: HTMLSpanElement }>();
 
   constructor(parent: HTMLElement, actions: HudActions) {
     this.root = el('div', 'hud');
@@ -71,10 +71,14 @@ export class Hud {
       const bar = el('div', 'tr-bar');
       const fill = el('div', 'tr-fill');
       bar.append(fill);
-      const v = el('span', 'tr-v', '+0%');
+      // 값 칸: 기호(+ ×)는 왼쪽, 숫자는 오른쪽 끝 (줄마다 칸 폭이 같아 위아래가 맞음, 사용자 2026-11-12)
+      const v = el('span', 'tr-v');
+      const sign = el('span', 'tr-sign', '+');
+      const num = el('span', 'tr-num', '0');
+      v.append(sign, num);
       r.append(el('span', 'tr-l', t(`tr.${k}`)), bar, v);
       tr.append(r);
-      this.bars.set(k, { fill, v });
+      this.bars.set(k, { fill, v: num, sign });
     }
     stats.append(tr);
 
@@ -97,13 +101,15 @@ export class Hud {
     for (const [k, b] of this.bars) {
       const v = trainValue(s, k);
       const goal = k === 'atk' ? rebirthReq(s) : k === 'spd' ? BALANCE.train.spdMax : 0;
-      b.fill.parentElement!.hidden = goal <= 0;
+      // 막대가 없는 줄도 칸은 남김 (값 칸이 왼쪽으로 밀려 줄이 안 맞던 것)
+      b.fill.parentElement!.style.visibility = goal <= 0 ? 'hidden' : '';
       if (goal > 0) {
         b.fill.style.transform = `scaleX(${Math.min(1, v / goal)})`;
         b.fill.classList.toggle('full', v >= goal);
       }
       // 연사·골드는 지금 배율로 (처음 '+0%'가 '0% 오름'으로 읽혀서, 사용자 2026-11-12)
-      setText(b.v, k === 'atk' ? `+${formatNum(v)}` : `×${multText(1 + Math.min(v, k === 'spd' ? BALANCE.train.spdMax : v) / 100)}`);
+      setText(b.sign, k === 'atk' ? '+' : '×');
+      setText(b.v, k === 'atk' ? formatNum(v) : multText(1 + Math.min(v, k === 'spd' ? BALANCE.train.spdMax : v) / 100));
     }
   }
 

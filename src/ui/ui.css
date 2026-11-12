@@ -274,7 +274,9 @@
 .tr-spd .tr-fill { background: #4fb3ff; }
 .tr-coin .tr-fill { background: #ffc928; }
 .tr-fill.full { box-shadow: inset 0 0 0 2px rgba(255,255,255,.7); }
-.tr-v { min-width: 44px; text-align: right; color: var(--ink); }
+.tr-v { width: 52px; display: flex; justify-content: space-between; align-items: baseline; color: var(--ink); }
+.tr-sign { color: var(--ink2); }
+.tr-num { text-align: right; }
 @media (max-width: 520px), (max-height: 520px) {
   .tabs button { font-size: 13px; padding: 7px 2px; }
   .tr-row { font-size: 11px; grid-template-columns: 30px 1fr auto; }
