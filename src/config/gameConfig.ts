@@ -4,10 +4,11 @@ import { CHARACTERS, PLAYER_CHARACTER } from './characters';
 
 const base = import.meta.env.BASE_URL;
 
-// 기본은 Blender 최적화 수정본 (tools/blender/optimize_glb.py). 비교용: ?rifle=original 이면 원본
-const rifleVariant = '_lod0';
-// 샷건·스나이퍼도 같은 Blender 최적화본(_lod0)이 기본. 비교용: ?guns=original
-const gunVariant = '_lod0';
+// 총 모델: 기본은 가벼운 Blender 최적화본 _lod1 (tools/blender/optimize_glb.py --tris 2500 --tex 512 --tex-orm 256 --tex-normal 512, 입력 = _lod0).
+// 광장에 총이 10자루 넘게 보여(진열대·NPC·다른 사람) 7000 삼각형 _lod0이 광장 삼각형의 1/3 (2026-11-12). 카메라가 멀어 겉모습 차이 없음.
+// 개발 서버 비교용: ?guns=lod0
+const gunVariant = import.meta.env.DEV && new URLSearchParams(location.search).get('guns') === 'lod0' ? '_lod0' : '_lod1';
+const rifleVariant = gunVariant;
 
 
 export const ASSETS = {
@@ -15,12 +16,12 @@ export const ASSETS = {
   character: CHARACTERS[PLAYER_CHARACTER].file,
   rifle: `${base}assets/models/weapon_toy_rifle${rifleVariant}.glb`,
   // Verse8 2D to 3D (Tripo) 생성본 (원본: art-src/glb-originals/static-3d-01a157c7…·01a157cd…, 파일명은 사용자 지정).
-  // _lod0 = tools/blender/optimize_glb.py (7000 삼각형, Color·Normal 1024², ORM 512²). 축·원점·크기는 원본과 같아 장착값 공용
+  // _lod0 = optimize_glb.py 7000 삼각형(Color·Normal 1024², ORM 512²), _lod1 = 2500 삼각형(512², ORM 256²). 축·원점·크기는 원본과 같아 장착값 공용
   shotgun: `${base}assets/models/pop_battle_shotgun${gunVariant}.glb`,
   sniper: `${base}assets/models/pop_battle_sniper${gunVariant}.glb`,
   // 권총·근접무기 (원본: static-3d-01a157ed… = 권총, 01a157f1… = 뿅망치)
   pistol: `${base}assets/models/pop_battle_pistol${gunVariant}.glb`,
-  melee: `${base}assets/models/pop_battle_melee${gunVariant}.glb`,
+  melee: `${base}assets/models/pop_battle_melee_lod0.glb`,
 } as const;
 
 export const CHARACTER = {

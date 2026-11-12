@@ -20,7 +20,8 @@ function makeGeo(n: GeoName): THREE.BufferGeometry {
     case 'cyl': return new THREE.CylinderGeometry(0.5, 0.5, 1, 16);
     case 'cone': return new THREE.ConeGeometry(0.5, 1, 16);
     case 'pyr': return new THREE.ConeGeometry(0.5, 1, 4);
-    case 'sph': return new THREE.SphereGeometry(0.5, 16, 12);
+    // 광장 장식 공 (나무·덤불, 100개 넘게 인스턴스): 16×12(352삼각형) → 14×9(224), 둥근 느낌 유지 (2026-11-12 삼각형 줄이기)
+    case 'sph': return new THREE.SphereGeometry(0.5, 14, 9);
     case 'hemi': return new THREE.SphereGeometry(0.5, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2);
     case 'taper': return new THREE.CylinderGeometry(0.35, 0.5, 1, 12);
     case 'oct': return new THREE.OctahedronGeometry(0.5);
