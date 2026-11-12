@@ -16,7 +16,7 @@ import { allowedChars, checkSave } from '../../src/sim/econ.ts';
 import { AD_KINDS, AD_LIMIT, buySkipRebirth, claimAd, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
 import type { CharId, GameState } from '../../src/sim/state.ts';
-import { autoDps, damagePerShot, skipRebirthGems } from '../../src/sim/actions.ts';
+import { autoDps, skipRebirthGems } from '../../src/sim/actions.ts';
 import {
   HUB_MAX_PLAYERS,
   HUB_TIMING,
@@ -33,7 +33,7 @@ import {
   type HubPacket,
 } from '../../src/net/shared/hub.ts';
 import { checkNickname } from '../../src/net/shared/nickFilter.ts';
-import { RANK_COLLECTION, RANK_TOP, rankKey, type RankBoard, type RankRow } from '../../src/net/shared/rank.ts';
+import { bestDps, RANK_COLLECTION, RANK_TOP, type RankBoard, type RankRow } from '../../src/net/shared/rank.ts';
 
 /** 저장 응답: 서버가 정한 프리미엄 값 + (잘렸으면) 코인 + (거절이면) 서버 저장 */
 interface SaveWriteResult {
@@ -282,9 +282,10 @@ export class Server {
       // 기록판 한 줄 (계정마다 하나, 항목당 문서 하나라 커지지 않음). 실패해도 저장은 그대로
       try {
         const nk = checkNickname(st.nick);
-        const pw = damagePerShot(saved);
-        const row = { acc: account, nick: nk.ok ? nk.value : '', rb: saved.rebirths, bs: saved.bestStage, pw, c: saved.char, k: rankKey(saved.rebirths, saved.bestStage, pw), t: now };
         const found = await $global.getCollectionItems(RANK_COLLECTION, { filters: [{ field: 'acc', operator: '==', value: account }], limit: 1 });
+        // 최고 DPS: 이 줄의 이전 최고와 지금 저장으로 계산한 DPS 중 큰 값 (사용자 2026-11-12)
+        const pw = bestDps((found[0] as Record<string, unknown> | undefined)?.pw, autoDps(saved));
+        const row = { acc: account, nick: nk.ok ? nk.value : '', rb: saved.rebirths, bs: saved.bestStage, pw, c: saved.char, k: pw, t: now };
         if (found[0]) await $global.updateCollectionItem(RANK_COLLECTION, { __id: found[0].__id, ...row });
         else await $global.addCollectionItem(RANK_COLLECTION, row);
       } catch { /* 기록판은 다음 저장 때 다시 */ }

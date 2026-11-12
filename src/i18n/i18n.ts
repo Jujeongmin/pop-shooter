@@ -246,7 +246,7 @@ const STRINGS = {
   'nick.err.rate': { en: 'Try again in {s}s', ko: '{s}초 뒤에 다시 바꿀 수 있어요', ja: '{s}秒後にもう一度', 'zh-TW': '{s}秒後再試', 'zh-CN': '{s}秒后再试' },
   'nick.err.net': { en: 'Server not reachable, try again', ko: '서버에 연결이 안 돼요. 다시 해 봐요', ja: 'サーバーに接続できません', 'zh-TW': '無法連線伺服器,請再試一次', 'zh-CN': '无法连接服务器,请再试一次' },
   'rank.title': { en: 'Leaderboard · World {w}', ko: '기록판 · 월드 {w}', ja: '記録ボード · ワールド{w}', 'zh-TW': '紀錄榜 · 世界{w}', 'zh-CN': '纪录榜 · 世界{w}' },
-  'rank.cols': { en: 'Rebirths · Best · Attack', ko: '환생 · 최고 · 공격력', ja: '転生 · 最高 · 攻撃力', 'zh-TW': '轉生 · 最佳 · 攻擊力', 'zh-CN': '转生 · 最佳 · 攻击力' },
+  'rank.cols': { en: 'Rebirths · Best · Top DPS', ko: '환생 · 최고 · 최고 DPS', ja: '転生 · 最高 · 最高DPS', 'zh-TW': '轉生 · 最佳 · 最高DPS', 'zh-CN': '转生 · 最佳 · 最高DPS' },
   'rank.mine': { en: 'My rank #{n}', ko: '내 순위 {n}위', ja: '自分の順位 {n}位', 'zh-TW': '我的排名 第{n}名', 'zh-CN': '我的排名 第{n}名' },
   'rank.none': { en: 'Clear a stage to get on the board!', ko: '스테이지를 깨면 기록판에 올라가요!', ja: 'ステージをクリアするとボードに載るよ!', 'zh-TW': '通關一關就能上榜!', 'zh-CN': '通关一关就能上榜!' },
   'rank.empty': { en: 'No records yet', ko: '아직 기록이 없어요', ja: 'まだ記録がありません', 'zh-TW': '還沒有紀錄', 'zh-CN': '还没有纪录' },
