@@ -4,12 +4,12 @@ Verse8 대시보드 VXShop에 아래 **상품 ID 그대로** 등록한다. 지�
 
 | 상품 ID | 내용 | 종류 | 비고 |
 |---|---|---|---|
-| `pass_x2` | 공격력 패스 ×2 (영구) | 1회 (Lifetime 1) | 지금보다 높은 단계는 아무거나 바로 구매 가능 |
-| `pass_x4` | 공격력 패스 ×4 | 1회 | 가장 높은 패스 하나만 적용 (높은 걸 사면 낮은 건 의미 없음 → 단계 사이 가격 차이를 너무 크지 않게) |
-| `pass_x8` | 공격력 패스 ×8 | 1회 | |
-| `pass_x16` | 공격력 패스 ×16 | 1회 | |
-| `pass_x32` | 공격력 패스 ×32 | 1회 | |
-| `pass_x64` | 공격력 패스 ×64 | 1회 | |
+| `pass_x2` | 공격력 패스 1단계 (피해 ×2, 영구) | 1회 (Lifetime 1) | 순서대로만 구매 (상점은 바로 다음 단계만 구매 버튼) |
+| `pass_x4` | 공격력 패스 2단계 (×2 추가, 합계 ×4) | 1회 | 단계마다 피해 ×2가 쌓임, 산 것이 버려지지 않음 |
+| `pass_x8` | 공격력 패스 3단계 (합계 ×8) | 1회 | |
+| `pass_x16` | 공격력 패스 4단계 (합계 ×16) | 1회 | |
+| `pass_x32` | 공격력 패스 5단계 (합계 ×32) | 1회 | |
+| `pass_x64` | 공격력 패스 6단계 (합계 ×64) | 1회 | 6단계 전부 4,600 VX |
 | `gems_s` | 팝젬 100개 | 반복 구매 | 수량(quantity)만큼 곱해 지급 |
 | `gems_m` | 팝젬 550개 | 반복 구매 | |
 | `gems_l` | 팝젬 1200개 | 반복 구매 | |
@@ -29,22 +29,22 @@ Verse8 대시보드 VXShop에 아래 **상품 ID 그대로** 등록한다. 지�
 1. Verse8 에디터에서 서버 재배포 → 게임 새로고침.
 2. HUD [상점] → 각 탭 가격이 대시보드 값으로 보이는지.
 3. 팝젬 묶음 하나 구매 → 15초 안에 팝젬이 늘어나는지, 새로고침 뒤에도 유지되는지.
-4. 공격력 패스 ×2 구매 → ×2는 '보유', 더 높은 단계는 계속 살 수 있는지, 피해가 2배인지.
+4. 공격력 패스 1단계 구매 → 1단계 '보유', 2단계만 구매 버튼, 3단계부터 '이전 단계 먼저', 피해가 2배인지.
 5. 무료 탭 광고 → 골드 2배 시간이 HUD에 뜨는지, 하루 선물로 팝젬 +5.
 6. 1분 넘게 끄고 다시 켜서 오프라인 창 [광고 보고 2배] → 골드·훈련이 2배로 들어오고 저장이 잘리지 않는지.
 
 ## 등록 양식 값 (복사해서 붙여 넣기)
 
-공통: Product ID는 정확히 같게. Price는 제안값(사용자 확정, 100 VX ≈ $1). Stock Quantity는 넣을 수 있는 가장 큰 값(0이 되면 판매 중단). Metadata 비움(게임이 안 읽음). Period Limit·Time-Limited Sale은 쓰지 않음. 이미지: `art-src/vxshop/<Product ID>.png` (SHONI·BAM은 팝배틀 때 쓰던 이미지).
+공통: Product ID는 정확히 같게. Price는 제안값(100 VX ≈ $1, VXShop 최저 100). 공격력 패스는 키보드 탈출 Speed Multiplier Tier 방식(순서 구매, 싼 첫 단계)으로 1단계 100 VX부터. Stock Quantity는 넣을 수 있는 가장 큰 값(0이 되면 판매 중단). Metadata 비움(게임이 안 읽음). Period Limit·Time-Limited Sale은 쓰지 않음. 이미지: `art-src/vxshop/<Product ID>.png` (SHONI·BAM은 팝배틀 때 쓰던 이미지).
 
 ### pass_x2
 
-- Price (VX): 300
+- Price (VX): 100
 - Purchase Constraints: Lifetime Limit 1
 
 Product Name
 ```
-공격력 패스 ×2 / Attack Pass ×2
+공격력 패스 1단계 / Attack Pass Tier 1
 ```
 
 Description
@@ -55,82 +55,82 @@ Permanent damage ×2
 
 ### pass_x4
 
-- Price (VX): 500
+- Price (VX): 200
 - Purchase Constraints: Lifetime Limit 1
 
 Product Name
 ```
-공격력 패스 ×4 / Attack Pass ×4
+공격력 패스 2단계 / Attack Pass Tier 2
 ```
 
 Description
 ```
-피해 영구 ×4
-Permanent damage ×4
+피해 ×2 추가 (합계 ×4), 1단계 보유 필요
+Damage ×2 more (total ×4), needs Tier 1
 ```
 
 ### pass_x8
 
-- Price (VX): 900
+- Price (VX): 400
 - Purchase Constraints: Lifetime Limit 1
 
 Product Name
 ```
-공격력 패스 ×8 / Attack Pass ×8
+공격력 패스 3단계 / Attack Pass Tier 3
 ```
 
 Description
 ```
-피해 영구 ×8
-Permanent damage ×8
+피해 ×2 추가 (합계 ×8), 2단계 보유 필요
+Damage ×2 more (total ×8), needs Tier 2
 ```
 
 ### pass_x16
 
-- Price (VX): 1500
+- Price (VX): 700
 - Purchase Constraints: Lifetime Limit 1
 
 Product Name
 ```
-공격력 패스 ×16 / Attack Pass ×16
+공격력 패스 4단계 / Attack Pass Tier 4
 ```
 
 Description
 ```
-피해 영구 ×16
-Permanent damage ×16
+피해 ×2 추가 (합계 ×16), 3단계 보유 필요
+Damage ×2 more (total ×16), needs Tier 3
 ```
 
 ### pass_x32
 
-- Price (VX): 2500
+- Price (VX): 1200
 - Purchase Constraints: Lifetime Limit 1
 
 Product Name
 ```
-공격력 패스 ×32 / Attack Pass ×32
+공격력 패스 5단계 / Attack Pass Tier 5
 ```
 
 Description
 ```
-피해 영구 ×32
-Permanent damage ×32
+피해 ×2 추가 (합계 ×32), 4단계 보유 필요
+Damage ×2 more (total ×32), needs Tier 4
 ```
 
 ### pass_x64
 
-- Price (VX): 4000
+- Price (VX): 2000
 - Purchase Constraints: Lifetime Limit 1
 
 Product Name
 ```
-공격력 패스 ×64 / Attack Pass ×64
+공격력 패스 6단계 / Attack Pass Tier 6
 ```
 
 Description
 ```
-피해 영구 ×64
-Permanent damage ×64
+피해 ×2 추가 (합계 ×64), 5단계 보유 필요
+Damage ×2 more (total ×64), needs Tier 5
 ```
 
 ### gems_s
