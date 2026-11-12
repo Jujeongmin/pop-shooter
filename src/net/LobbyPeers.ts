@@ -34,6 +34,8 @@ export interface LobbyPeersContext {
   readonly targets: readonly THREE.Object3D[];
   /** 내 위치 (가까운 사람부터 그리기) */
   readonly me?: { readonly x: number; readonly z: number };
+  /** 게임 카메라 (화면 밖 사람은 애니메이션 계산을 건너뜀) */
+  readonly camera?: THREE.Camera;
 }
 
 /**
@@ -81,6 +83,10 @@ const LABEL_HEIGHT = 0.4;
 const GLYPH_WAIT_MS = 2500;
 
 const _muzzle = new THREE.Vector3();
+/** 화면 안 판정 (지난 프레임 카메라). 반지름에 여유를 둬 화면 가장자리 그림자·이름표가 끊기지 않게 */
+const _frustum = new THREE.Frustum();
+const _pv = new THREE.Matrix4();
+const _sphere = new THREE.Sphere(new THREE.Vector3(), 3);
 const _hit = new THREE.Vector3();
 const _spot = { x: 0, z: 0, yaw: 0 };
 
@@ -249,6 +255,8 @@ export class LobbyPeers {
     this.pickT -= dt;
     if (this.pickT <= 0) { this.pickT = PICK_SEC; this.pickDrawn(); }
     const targets = this.ctx.targets;
+    const cam = this.ctx.camera;
+    if (cam) _frustum.setFromProjectionMatrix(_pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
     // 고정 배열 index 순회 (매 프레임 반복자 객체 없음)
     const list = this.list;
     for (let li = 0; li < list.length; li++) {
@@ -278,8 +286,9 @@ export class LobbyPeers {
       label.visible = true;
       const me = this.ctx.me;
       item.dist2 = me ? (p.pos.x - me.x) ** 2 + (p.pos.z - me.z) ** 2 : 0;
-      if (!item.drawn) {
-        // 그리기 예산 밖: 캐릭터·오라 숨기고 이름표만
+      if (cam) _sphere.center.set(p.pos.x, 1, p.pos.z);
+      if (!item.drawn || (cam && !_frustum.intersectsSphere(_sphere))) {
+        // 그리기 예산 밖 또는 화면 밖: 캐릭터·오라 숨기고 이름표만 (화면 밖이면 애니메이션·발사 연출 계산도 안 함, 2026-11-12 16명 성능)
         item.avatar.root.visible = false;
         item.aura.root.visible = false;
         label.position.set(p.pos.x, PLATE_Y + LABEL_LIFT, p.pos.z);
