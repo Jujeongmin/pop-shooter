@@ -5,7 +5,7 @@ import { GUNS } from '../sim/guns.ts';
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { HitFx } from '../fx/HitFx';
-import { highestWorld, shotsPerSec } from '../sim/actions.ts';
+import { shotsPerSec } from '../sim/actions.ts';
 import { gainPerShot, train } from '../sim/training.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
@@ -111,7 +111,7 @@ export class TrainingRange {
   private flush(): void {
     if (!this.active || this.pendingShots <= 0) return;
     const g = this.game;
-    const world = highestWorld(g.state);
+    const world = g.world;
     const gain = gainPerShot(g.state, 'atk', world) * this.pendingShots;
     g.setState(train(g.state, 'atk', this.pendingShots, world));
     this.pendingShots = 0;
@@ -169,7 +169,7 @@ export class TrainingRange {
     this.hiddenAt = 0;
     if (shots <= 0) return;
     const g = this.game;
-    const world = highestWorld(g.state);
+    const world = g.world;
     const gain = gainPerShot(g.state, 'atk', world) * shots;
     g.setState(train(g.state, 'atk', shots, world), true);
     _aim.set(RANGE_SPOT.x, 2.8, RANGE_SPOT.z - 3);

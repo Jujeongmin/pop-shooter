@@ -1,6 +1,6 @@
 import { t } from '../i18n/i18n.ts';
 
-export type FacilityId = 'range' | 'treadmill' | 'fountain' | 'upgrade' | 'guns' | 'altar' | 'portal' | 'chars';
+export type FacilityId = 'range' | 'treadmill' | 'fountain' | 'upgrade' | 'guns' | 'altar' | 'portal' | 'chars' | 'travel';
 
 export interface Facility {
   id: FacilityId;
@@ -33,6 +33,8 @@ export const FOUNTAIN_SPOTS: readonly number[] = [0, -1.1, 1.1];
 /** 포털 고리 중심 (구역은 그 앞 PORTAL_SPOT) */
 export const PORTAL_GATE = { x: 0, z: -10 };
 export const PORTAL_SPOT = { x: 0, z: -6.5 };
+/** 월드 이동 정류장 (북서쪽 구석, 사격장 과녁 뒤). 열린 월드 광장으로 이동 (사용자 2026-11-12: 월드마다 광장 따로) */
+export const TRAVEL_SPOT = { x: -12, z: -11.5 };
 
 export const WORLD1_FACILITIES: readonly Facility[] = [
   { id: 'range', x: RANGE_SPOT.x, z: RANGE_SPOT.z, radius: 2.4, label: t('fac.range') },
@@ -43,6 +45,7 @@ export const WORLD1_FACILITIES: readonly Facility[] = [
   { id: 'altar', x: -8, z: 11, radius: 2.6, label: t('fac.altar') },
   { id: 'chars', x: 8, z: 11, radius: 2.4, label: t('fac.chars') },
   { id: 'portal', x: PORTAL_SPOT.x, z: PORTAL_SPOT.z, radius: 2.4, label: t('fac.portal', { w: 1 }) },
+  { id: 'travel', x: TRAVEL_SPOT.x, z: TRAVEL_SPOT.z, radius: 2.2, label: t('fac.travel') },
 ];
 
 export function nearestFacility(x: number, z: number, list: readonly Facility[]): Facility | null {

@@ -4,7 +4,6 @@ import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t, type StrKey } from '../i18n/i18n';
 import { formatNum } from '../sim/format.ts';
-import { highestWorld } from '../sim/actions.ts';
 import type { GameState } from '../sim/state.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { stageLabel } from '../sim/stages.ts';
@@ -240,7 +239,7 @@ export class UpgradePanel {
       const p = planMachine(r.kind, s, this.unit);
       const show = p.n > 0 ? p.n : this.unit === 'max' ? 1 : this.unit;
       const after: GameState = r.kind === 'atk' ? { ...s, mAtk: lv + show } : r.kind === 'spd' ? { ...s, mSpd: lv + show } : { ...s, mCoin: lv + show };
-      const w = highestWorld(s);
+      const w = this.game.world;
       const unit = r.kind === 'atk' ? '' : '%';
       const gv = (x: GameState): string => (r.kind === 'atk' ? formatNum(gainPerShot(x, r.kind, w)) : pct(gainPerShot(x, r.kind, w)));
       setText(r.lv, t('up.lv', { n: lv }));

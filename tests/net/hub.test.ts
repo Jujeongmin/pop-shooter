@@ -24,19 +24,20 @@ test('room ids carry the world number', () => {
   assert.equal(hubRoomId(1, 3), 'w1-3');
   assert.ok(isHubRoom('w1-1'));
   assert.ok(isHubRoom('w1-9999'));
-  for (const bad of ['lb-1', 'w0-1', 'w2-1', 'w4-9999', 'w1-', 'w1-12345', 'pb-abc', '__no_room__', null, undefined]) assert.ok(!isHubRoom(bad), String(bad));
+  for (const bad of ['lb-1', 'w0-1', 'w9-1', 'w1-', 'w1-12345', 'pb-abc', '__no_room__', null, undefined]) assert.ok(!isHubRoom(bad), String(bad));
   assert.equal(hubWorldOf('w1-7'), 1);
-  assert.equal(hubWorldOf('w2-7'), 0); // 닫힌 월드
-  assert.deepEqual(HUB_OPEN_WORLDS, [1]);
-  assert.ok(isHubWorld(1) && !isHubWorld(2) && !isHubWorld(0));
+  assert.equal(hubWorldOf('w8-7'), 8);
+  assert.equal(hubWorldOf('w9-7'), 0); // 없는 월드
+  assert.deepEqual(HUB_OPEN_WORLDS, [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.ok(isHubWorld(1) && isHubWorld(8) && !isHubWorld(9) && !isHubWorld(0));
   assert.equal(hubWorldOf('lb-1'), 0);
 });
 
 test('field validation', () => {
   assert.equal(sanitizeHubField('c', 'pink'), 'pink');
   assert.equal(sanitizeHubField('c', 'nope'), undefined);
-  assert.equal(sanitizeHubField('g', 15), 15);
-  assert.equal(sanitizeHubField('g', 16), undefined);
+  assert.equal(sanitizeHubField('g', 31), 31);
+  assert.equal(sanitizeHubField('g', 32), undefined);
   assert.equal(sanitizeHubField('g', 2.5), undefined);
   assert.equal(sanitizeHubField('r', 0), 0);
   assert.equal(sanitizeHubField('r', -1), undefined);

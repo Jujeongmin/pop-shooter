@@ -31,6 +31,7 @@ import { SettingsPanel } from './ui/SettingsPanel';
 import { UpgradePanel } from './ui/UpgradePanel';
 import { GunPanel } from './ui/GunPanel';
 import { RebirthPanel } from './ui/RebirthPanel';
+import { TravelPanel } from './ui/TravelPanel';
 import { CharacterPanel } from './ui/CharacterPanel';
 import { showOfflineReward } from './ui/OfflinePanel';
 import { Premium } from './platform/Premium';
@@ -69,9 +70,10 @@ async function boot(): Promise<void> {
   portal.onEnterRun = () => window.setTimeout(() => {
     if (!portal.inside || battle.active) return;
     portal.release();
-    battle.start(1);
+    battle.start(game.world);
   }, 1200);
   new MentorNpcs(game);
+  new TravelPanel(game, ui, callout);
   new UpgradePanel(game, ui, callout, float);
   new GunPanel(game, ui, callout, float);
   const rebirthPanel = new RebirthPanel(game, ui, callout, float);

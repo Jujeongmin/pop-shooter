@@ -6,6 +6,14 @@ import { stageLabel } from '../sim/stages.ts';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { PORTAL_GATE, PORTAL_SPOT, WORLD1_FACILITIES } from '../world/facilities';
 
+/** 이 광장 월드 포털 이름 + 이 월드 안 최고 기록 */
+function portalTitle(game: Game): string {
+  const w = game.world;
+  const first = (w - 1) * BALANCE.stage.perWorld;
+  const best = Math.min(game.state.bestStage, first + BALANCE.stage.perWorld);
+  return best > first ? `${t('fac.portal', { w })} · ${t('portal.best', { s: stageLabel(best) })}` : t('fac.portal', { w });
+}
+
 /**
  * 월드 포털 구역: 들어가면 포털 앞으로 폴짝 → 착지 연출. 연속 도전(전투)은 onEnterRun에 붙임.
  */
@@ -30,8 +38,8 @@ export class PortalZone {
       spot: PORTAL_SPOT,
       face: PORTAL_GATE,
       text: () => ({
-        title: game.state.bestStage > 0 ? `${t('fac.portal', { w: 1 })} · ${t('portal.best', { s: stageLabel(Math.min(game.state.bestStage, BALANCE.stage.perWorld)) })}` : t('fac.portal', { w: 1 }),
-        big: t('portal.big', { s: stageLabel(1) }),
+        title: portalTitle(game),
+        big: t('portal.big', { s: stageLabel((game.world - 1) * BALANCE.stage.perWorld + 1) }),
       }),
     });
     this.zone.onLanded = () => this.onEnterRun?.();

@@ -53,9 +53,10 @@ export class ToyBoss {
   private throwT = 1;
   private clock = Math.random() * 10;
 
-  constructor(stage: number) {
+  /** tints = 월드 테마 보스 색 (없으면 기본) */
+  constructor(stage: number, tints: readonly string[] = TINTS) {
     this.kind = toyKind(stage);
-    const tint = TINTS[(stage - 1) % TINTS.length]!;
+    const tint = tints[(stage - 1) % tints.length]!;
     this.animate = { robot: () => this.robot(tint), soldier: () => this.soldier(tint), jack: () => this.jack(tint), bear: () => this.bear() }[this.kind]();
     if (isBoss(stage)) this.crown();
     // 키 맞추기: 조립한 모양의 실제 높이로

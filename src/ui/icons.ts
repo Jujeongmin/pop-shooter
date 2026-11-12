@@ -89,12 +89,19 @@ const SVG: Record<string, string> = {
   check: `
     <circle cx="32" cy="32" r="27" fill="#5ccf6b" ${S}/>
     <path d="M20 33l8 8 16-17" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`,
+  globe: `
+    <circle cx="32" cy="32" r="26" fill="#6fc3ff" ${S}/>
+    <path d="M18 20c6 2 8 8 4 12s2 10 8 10M40 12c-3 5 2 9 7 9s6 6 3 10M36 50c0-6 6-8 10-6" fill="#7fd78a" stroke="#3f9e5a" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="24" cy="18" rx="7" ry="3.5" fill="#fff" opacity=".7" transform="rotate(-30 24 18)"/>`,
   cross: `
     <circle cx="32" cy="32" r="27" fill="#ff5e6a" ${S}/>
     <path d="M22 22l20 20M42 22L22 42" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>`,
 };
 
-export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'heart' | 'lock' | 'close' | 'target' | 'rapid' | 'cointarget' | 'gloves' | 'goggles' | 'piggy' | 'medal';
+export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'heart' | 'lock' | 'close' | 'target' | 'rapid' | 'cointarget' | 'gloves' | 'goggles' | 'piggy' | 'medal' | 'globe';
+
+/** 그림 파일 없이 SVG로만 그리는 아이콘 (없는 파일 요청 안 함) */
+const SVG_ONLY: ReadonlySet<string> = new Set(['globe']);
 
 const BASE = `${import.meta.env.BASE_URL}ui/icons/`;
 
@@ -105,6 +112,10 @@ const BASE = `${import.meta.env.BASE_URL}ui/icons/`;
 export function icon(name: IconName, cls = ''): HTMLSpanElement {
   const s = document.createElement('span');
   s.className = `ico ico-${name}${cls ? ` ${cls}` : ''}`;
+  if (SVG_ONLY.has(name)) {
+    s.innerHTML = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${SVG[name]}</svg>`;
+    return s;
+  }
   const img = document.createElement('img');
   img.src = `${BASE}${name}.webp`;
   img.alt = '';

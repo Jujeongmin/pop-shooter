@@ -1,16 +1,10 @@
-// 표가 스펙 4.7 목표 범위 안인지 (npm run sim 출력 형식을 직접 계산): 0 = 통과
+// 진행이 막히지 않는지만 확인 (사용자 2026-11-12: 플레이 시간 목표에 맞춰 조정하지 않음). 0 = 모든 월드 대장까지 도달
 import { execFileSync } from 'node:child_process';
-const out = execFileSync('node', ['tools/sim/simulate.ts'], { encoding: 'utf8' });
-const min = (label: string): number => {
-  const m = out.match(new RegExp(String.raw`^${label}\s+(\d+)h(\d+)m`, 'm'));
-  return m ? Number(m[1]) * 60 + Number(m[2]) : Infinity;
-};
-const ranges: [string, number, number][] = [['1-1', 0, 2], ['1-10', 20, 45], ['2-10', 150, 210], ['3-10', 300, 420], ['4-10', 600, 780]];
+const out = execFileSync('node', ['tools/sim/simulate.ts', '--hours', '150'], { encoding: 'utf8' });
 let ok = true;
-for (const [l, lo, hi] of ranges) {
-  const v = min(l);
-  const pass = v >= lo && v <= hi;
-  ok &&= pass;
-  console.log(`${l} ${v}min [${lo}-${hi}] ${pass ? 'ok' : 'OUT'}`);
+for (let w = 1; w <= 8; w++) {
+  const m = out.match(new RegExp(String.raw`^${w}-10\s+(\d+)h(\d+)m`, 'm'));
+  ok &&= !!m;
+  console.log(`${w}-10 ${m ? `${m[1]}h${m[2]}m` : 'not reached'}`);
 }
 process.exit(ok ? 0 : 1);

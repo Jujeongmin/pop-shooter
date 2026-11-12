@@ -3,7 +3,6 @@ import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
-import { highestWorld } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { TapLimiter } from '../sim/tapLimiter.ts';
 import { gainPerShot, spdMaxed, train, type TrainKind } from '../sim/training.ts';
@@ -124,7 +123,7 @@ export class Stations {
   private flush(st: Station): void {
     if (st.pending <= 0) return;
     const g = this.game;
-    const world = highestWorld(g.state);
+    const world = g.world;
     const gain = gainPerShot(g.state, st.kind, world) * st.pending;
     g.setState(train(g.state, st.kind, st.pending, world));
     st.pending = 0;
@@ -171,7 +170,7 @@ export class Stations {
     const n = BALANCE.train.actionsPerSec * sec;
     if (n <= 0) return;
     const g = this.game;
-    const world = highestWorld(g.state);
+    const world = g.world;
     const gain = gainPerShot(g.state, st.kind, world) * n;
     g.setState(train(g.state, st.kind, n, world), true);
     const at = st.kind === 'spd' ? TREADMILL : FOUNTAIN;

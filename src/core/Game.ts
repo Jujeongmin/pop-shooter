@@ -15,6 +15,8 @@ import { HUB_SPAWN, nearestFacility, type Facility } from '../world/facilities';
 import type { BrickName, KitModel } from '../world/kit';
 import { moveWithColliders } from '../world/movement';
 import { World1Hub } from '../world/World1Hub';
+import { themeOf } from '../world/worldThemes';
+import { highestWorld } from '../sim/actions.ts';
 import { Controls, type Tap } from './Controls';
 import { t } from '../i18n/i18n';
 import type { Stage3D } from './Stage3D';
@@ -97,7 +99,10 @@ export class Game {
     this.saver = new AutoSaver(() => this.state, save.account, save.cloud);
     this.saver.start();
     this.cam = new FollowCamera(stage.camera);
-    this.hub = new World1Hub(kit, assets.guns);
+    // 시작 광장 = 열린 가장 높은 월드 (위치는 저장 안 함)
+    const w0 = highestWorld(state);
+    this.hub = new World1Hub(kit, assets.guns, w0);
+    this.applySky(w0);
     stage.scene.add(this.hub.root);
     this.hub.setBest(state.bestStage);
     this.avatar = new Avatar(assets, state.char, GUNS[state.gun]!);
@@ -141,6 +146,38 @@ export class Game {
     if (!this.state.chars.includes(c) || c === this.state.char) return;
     this.rebuildAvatar(c, this.state.gun);
     this.setState({ ...this.state, char: c }, true);
+  }
+
+  /** 지금 광장 월드 (1~8): 훈련장 등급·포털 월드·광장 멀티 방 */
+  get world(): number {
+    return this.hub.world;
+  }
+
+  private readonly worldListeners: ((w: number) => void)[] = [];
+
+  onWorldChange(fn: (w: number) => void): void {
+    this.worldListeners.push(fn);
+  }
+
+  private applySky(w: number): void {
+    const sky = themeOf(w).sky;
+    (this.stage.scene.background as THREE.Color).set(sky);
+    this.stage.scene.fog?.color.set(sky);
+  }
+
+  /**
+   * 다른 월드 광장으로 이동 (열린 월드만): 바깥 꾸미기·하늘을 바꾸고 시작 지점으로.
+   * 해제된 꾸미기는 가림 투명 대상에서 뺌 (가림 대상에 남으면 해제된 geometry를 레이캐스트)
+   */
+  setWorld(w: number): void {
+    if (w === this.hub.world || w < 1 || w > highestWorld(this.state)) return;
+    const old = this.hub.setWorld(w);
+    if (old) this.occlusion.unregister(old);
+    this.applySky(w);
+    this.placeAt(HUB_SPAWN.x, HUB_SPAWN.z, Math.PI);
+    this.cam.yaw = 0;
+    this.hub.setBest(this.state.bestStage);
+    for (const fn of this.worldListeners) fn(w);
   }
 
   onTick(fn: (dt: number) => void): void {

@@ -12,7 +12,7 @@ test('gun needs world unlocked', () => {
   const rich = { ...newState(0), coins: 1e30, gun: 3 };
   assert.equal(buyNextGun(rich), null);
   assert.equal(buyNextGun({ ...rich, bestStage: 10 })!.gun, 4);
-  assert.equal(buyNextGun({ ...newState(0), coins: 1e300, gun: 15, bestStage: 40 }), null);
+  assert.equal(buyNextGun({ ...newState(0), coins: 1e300, gun: 31, bestStage: 80 }), null);
 });
 
 test('clearStage first and replay', () => {

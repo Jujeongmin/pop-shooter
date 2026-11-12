@@ -8,11 +8,11 @@ test('loadSave corrupt', () => {
   assert.deepEqual(normalizeState('not json', 5), newState(5));
   assert.deepEqual(normalizeState(null, 5), newState(5));
   assert.deepEqual(normalizeState([1, 2], 5), newState(5));
-  const r = normalizeState({ v: 2, coins: -3, gun: 99, bestStage: 400, chars: ['blue', 'zzz'], char: 'zzz', mAtk: 2.7 }, 5);
+  const r = normalizeState({ v: 2, coins: -3, gun: 99, bestStage: 800, chars: ['blue', 'zzz'], char: 'zzz', mAtk: 2.7 }, 5);
   assert.equal(r.coins, 0);
   assert.equal(r.mAtk, 2);
-  assert.equal(r.gun, 15);
-  assert.equal(r.bestStage, 40);
+  assert.equal(r.gun, 31);
+  assert.equal(r.bestStage, 80);
   assert.deepEqual(r.chars, ['blue']);
   assert.equal(r.char, 'blue');
   assert.equal(normalizeState({ v: 2, coins: Infinity }, 5).coins, 0);

@@ -5,9 +5,9 @@
 /** 광장 인스턴스 정원 */
 export const HUB_MAX_PLAYERS = 8;
 /** 월드 수 (balance.ts stage.worlds). 룸 id에는 월드 번호를 둠 */
-export const HUB_WORLDS = 4;
+export const HUB_WORLDS = 8;
 /** 지금 광장이 열린 월드 (서버가 이 밖의 월드 룸은 광장으로 치지 않음 → 장부 문서·룸이 마구 생기지 않게). 월드를 열 때 여기에 추가 */
-export const HUB_OPEN_WORLDS: readonly number[] = [1];
+export const HUB_OPEN_WORLDS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
 export function hubRoomId(world: number, n: number): string {
   return `w${world}-${n}`;
@@ -79,6 +79,7 @@ export const HUB_SNAPS: ReadonlyArray<{ x: number; z: number; r: number; reach: 
   { x: 0, z: -6.5, r: 1, reach: 4 }, // 포털
   { x: -12.6, z: 6.8, r: 2.2, reach: 5 }, // 러닝머신 세 대 (연사)
   { x: -7.6, z: 5.6, r: 1.6, reach: 5 }, // 동전 분수 세 자리 (골드 보너스)
+  { x: -12, z: -11.5, r: 1, reach: 4 }, // 월드 이동 정류장
 ];
 
 /**
@@ -94,8 +95,8 @@ export const HUB_STATUSES: readonly HubStatus[] = ['hub', 'training', 'battle'];
 /** 캐릭터 id (sim/state.ts CHAR_IDS와 같음 — 테스트가 확인) */
 export const HUB_CHARS = ['blue', 'yellow', 'red', 'pink', 'white', 'black'] as const;
 export type HubChar = (typeof HUB_CHARS)[number];
-/** 총 index 범위 (balance.ts gun.count = 16) */
-export const HUB_GUN_COUNT = 16;
+/** 총 index 범위 (balance.ts gun.count = 32) */
+export const HUB_GUN_COUNT = 32;
 /** 환생 횟수 상한 (sim/normalize.ts와 같은 1e9) */
 export const HUB_MAX_REBIRTHS = 1e9;
 

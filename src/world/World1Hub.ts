@@ -1,23 +1,26 @@
 import { t } from '../i18n/i18n';
 import * as THREE from 'three';
-import { BrickBatch, BRICK_SCALE, type BrickName, type KitModel } from './kit';
+import { type BrickName, type KitModel } from './kit';
+import { HubDecor } from './HubDecor';
+import { themeOf } from './worldThemes';
 import { disposeLabel, makeLabel } from './labels';
 import type { Collider } from './movement';
 import { BALANCE } from '../sim/balance.ts';
 import { stageLabel } from '../sim/stages.ts';
 import type { GunModel } from '../sim/guns.ts';
-import { buildAltar, buildFountain, buildGunShop, buildRangeBooths, buildTreadmill, buildUpgrade, buildWardrobe, type FountainProps, type TreadmillProps } from './HubFacilities';
+import { buildAltar, buildFountain, buildGunShop, buildRangeBooths, buildTravel, buildTreadmill, buildUpgrade, buildWardrobe, type FountainProps, type TreadmillProps } from './HubFacilities';
 import { ToyBuilder } from './HubProps';
 import { HUB_BOUNDS, PORTAL_GATE, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
 
-/** 이 광장 월드의 스테이지 수 (포털 기록은 월드 1 안에서만) */
+/** 월드 하나의 스테이지 수 (포털 기록은 이 광장 월드 안에서만) */
 const PER_WORLD = BALANCE.stage.perWorld;
 /** 3D 이름표가 흐려지기 시작·사라지는 카메라 거리(m) */
 const LABEL_FAR = 11;
 const LABEL_NEAR = 7;
 
 /**
- * 월드 1 광장 "장난감 마을": 팝배틀 브릭 키트 + 임시 도형 시설.
+ * 월드 광장: 시설(사격장·러닝머신·동전 분수·상점·제단·탈의실·포털·월드 이동)은 모든 월드가 같은 자리,
+ * 바닥·울타리·바깥 꾸미기는 월드마다 다름 (HubDecor, setWorld로 바꿈. 사용자 2026-11-12: 월드마다 광장 따로).
  * 이 클래스가 만든 geometry·material·label은 dispose()에서 해제. 키트 지오메트리·머티리얼은 공유라 해제 안 함.
  */
 export class World1Hub {
@@ -40,13 +43,19 @@ export class World1Hub {
   treadmill!: TreadmillProps;
   fountain!: FountainProps;
 
-  constructor(kit: Record<BrickName, KitModel>, guns: Record<GunModel, THREE.Object3D> | null = null) {
+  /** 지금 광장 월드 (1~8) */
+  world = 1;
+  private decor: HubDecor;
+  private readonly kit: Record<BrickName, KitModel>;
+  private best = 0;
+
+  constructor(kit: Record<BrickName, KitModel>, guns: Record<GunModel, THREE.Object3D> | null = null, world = 1) {
     this.guns = guns;
+    this.kit = kit;
+    this.world = world;
+    this.decor = new HubDecor(themeOf(world), kit);
+    this.root.add(this.decor.root);
     this.root.add(this.toys.root);
-    this.buildGround();
-    const bricks = new BrickBatch();
-    this.buildTown(bricks);
-    this.root.add(bricks.build(kit));
     this.buildRange();
     this.buildFacilities();
     this.buildPortal();
@@ -78,128 +87,6 @@ export class World1Hub {
     this.root.add(s);
     this.labels.push(s);
     return s;
-  }
-
-  private buildGround(): void {
-    const flat = (geo: THREE.BufferGeometry, color: string, y: number, x = 0, z = 0): void => {
-      this.mesh(geo, color, x, y, z).castShadow = false;
-    };
-    const { hx, hz } = HUB_BOUNDS;
-    flat(new THREE.BoxGeometry(220, 1, 220), '#8fcf84', -0.5);
-    // 울타리 안 광장 바닥 + 길 (스폰 → 포털, 가로 길)
-    flat(new THREE.BoxGeometry(hx * 2 + 1, 0.04, hz * 2 + 1), '#a8de98', 0.02);
-    flat(new THREE.BoxGeometry(4, 0.05, 20), '#ffe2b0', 0.03, 0, 1);
-    flat(new THREE.BoxGeometry(24, 0.05, 3.4), '#ffe2b0', 0.031, 0, 1);
-    flat(new THREE.CylinderGeometry(3.6, 3.6, 0.06, 40), '#ffe2b0', 0.032, 0, 6);
-  }
-
-  /** 울타리로 둘러싼 광장 + 바깥 집·나무 벽 + 먼 언덕 (빈 들판·지평선이 안 보이게) */
-  private buildTown(b: BrickBatch): void {
-    const F = HUB_BOUNDS.hx + 0.8;
-    // 울타리: 말뚝 + 가로대 (InstancedMesh 둘)
-    const postGeo = new THREE.BoxGeometry(0.22, 1.2, 0.22);
-    const railGeo = new THREE.BoxGeometry(1, 0.16, 0.08);
-    this.owned.push(postGeo, railGeo);
-    const posts: THREE.Matrix4[] = [];
-    const rails: THREE.Matrix4[] = [];
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const side = (x0: number, z0: number, x1: number, z1: number): void => {
-      const len = Math.hypot(x1 - x0, z1 - z0);
-      const n = Math.round(len / 1.2);
-      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.atan2(z1 - z0, x1 - x0));
-      for (let i = 0; i <= n; i++) {
-        const t = i / n;
-        posts.push(new THREE.Matrix4().makeTranslation(x0 + (x1 - x0) * t, 0.6, z0 + (z1 - z0) * t));
-      }
-      for (const y of [0.45, 0.9]) {
-        m.compose(new THREE.Vector3((x0 + x1) / 2, y, (z0 + z1) / 2), q, new THREE.Vector3(len, 1, 1));
-        rails.push(m.clone());
-      }
-    };
-    side(-F, -F, F, -F);
-    side(F, -F, F, F);
-    side(F, F, -F, F);
-    side(-F, F, -F, -F);
-    for (const [geo, list] of [[postGeo, posts], [railGeo, rails]] as const) {
-      const im = new THREE.InstancedMesh(geo, this.mat('#ffffff'), list.length);
-      list.forEach((mm, i) => im.setMatrixAt(i, mm));
-      im.castShadow = true;
-      im.receiveShadow = true;
-      this.root.add(im);
-    }
-
-    // 바깥 집: 북·동·서 (남쪽은 카메라가 있는 쪽이라 비워 둠)
-    const houses: [number, number, string, string][] = [
-      [-14, -21, '#ff9ec4', '#7cc4ff'], [-4, -22, '#ffd34d', '#ff8a5b'], [7, -21, '#7cc4ff', '#ffd34d'], [17, -22, '#b9a6ff', '#ff9ec4'],
-      [-23, -10, '#7fd78a', '#ff8a5b'], [-23, 1, '#ff8a5b', '#7cc4ff'], [-23, 12, '#ffd34d', '#b9a6ff'],
-      [23, -10, '#ff9ec4', '#ffd34d'], [23, 1, '#7cc4ff', '#ff8a5b'], [23, 12, '#7fd78a', '#ff9ec4'],
-    ];
-    const W = 0.318 * BRICK_SCALE;
-    const D = 0.158 * BRICK_SCALE;
-    const H = 0.114 * BRICK_SCALE;
-    for (const [x, z, wall, roof] of houses) {
-      for (let row = 0; row < 3; row++) {
-        for (let cx = 0; cx < 2; cx++) {
-          for (let cz = 0; cz < 2; cz++) {
-            b.add('brick-2x4', x + (cx - 0.5) * W, row * H, z + (cz - 0.5) * D, row === 1 ? '#ffffff' : wall);
-          }
-        }
-      }
-      for (let cx = 0; cx < 4; cx++) {
-        b.add('slope-2x4', x + (cx - 1.5) * W * 0.5, 3 * H, z - D * 0.5, roof, 0);
-        b.add('slope-2x4', x + (cx - 1.5) * W * 0.5, 3 * H, z + D * 0.5, roof, Math.PI);
-      }
-    }
-
-    // 나무: 울타리 바깥을 빽빽하게 (집 사이 틈 메움) + 남쪽은 낮은 덤불
-    const trunk = new THREE.CylinderGeometry(0.35, 0.45, 2, 10);
-    const leaves = new THREE.SphereGeometry(1.8, 16, 12);
-    const bush = new THREE.SphereGeometry(1.1, 14, 10);
-    this.owned.push(trunk, leaves, bush);
-    const trees: [number, number, number][] = [];
-    let seed = 7;
-    const rnd = (): number => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    for (let x = -26; x <= 26; x += 3.2) {
-      trees.push([x + rnd() * 1.2, -18 - rnd() * 1.5, 0.9 + rnd() * 0.5]);
-      trees.push([x + rnd() * 1.2, -26 - rnd() * 3, 1.1 + rnd() * 0.5]);
-    }
-    for (let z = -16; z <= 18; z += 3.2) {
-      for (const sx of [-1, 1]) {
-        trees.push([sx * (18.5 + rnd() * 1.2), z + rnd(), 0.9 + rnd() * 0.5]);
-        trees.push([sx * (28 + rnd() * 3), z + rnd(), 1.1 + rnd() * 0.5]);
-      }
-    }
-    const leafCols = ['#6fcf7a', '#5fc06c', '#82d98a'];
-    for (const [x, z, s] of trees) {
-      const t = new THREE.Mesh(trunk, this.mat('#c98a5a'));
-      t.position.set(x, s, z);
-      t.scale.setScalar(s);
-      const l = new THREE.Mesh(leaves, this.mat(leafCols[Math.floor(rnd() * 3)]!));
-      l.position.set(x, 3.2 * s, z);
-      l.scale.setScalar(s);
-      t.castShadow = l.castShadow = true;
-      this.root.add(t, l);
-    }
-    for (let x = -16; x <= 16; x += 2.4) {
-      const bsh = new THREE.Mesh(bush, this.mat('#6fcf7a'));
-      bsh.position.set(x, 0.5, F + 1.4);
-      bsh.scale.set(1, 0.7, 1);
-      this.root.add(bsh);
-    }
-
-    // 먼 언덕: 지평선을 가림 (안개와 섞임)
-    const hill = new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-    this.owned.push(hill);
-    const hills: [number, number, number, number][] = [
-      [-40, -45, 22, 9], [0, -52, 28, 12], [40, -45, 22, 10], [-60, -10, 20, 8], [60, -10, 20, 9], [-55, 25, 18, 7], [55, 25, 18, 7],
-    ];
-    for (const [x, z, r, h] of hills) {
-      const mh = new THREE.Mesh(hill, this.mat('#7cc47a'));
-      mh.position.set(x, -0.2, z);
-      mh.scale.set(r, h, r);
-      this.root.add(mh);
-    }
   }
 
   /** 사격장: 파란 매트 + 과녁 3개 */
@@ -242,6 +129,7 @@ export class World1Hub {
     buildGunShop(this.toys, f('guns'), this.colliders, this.guns);
     buildAltar(this.toys, f('altar'), this.colliders);
     buildWardrobe(this.toys, f('chars'), this.colliders);
+    buildTravel(this.toys, f('travel'), this.colliders);
     this.treadmill = buildTreadmill(this.toys, this.colliders);
     this.fountain = buildFountain(this.toys, this.colliders);
   }
@@ -283,9 +171,26 @@ export class World1Hub {
     this.colliders.push({ kind: 'box', x: g.x, z: g.z, hx: 2, hz: 0.25 });
   }
 
-  /** 포털 앞(받침 위, 낮게) 이름 + 최고 기록 한 줄. 고리 위는 따라가는 카메라 화면 밖이라 가려짐. 바뀔 때만 다시 그림 */
+  /**
+   * 광장 월드 바꾸기: 바깥 꾸미기만 새로 (이전 것은 해제). 반환 = 해제된 꾸미기 root (가림 투명 대상에서 빼라고)
+   */
+  setWorld(world: number): THREE.Object3D | null {
+    if (world === this.world) return null;
+    const old = this.decor;
+    this.world = world;
+    this.decor = new HubDecor(themeOf(world), this.kit);
+    this.root.add(this.decor.root);
+    old.dispose();
+    this.setBest(this.best);
+    return old.root;
+  }
+
+  /** 포털 앞(받침 위, 낮게) 이 월드 이름 + 이 월드 안 최고 기록 한 줄. 고리 위는 따라가는 카메라 화면 밖이라 가려짐. 바뀔 때만 다시 그림 */
   setBest(bestStage: number): void {
-    const text = `${t('fac.portal', { w: 1 })} · ${bestStage <= 0 ? t('portal.first') : t('portal.best', { s: stageLabel(Math.min(bestStage, PER_WORLD)) })}`;
+    this.best = bestStage;
+    const first = (this.world - 1) * PER_WORLD;
+    const inWorld = Math.min(bestStage, first + PER_WORLD);
+    const text = `${t('fac.portal', { w: this.world })} · ${inWorld <= first ? t('portal.first') : t('portal.best', { s: stageLabel(inWorld) })}`;
     if (this.bestLabel?.userData.text === text) return;
     if (this.bestLabel) {
       this.bestLabel.removeFromParent();
@@ -314,6 +219,7 @@ export class World1Hub {
     for (const o of this.owned) o.dispose();
     for (const l of this.labels) disposeLabel(l);
     this.toys.dispose();
+    this.decor.dispose();
     this.root.removeFromParent();
   }
 }

@@ -19,6 +19,7 @@ import type { ResultCard } from '../ui/ResultCard';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { PORTAL_SPOT } from '../world/facilities';
 import { ToyBoss } from './ToyBoss';
+import { themeOf } from '../world/worldThemes';
 
 /** 전투 무대 위치 (광장은 숨김) */
 const PLAYER_AT = { x: 0, z: 6 };
@@ -75,6 +76,13 @@ export class BattleScene {
   private launched = 0;
   private landed = 0;
   private readonly toys: Toy[] = [];
+  private floorMat!: THREE.MeshStandardMaterial;
+  private centerMat!: THREE.MeshStandardMaterial;
+  private ringMat!: THREE.MeshStandardMaterial;
+  private blocks!: THREE.InstancedMesh;
+  private themeWorld = 1;
+  /** 이번 연속 도전으로 새로 열린 월드 (결과 카드 닫으면 그 광장으로) */
+  private opened = 0;
   private hurtT = 1;
   /** 디버그·검증 */
   get active(): boolean {
@@ -122,9 +130,12 @@ export class BattleScene {
       this.owned.push(m);
       return m;
     };
-    add(new THREE.CylinderGeometry(40, 40, 1, 48), mat('#ffd9ec'), 0, -0.5, 0);
-    add(new THREE.CylinderGeometry(11, 11, 0.12, 64), mat('#fff3c4'), 0, 0.06, 0);
-    add(new THREE.RingGeometry(10.4, 11, 64).rotateX(-Math.PI / 2), mat('#ff9ec4'), 0, 0.13, 0);
+    this.floorMat = mat('#ffd9ec');
+    this.centerMat = mat('#fff3c4');
+    this.ringMat = mat('#ff9ec4');
+    add(new THREE.CylinderGeometry(40, 40, 1, 48), this.floorMat, 0, -0.5, 0);
+    add(new THREE.CylinderGeometry(11, 11, 0.12, 64), this.centerMat, 0, 0.06, 0);
+    add(new THREE.RingGeometry(10.4, 11, 64).rotateX(-Math.PI / 2), this.ringMat, 0, 0.13, 0);
     // 둘레 벽: 색 블록 기둥을 빙 둘러 (InstancedMesh 하나)
     const blockGeo = new THREE.BoxGeometry(2.2, 1, 1.6);
     this.owned.push(blockGeo);
@@ -147,6 +158,21 @@ export class BattleScene {
     }
     im.castShadow = true;
     this.arena.add(im);
+    this.blocks = im;
+  }
+
+  /** 무대 색을 월드 테마로 (바닥·가운데·테두리·둘레 블록). 같은 월드면 그대로 */
+  private applyTheme(world: number): void {
+    if (world === this.themeWorld) return;
+    this.themeWorld = world;
+    const a = themeOf(world).arena;
+    this.floorMat.color.set(a.floor);
+    this.centerMat.color.set(a.center);
+    this.ringMat.color.set(a.ring);
+    const c = new THREE.Color();
+    const N = 40;
+    for (let i = 0; i < this.blocks.count; i++) this.blocks.setColorAt(i, c.set(a.blocks[((i % N) + Math.floor(i / N)) % a.blocks.length]!));
+    if (this.blocks.instanceColor) this.blocks.instanceColor.needsUpdate = true;
   }
 
   /** 포털 착지 뒤 호출: 광장 숨기고 연속 도전 시작 */
@@ -160,6 +186,7 @@ export class BattleScene {
     g.placeAt(PLAYER_AT.x, PLAYER_AT.z, Math.PI);
     g.cam.focus = -1.2;
     audio.setMusic('battle');
+    this.applyTheme(world);
     this.run = startRun(g.state, world);
     // 시작 연출 동안은 쉬는 시간으로 둠 (자동 발사·탭 막힘)
     this.run.gap = INTRO_SEC;
@@ -175,7 +202,7 @@ export class BattleScene {
 
   private spawnBoss(): void {
     const run = this.run!;
-    this.boss = new ToyBoss(run.stage);
+    this.boss = new ToyBoss(run.stage, themeOf(run.world).bossTints);
     // 큰 보스일수록 카메라를 뒤·위로 (대장 머리·왕관이 잘리지 않게)
     const extra = Math.max(0, this.boss.height - 2.4);
     this.game.cam.focus = -1.2 - extra * 0.28;
@@ -355,6 +382,9 @@ export class BattleScene {
     const res = finishRun(g.state, run.cleared, Date.now());
     const prevBest = g.state.bestStage;
     g.setState(res.state, true);
+    // 월드 대장 첫 클리어 = 다음 월드 열림 → 결과 카드 닫으면 그 광장으로 (사용자 2026-11-12: 월드마다 광장 따로)
+    const bossStage = run.world * BALANCE.stage.perWorld;
+    this.opened = run.done === 'worldClear' && prevBest < bossStage && run.world < BALANCE.stage.worlds ? run.world + 1 : 0;
     audio.play(run.cleared.length > 0 ? 'win' : 'lose');
     const failed = run.done === 'fail' ? run.stage : null;
     const title = run.done === 'worldClear' ? t('result.world', { w: run.world }) : run.cleared.length > 0 ? t('result.stages', { n: run.cleared.length }) : t('result.none');
@@ -397,6 +427,14 @@ export class BattleScene {
     g.setMode('hub');
     audio.setMusic('hub');
     g.placeAt(PORTAL_SPOT.x, PORTAL_SPOT.z + 3.2, Math.PI);
+    if (this.opened) {
+      const w = this.opened;
+      this.opened = 0;
+      this.callout.flash('rgba(255, 255, 255, 1)');
+      g.setWorld(w);
+      this.callout.show({ title: t('travel.opened', { w }), big: t(`world.${w}` as StrKey) });
+      window.setTimeout(() => this.callout.hide(), 1800);
+    }
   }
 
   dispose(): void {

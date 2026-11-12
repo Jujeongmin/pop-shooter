@@ -4,7 +4,8 @@ export type GunModel = 'pistol' | 'rifle' | 'shotgun' | 'sniper';
 
 export interface GunDef {
   index: number;
-  world: 1 | 2 | 3 | 4;
+  /** 이 총의 월드 (1~8) */
+  world: number;
   model: GunModel;
   /** 총 재질 색에 곱하는 색 (월드별) */
   tint: string;
@@ -18,13 +19,17 @@ const WORLD_STYLE = [
   { prefix: '공사장', tint: '#ffbf5e' },
   { prefix: '사탕', tint: '#ff9ccf' },
   { prefix: '우주', tint: '#a9b8ff' },
+  { prefix: '바다', tint: '#7fe0ff' },
+  { prefix: '눈꽃', tint: '#d9ecff' },
+  { prefix: '기사', tint: '#ffd77a' },
+  { prefix: '무지개', tint: '#e2c4ff' },
 ] as const;
 
 export const GUNS: readonly GunDef[] = Array.from({ length: BALANCE.gun.count }, (_, index) => {
   const w = Math.floor(index / BALANCE.gun.perWorld);
   const model = MODELS[index % MODELS.length]!;
   const style = WORLD_STYLE[w]!;
-  return { index, world: (w + 1) as GunDef['world'], model, tint: style.tint, name: `${style.prefix} ${MODEL_NAME[model]}` };
+  return { index, world: w + 1, model, tint: style.tint, name: `${style.prefix} ${MODEL_NAME[model]}` };
 });
 
 export function gunMult(i: number): number {

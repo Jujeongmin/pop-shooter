@@ -10,9 +10,6 @@ import { LobbyPeers } from './LobbyPeers';
 import type { NetClient } from './NetClient';
 import type { HubInfo, HubStatus } from './shared/hub.ts';
 
-/** 지금 광장 월드 (계획 1·2 = 월드 1) */
-const HUB_WORLD = 1;
-
 export interface Lobby {
   readonly hub: LobbyHub;
   readonly peers: LobbyPeers;
@@ -77,7 +74,14 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
         warned = true;
       }
     });
-    hub.start(HUB_WORLD, infoOf(game.state, status, info));
+    hub.start(game.world, infoOf(game.state, status, info));
+    // 다른 월드 광장으로 가면 그 월드 방으로 옮김 (룸 = 월드별, 사용자 2026-11-12)
+    game.onWorldChange((w) => {
+      void hub.stop().then(() => {
+        peers.clear();
+        if (game.world === w) hub.start(w, infoOf(game.state, status, info));
+      });
+    });
     return { hub, peers };
   } catch (e) {
     console.warn('[lobby] 시작 실패 (혼자 모드)', e);

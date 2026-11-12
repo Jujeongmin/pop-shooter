@@ -19,5 +19,6 @@
 ## 개발
 
 - 개발 서버 포트 5220 (`.claude/launch.json` `dev`).
-- 밸런스: `npm run sim`, `node tools/sim/check.ts` (목표 시간 범위). `--fit`은 연속 도전 규칙에서 값이 튀어 쓰지 않음.
+- 밸런스: `npm run sim`, `node tools/sim/check.ts` (월드 8 대장까지 막힘 없는지만, 플레이 시간 목표로 맞추지 않음 — 사용자 2026-11-12). `node tools/sim/try.ts <월드 체력 배수 8개>`로 값 시험.
+- 월드 8개 (2026-11-12): 월드마다 광장 따로 = 시설 자리는 같고 바깥 꾸미기·하늘만 다름 (`world/worldThemes.ts`, `world/HubDecor.ts`, `Game.setWorld`), 월드 이동 정류장 `ui/TravelPanel.ts`, 대장 첫 클리어 시 다음 월드 광장으로. 훈련장 등급 = 지금 광장 월드, 광장 멀티 방도 월드별.
 - 웹 게임 메모리 체크리스트(`~/.claude/web-game-memory-checklist.md`) 따름.

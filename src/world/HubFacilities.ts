@@ -240,3 +240,43 @@ export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainPro
     },
   };
 }
+
+/** 월드 이동 정류장: 둥근 발판 + 떠서 도는 지구본 + 둘레를 도는 작은 열기구 둘 + 간판 */
+export function buildTravel(b: ToyBuilder, f: Facility, colliders: Collider[]): void {
+  const g = new THREE.Group();
+  g.position.set(f.x, 0, f.z - 1.6);
+  b.root.add(g);
+  b.toy(new THREE.CylinderGeometry(1.6, 1.8, 0.35, 24), '#7cc4ff', 0, 0.18, 0, g);
+  b.toy(new THREE.CylinderGeometry(1.2, 1.2, 0.06, 32), b.mat('#e9f6ff', { emissive: '#7cc4ff' }), 0, 0.39, 0, g, false);
+  const globe = new THREE.Group();
+  globe.position.y = 2.1;
+  g.add(globe);
+  b.toy(new THREE.SphereGeometry(0.85, 24, 16), '#6fc3ff', 0, 0, 0, globe);
+  // 대륙 조각 (초록 납작 구) + 적도 고리
+  for (let k = 0; k < 5; k++) {
+    const a = k * 1.3;
+    const land = b.toy(new THREE.SphereGeometry(0.32, 12, 8), '#7fd78a', Math.cos(a) * 0.62, Math.sin(k * 2.1) * 0.45, Math.sin(a) * 0.62, globe, false);
+    land.scale.set(1, 0.7, 0.45);
+    land.lookAt(0, 0, 0);
+  }
+  const ring = b.toy(new THREE.TorusGeometry(1.15, 0.06, 8, 40), '#ffd34d', 0, 0, 0, globe);
+  ring.rotation.x = Math.PI / 2.4;
+  // 열기구 둘
+  const balloons = ['#ff9ec4', '#ffd34d'].map((c) => {
+    const bg = new THREE.Group();
+    g.add(bg);
+    b.toy(new THREE.SphereGeometry(0.32, 14, 10), c, 0, 0.3, 0, bg);
+    b.toy(new THREE.BoxGeometry(0.18, 0.14, 0.18), '#c98a5a', 0, -0.12, 0, bg);
+    return bg;
+  });
+  b.animators.push((dt, c) => {
+    globe.rotation.y += dt * 0.8;
+    globe.position.y = 2.1 + Math.sin(c * 1.5) * 0.12;
+    balloons.forEach((bg, i) => {
+      const a = c * 0.7 + i * Math.PI;
+      bg.position.set(Math.cos(a) * 1.7, 1.9 + Math.sin(c * 1.3 + i) * 0.35, Math.sin(a) * 1.7);
+    });
+  });
+  colliders.push({ kind: 'circle', x: f.x, z: f.z - 1.6, r: 1.7 });
+  b.sign('globe', t('fac.travel'), f.x + 2.6, 2.1, f.z - 0.6, { w: 2.3, color: '#7cc4ff', rotY: -0.3 });
+}

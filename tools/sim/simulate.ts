@@ -36,7 +36,7 @@ const FARM_SEC = opt('farm', 90);
 const ASAP = opt('asap', 1) === 1;
 const STALL_SEC = 600;
 const ECON = opt('econ', 0) === 1;
-const MAX_T = opt('hours', 30) * 3600;
+const MAX_T = opt('hours', 100) * 3600;
 
 interface Ctx { s: GameState; t: number; lastProgress: number; lastFarm: number; kindSec: Record<TrainKind, number>; battleSec: number }
 
@@ -168,7 +168,7 @@ runUntil(ctx, MAX_T, (st, c) => at.set(st, {
 }));
 console.log(`taps=${TAPS} farm=${FARM_SEC}s  time: atk ${hms(ctx.kindSec.atk)} spd ${hms(ctx.kindSec.spd)} coin ${hms(ctx.kindSec.coin)} battle ${hms(ctx.battleSec)}`);
 if (ECON) console.log(`econ checks ${econ.checks} clamps ${econ.clamps} rejects ${econ.rejects} ${JSON.stringify(econ.reasons)}`);
-for (const st of [1, 2, 3, 5, 10, 15, 20, 25, 30, 35, 40]) {
+for (const st of [1, 2, 3, 5, 10, 20, 30, 40, 50, 60, 70, 80]) {
   const r = at.get(st);
   console.log(`${stageLabel(st).padEnd(5)} ${hms(r?.t ?? Infinity).padStart(7)}  ${r?.info ?? ''}`);
 }

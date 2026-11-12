@@ -39,6 +39,20 @@ export class OcclusionFader {
     });
   }
 
+  /** root 아래 메시를 대상에서 뺌 (해제되는 꾸미기): 흐려진 것은 원래 material로 되돌리고 복제본 해제 */
+  unregister(root: THREE.Object3D): void {
+    const gone = new Set<THREE.Object3D>();
+    root.traverse((o) => gone.add(o));
+    for (let i = this.targets.length - 1; i >= 0; i--) if (gone.has(this.targets[i]!)) this.targets.splice(i, 1);
+    for (const o of gone) {
+      const m = o as THREE.Mesh;
+      const f = this.faded.get(m);
+      if (f) { m.material = f.orig; this.faded.delete(m); }
+      const c = this.clones.get(m);
+      if (c) { c.dispose(); this.clones.delete(m); }
+    }
+  }
+
   private cloneOf(m: THREE.Mesh, orig: THREE.Material): THREE.Material & { opacity: number } {
     let c = this.clones.get(m);
     if (!c) {
