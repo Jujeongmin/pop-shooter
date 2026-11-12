@@ -16,7 +16,7 @@ import type { Collider } from './movement';
  */
 
 /** 캐릭터 받침대 위치 (CharacterPanel이 현재 캐릭터를 올려 돌림) */
-export const CHAR_TURNTABLE = { x: 9.6, z: 9.2 };
+export const CHAR_TURNTABLE = { x: 12.6, z: 14.2 };
 
 export function buildUpgrade(b: ToyBuilder, f: Facility, colliders: Collider[]): void {
   const g = new THREE.Group();
@@ -128,6 +128,8 @@ export function buildWardrobe(b: ToyBuilder, f: Facility, colliders: Collider[])
   b.toy(b.box(1.8, 0.2, 1.4, 0.06), '#ff9ec4', -0.7, 2.7, 0, g);
   for (const x of [-1.55, 0.15]) b.toy(new THREE.CylinderGeometry(0.08, 0.08, 2.7, 10), '#ff9ec4', x, 1.35, 0.55, g);
   b.toy(b.box(1.8, 2.6, 0.12, 0.05), '#ffe9b8', -0.7, 1.35, -0.6, g);
+  // 옆벽 (사용자 2026-11-12: 옆에서 안이 보이지 않게)
+  for (const x of [-1.6, 0.2]) b.toy(b.box(0.12, 2.6, 1.15, 0.05), '#ff9ec4', x, 1.35, -0.02, g);
   const folds: THREE.Mesh[] = [];
   for (let i = 0; i < 6; i++) folds.push(b.toy(new THREE.CylinderGeometry(0.15, 0.15, 2.3, 10), '#ffd34d', -1.42 + i * 0.27, 1.4, 0.55, g));
   // 거울 (둥근 틀)
@@ -201,29 +203,44 @@ export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainPro
   g.position.set(mx, 0, mz);
   b.root.add(g);
   b.toy(new THREE.CylinderGeometry(0.9, 1.05, 0.35, 24), '#ffe48a', 0, 0.18, 0, g);
-  b.toy(new THREE.CylinderGeometry(0.62, 0.7, 1.7, 24), '#ffc928', 0, 1.2, 0, g);
-  b.toy(new THREE.SphereGeometry(0.66, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), '#ff9ec4', 0, 2.05, 0, g);
-  b.toy(new THREE.CylinderGeometry(0.22, 0.22, 0.12, 18), '#ffffff', 0, 2.68, 0, g);
+  // 몸통 + 뚜껑(동전 뿜을 때 통통 찌그러짐)
+  const body = new THREE.Group();
+  g.add(body);
+  b.toy(new THREE.CylinderGeometry(0.62, 0.7, 1.7, 24), '#ffc928', 0, 1.2, 0, body);
+  b.toy(new THREE.SphereGeometry(0.66, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), '#ff9ec4', 0, 2.05, 0, body);
+  b.toy(new THREE.CylinderGeometry(0.22, 0.22, 0.12, 18), '#ffffff', 0, 2.68, 0, body);
   // 앞으로 휘어진 관 (서는 자리 위에서 끝남)
-  const spout = b.toy(new THREE.TorusGeometry(0.75, 0.14, 12, 24, Math.PI / 2), '#ffc928', 0, 2.2, 0.75, g);
+  const spout = b.toy(new THREE.TorusGeometry(0.75, 0.14, 12, 24, Math.PI / 2), '#ffc928', 0, 2.2, 0.75, body);
   spout.rotation.set(0, Math.PI / 2, 0);
-  const coinGeo = b.own(new THREE.CylinderGeometry(0.14, 0.14, 0.04, 18));
+  // 꼭대기에서 도는 큰 동전 (늘 움직여서 동전 분수인 걸 알아보게)
   const coinMat = b.mat('#ffd34d', { emissive: '#ffb000', metal: 0.4, rough: 0.3 });
+  const topper = b.toy(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 28), coinMat, 0, 3.35, 0, body);
+  topper.rotation.x = Math.PI / 2;
+  // 떨어지는 동전 (크게, 관 끝에서 위로 튀었다가 손으로)
+  const coinGeo = b.own(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 18));
   const pool: { m: THREE.Mesh; t: number; from: THREE.Vector3; to: THREE.Vector3; done: (() => void) | null }[] = [];
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 16; i++) {
     const m = new THREE.Mesh(coinGeo, coinMat);
     m.visible = false;
+    m.castShadow = true;
     b.root.add(m);
     pool.push({ m, t: 1, from: new THREE.Vector3(), to: new THREE.Vector3(), done: null });
   }
-  const FALL = 0.45;
-  b.animators.push((dt) => {
+  const FALL = 0.7;
+  let squash = 1;
+  b.animators.push((dt, c) => {
+    topper.rotation.z += dt * 3;
+    topper.position.y = 3.35 + Math.sin(c * 2.4) * 0.08;
+    squash = Math.min(1, squash + dt * 3);
+    const k = Math.sin(squash * Math.PI) * 0.12;
+    body.scale.set(1 + k, 1 - k, 1 + k);
     for (const p of pool) {
       if (p.t >= 1) continue;
       p.t = Math.min(1, p.t + dt / FALL);
       p.m.position.lerpVectors(p.from, p.to, p.t);
-      p.m.position.y += Math.sin(p.t * Math.PI) * 0.35;
-      p.m.rotation.x += dt * 10;
+      p.m.position.y += Math.sin(p.t * Math.PI) * 1.3;
+      p.m.rotation.x += dt * 12;
+      p.m.rotation.z += dt * 5;
       if (p.t >= 1) { p.m.visible = false; p.done?.(); p.done = null; }
     }
   });
@@ -237,6 +254,7 @@ export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainPro
       p.t = 0;
       p.done = onCatch;
       p.m.visible = true;
+      squash = 0;
     },
   };
 }

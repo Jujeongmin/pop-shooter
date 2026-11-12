@@ -16,5 +16,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe3ff; tou
 .lock-hint { position: absolute; left: 12px; bottom: 10px; padding: 4px 12px; border-radius: 12px; background: rgba(43,58,103,.55); color: #fff; font-size: 13px; pointer-events: none; white-space: nowrap; display: none; }
 .lock-hint.on { display: block; }
 .lock-cross { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: 0 0 0 2px rgba(43,58,103,.35); pointer-events: none; display: none; }
-.lock-cross.on { display: block; }
+/* 마우스 고정 때 가운데 점 표시 안 함 (사용자 2026-11-12) */
+.lock-cross.on { display: none; }
 .joy-knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; border-radius: 50%; background: #fff; box-shadow: 0 3px 0 rgba(43,58,103,.25); transform: translate(-50%, -50%); }

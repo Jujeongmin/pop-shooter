@@ -83,7 +83,7 @@ async function boot(): Promise<void> {
   const lobbyApi = net.hasVerse ? new LobbyApi(net) : null;
   const nickPanel = lobbyApi ? new NicknamePanel(ui, net, lobbyApi) : null;
   // 광장 3D 기록판 (북동쪽, 남쪽=카메라 쪽을 봄). 내 저장 뒤 조금 있다가 갱신
-  const board = new RankBoard(8.5, -12.6, lobbyApi);
+  const board = new RankBoard(12, -17.5, lobbyApi);
   game.hub.root.add(board.root);
   game.hub.colliders.push(board.collider);
   cloud.onSaved.add(() => board.refreshSoon());

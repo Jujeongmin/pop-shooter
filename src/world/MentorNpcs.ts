@@ -12,7 +12,7 @@ import { disposeLabel, makeLabel } from './labels';
 /** 멘토 = 팝배틀 로비 NPC 4명 그대로 (사용자 2026-11-11) */
 export const MENTOR_CHAR: Record<string, CharId> = { coach: 'yellow', sniper: 'pink', captain: 'red', legend: 'white' };
 /** 멘토 자리: 업그레이드 기계 동쪽, 울타리 앞에 한 줄 (서쪽 광장을 봄) */
-const SPOTS: readonly { x: number; z: number }[] = [{ x: 13, z: -6 }, { x: 13, z: -3 }, { x: 13, z: 0 }, { x: 13, z: 3 }];
+const SPOTS: readonly { x: number; z: number }[] = [{ x: 19, z: -8 }, { x: 19, z: -4.5 }, { x: 19, z: -1 }, { x: 19, z: 2.5 }];
 const FACE_YAW = -Math.PI / 2;
 const TALK_DIST = 3.2;
 const ZERO = new THREE.Vector3();

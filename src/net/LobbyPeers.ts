@@ -21,6 +21,7 @@ import type { CharId } from '../sim/state.ts';
 import type { HubSample } from './hubBuffer';
 import type { HubPeer } from './LobbyHub';
 import { battleSpot } from './peerView';
+import { PowerAura } from '../player/PowerAura';
 import { HUB_TIMING } from './shared/hub.ts';
 import { NICK_PLACEHOLDER, safeDisplayNick } from './shared/nickFilter.ts';
 
@@ -47,6 +48,8 @@ interface Item {
   fireT: number;
   target: number;
   kick: number;
+  /** DPS 오라 (광장 root 아래) */
+  aura: PowerAura;
 }
 
 /** 남의 훈련 발사 연출 빈도 (초당, 실제 발사 속도와 무관한 고정값 — 가볍게) */
@@ -176,7 +179,10 @@ export class LobbyPeers {
       fireT: Math.random() / PEER_SHOTS_PER_SEC,
       target: Math.floor(Math.random() * 3),
       kick: 0,
+      aura: new PowerAura(),
     };
+    item.aura.setPower(peer.power);
+    this.ctx.parent.add(item.aura.root);
     this.items.set(peer.account, item);
     this.list.push(item);
     this.setPlate(item);
@@ -187,6 +193,7 @@ export class LobbyPeers {
     const item = this.items.get(peer.account);
     if (!item) return;
     item.peer = peer;
+    item.aura.setPower(peer.power);
     const char = peer.char as CharId;
     if (char !== item.char) {
       this.releaseAvatar(item.avatar);
@@ -207,6 +214,7 @@ export class LobbyPeers {
     const i = this.list.indexOf(item);
     if (i >= 0) this.list.splice(i, 1);
     this.releaseAvatar(item.avatar);
+    item.aura.dispose();
     if (item.label) disposePlate(item.label);
     item.label = null;
   }
@@ -240,6 +248,7 @@ export class LobbyPeers {
       } else {
         if (!item.peer.buffer.sample(renderTime, s)) {
           item.avatar.root.visible = false;
+          item.aura.root.visible = false;
           label.visible = false;
           continue;
         }
@@ -270,6 +279,8 @@ export class LobbyPeers {
       item.kick = Math.max(0, item.kick - dt * 0.6);
       p.kick = item.kick;
       item.avatar.update(dt, p);
+      item.aura.root.visible = true;
+      item.aura.update(dt, p.pos.x, 0, p.pos.z);
       label.position.set(p.pos.x, item.avatar.headTop() + LABEL_LIFT, p.pos.z);
     }
   }

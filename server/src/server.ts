@@ -16,7 +16,7 @@ import { allowedChars, checkSave } from '../../src/sim/econ.ts';
 import { AD_KINDS, AD_LIMIT, buySkipRebirth, claimAd, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
 import type { CharId, GameState } from '../../src/sim/state.ts';
-import { damagePerShot, skipRebirthGems } from '../../src/sim/actions.ts';
+import { autoDps, damagePerShot, skipRebirthGems } from '../../src/sim/actions.ts';
 import {
   HUB_MAX_PLAYERS,
   HUB_TIMING,
@@ -179,14 +179,14 @@ const HUB_FIELDS: readonly HubInfoField[] = ['c', 'g', 'r', 'pw', 's'];
 const HUB_DEFAULTS: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub' };
 
 /**
- * 보이는 환생·공격력은 내 저장값을 넘지 못함 (글로벌 사용자 상태 한 번 읽은 것 st): 환생 ≤ save.rebirths, 공격력 ≤ 저장으로 계산한 damagePerShot.
+ * 보이는 환생·DPS는 내 저장값을 넘지 못함 (글로벌 사용자 상태 한 번 읽은 것 st): 환생 ≤ save.rebirths, pw(= DPS, 사용자 2026-11-12) ≤ 저장으로 계산한 autoDps.
  * 저장이 조금 늦으면 잠깐 낮게 보일 수 있음 → 클라이언트는 저장 뒤 hubInfo를 다시 보냄 (Task 3)
  */
 function capBySave(patch: Partial<HubInfo>, st: Record<string, unknown>): void {
   if (patch.r === undefined && patch.pw === undefined) return;
   const saved = normalizeState(saveOf(st) ?? {}, Date.now());
   if (patch.r !== undefined) patch.r = Math.min(patch.r, saved.rebirths);
-  if (patch.pw !== undefined) patch.pw = Math.min(patch.pw, damagePerShot(saved));
+  if (patch.pw !== undefined) patch.pw = Math.min(patch.pw, autoDps(saved));
 }
 
 /** 광장 룸 사용자 상태 중 서버가 보는 것 */

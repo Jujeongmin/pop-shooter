@@ -9,9 +9,8 @@ import type { HitFx } from '../fx/HitFx';
 import { autoDps } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
-import { finishRun, startRun, stepRun, tapRun, type Run } from '../sim/run.ts';
+import { finishRun, startRun, stepRun, type Run } from '../sim/run.ts';
 import { isBoss, stageHp, stageLabel, stageTime } from '../sim/stages.ts';
-import { TapLimiter } from '../sim/tapLimiter.ts';
 import { CHARACTERS } from '../config/characters';
 import type { BattleHud } from '../ui/BattleHud';
 import type { FloatText } from '../ui/FloatText';
@@ -61,7 +60,6 @@ export class BattleScene {
   private goShown = true;
   private readonly arena = new THREE.Group();
   private readonly owned: { dispose(): void }[] = [];
-  private readonly limiter = new TapLimiter(BALANCE.tap.maxPerSec);
   private run: Run | null = null;
   private boss: ToyBoss | null = null;
   /** 쓰러지는 중인 이전 보스 */
@@ -197,7 +195,7 @@ export class BattleScene {
     this.dmgAcc = 0;
     this.spawnBoss();
     this.hud.show(true);
-    g.tapHandler = (taps) => { for (let i = 0; i < taps.length; i++) this.tap(); };
+    // 탭으로 더 쏘기 없음 (사용자 2026-11-12): 자동 사격만
   }
 
   private spawnBoss(): void {
@@ -222,16 +220,6 @@ export class BattleScene {
     }
     this.callout.show({ title: isBoss(run.stage) ? t('battle.bossIn') : t('battle.run'), big: label });
     window.setTimeout(() => { if (this.run) this.callout.hide(); }, 900);
-  }
-
-  private tap(): void {
-    const run = this.run;
-    if (!run || run.done || run.gap > 0) return;
-    if (!this.limiter.accept(this.clock)) return;
-    const before = run.battle.hp;
-    const cleared = tapRun(run);
-    this.shoot(before - (cleared !== null ? 0 : run.battle.hp), true);
-    if (cleared !== null) this.onCleared(cleared);
   }
 
   private shoot(dmg: number, tapped: boolean): void {

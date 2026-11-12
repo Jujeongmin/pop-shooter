@@ -16,7 +16,8 @@ import type { BrickName, KitModel } from '../world/kit';
 import { moveWithColliders } from '../world/movement';
 import { World1Hub } from '../world/World1Hub';
 import { themeOf } from '../world/worldThemes';
-import { highestWorld } from '../sim/actions.ts';
+import { autoDps, highestWorld } from '../sim/actions.ts';
+import { PowerAura } from '../player/PowerAura';
 import { Controls, type Tap } from './Controls';
 import { t } from '../i18n/i18n';
 import type { Stage3D } from './Stage3D';
@@ -76,6 +77,8 @@ export class Game {
   readonly saver: AutoSaver;
   /** 카메라와 나 사이를 가리는 광장 구조물 반투명 (main이 광장을 다 만든 뒤 register) */
   readonly occlusion = new OcclusionFader();
+  /** 내 DPS 오라 (다른 사람 화면에는 LobbyPeers가 같은 오라) */
+  readonly aura = new PowerAura();
 
   constructor(stage: Stage3D, assets: Assets, kit: Record<BrickName, KitModel>, state: GameState, ui: HTMLElement, save: { account: string | null; cloud: CloudSave | null } = { account: null, cloud: null }) {
     this.stage = stage;
@@ -108,6 +111,8 @@ export class Game {
     this.avatar = new Avatar(assets, state.char, GUNS[state.gun]!);
     stage.scene.add(this.avatar.root);
     this.avatar.setGear(gearTiers(state));
+    stage.scene.add(this.aura.root);
+    this.aura.setPower(autoDps(state));
     stage.onFrame((dt) => this.frame(dt));
   }
 
@@ -172,7 +177,10 @@ export class Game {
   setWorld(w: number): void {
     if (w === this.hub.world || w < 1 || w > highestWorld(this.state)) return;
     const old = this.hub.setWorld(w);
-    if (old) this.occlusion.unregister(old);
+    if (old) {
+      this.occlusion.unregister(old);
+      this.occlusion.register(this.hub.decorRoot);
+    }
     this.applySky(w);
     this.placeAt(HUB_SPAWN.x, HUB_SPAWN.z, Math.PI);
     this.cam.yaw = 0;
@@ -284,6 +292,7 @@ export class Game {
   readonly pose = { aimAt: null as THREE.Vector3 | null, kick: 0, grounded: true, dead: false };
 
   updateAvatar(dt: number): void {
+    this.aura.update(dt, this.pos.x, this.pos.y, this.pos.z);
     this.avatar.update(dt, { pos: this.pos, yaw: this.yaw, velocity: this.velocity, aimAt: this.pose.aimAt, kick: this.pose.kick, grounded: this.pose.grounded, dead: this.pose.dead });
   }
 
@@ -294,6 +303,7 @@ export class Game {
     this.state = next;
     if (next.bestStage !== prevBest) this.hub.setBest(next.bestStage);
     if (next.gear !== prevGear) this.avatar.setGear(gearTiers(next));
+    this.aura.setPower(autoDps(next));
     for (const l of this.stateListeners) l(next);
     if (save) this.saver.saveNow();
   }

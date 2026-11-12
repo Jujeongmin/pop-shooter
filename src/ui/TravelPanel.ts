@@ -51,8 +51,16 @@ export class TravelPanel {
     for (let w = 1; w <= BALANCE.stage.worlds; w++) {
       const th = themeOf(w);
       const row = el('div', `travel-row${w === this.game.world ? ' here' : ''}${w > top ? ' locked' : ''}`);
-      const badge = el('div', 'travel-badge', String(w));
+      // 썸네일 (Codex 그림 public/ui/worlds, 못 받으면 테마 색 + 번호)
+      const badge = el('div', 'travel-badge');
       badge.style.background = `linear-gradient(160deg, ${th.sky}, ${th.plaza})`;
+      const img = el('img', 'travel-img');
+      img.src = `${import.meta.env.BASE_URL}ui/worlds/world_${w}.webp`;
+      img.alt = '';
+      img.draggable = false;
+      img.onerror = () => img.remove();
+      badge.append(img);
+      badge.append(el('span', 'travel-num', String(w)));
       const mid = el('div', 'up-mid');
       mid.append(el('div', 'up-name', t(`world.${w}` as StrKey)), el('div', 'up-val', t('travel.train', { m: stationMult(w) })));
       let action: HTMLElement;

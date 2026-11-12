@@ -55,7 +55,7 @@ export const HUB_TIMING = {
  * 광장 공간 (world/facilities.ts HUB_BOUNDS·HUB_SPAWN과 같은 값 — tests/net/hub.test.ts가 확인).
  * 평지라 높이 없음. 범위 밖 margin 안쪽은 경계로 자르고, 더 밖은 거절
  */
-export const HUB_AREA = { hx: 15.5, hz: 15.5, margin: 0.5, spawn: { x: 0, z: 6 } } as const;
+export const HUB_AREA = { hx: 22, hz: 21, margin: 0.5, spawn: { x: 0, z: 8 } } as const;
 
 /**
  * 서버 이동 검사 (수평, m/s): 걷기 MOVE_SPEED 5.76 (core/Game.ts) × 1.35 여유 ≈ 7.8.
@@ -69,17 +69,17 @@ export const HUB_MOVE = { maxSpeed: 7.8, slack: 1.5 } as const;
  * - 전투에서 돌아옴 (BattleScene: 포털 앞 (0, -3.3)) · 시작 지점 → reach = Infinity (광장 안 어디서든)
  */
 export const HUB_SNAPS: ReadonlyArray<{ x: number; z: number; r: number; reach: number }> = [
-  { x: 0, z: 6, r: 1, reach: Infinity }, // 시작 지점
-  { x: 0, z: -3.3, r: 1, reach: Infinity }, // 전투 복귀 (PORTAL_SPOT.z + 3.2)
-  { x: -9, z: 1, r: 3, reach: 7 }, // 사격장 판
-  { x: 9, z: 4, r: 1, reach: 4 }, // 업그레이드
-  { x: 4.5, z: -3.5, r: 1, reach: 4 }, // 총
-  { x: -8, z: 11, r: 1, reach: 4 }, // 환생 제단
-  { x: 8, z: 11, r: 1, reach: 4 }, // 캐릭터
-  { x: 0, z: -6.5, r: 1, reach: 4 }, // 포털
-  { x: -12.6, z: 6.8, r: 2.2, reach: 5 }, // 러닝머신 세 대 (연사)
-  { x: -7.6, z: 5.6, r: 1.6, reach: 5 }, // 동전 분수 세 자리 (골드 보너스)
-  { x: -12, z: -11.5, r: 1, reach: 4 }, // 월드 이동 정류장
+  { x: 0, z: 8, r: 1, reach: Infinity }, // 시작 지점
+  { x: 0, z: -7.3, r: 1, reach: Infinity }, // 전투 복귀 (PORTAL_SPOT.z + 3.2)
+  { x: -14, z: 0, r: 3, reach: 7 }, // 사격장 판
+  { x: 13, z: 4, r: 1, reach: 4 }, // 업그레이드
+  { x: 7, z: -5, r: 1, reach: 4 }, // 총
+  { x: -11, z: 17, r: 1, reach: 4 }, // 환생 제단
+  { x: 11, z: 16, r: 1, reach: 4 }, // 캐릭터
+  { x: 0, z: -10.5, r: 1, reach: 4 }, // 포털
+  { x: -18.5, z: 10.2, r: 2.2, reach: 5 }, // 러닝머신 세 대 (연사)
+  { x: -9.5, z: 9, r: 1.6, reach: 5 }, // 동전 분수 세 자리 (골드 보너스)
+  { x: -17, z: -15, r: 1, reach: 4 }, // 월드 이동 정류장
 ];
 
 /**

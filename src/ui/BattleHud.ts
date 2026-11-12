@@ -44,6 +44,8 @@ export class BattleHud {
     this.root.append(this.me);
     this.hint = el('div', 'bhud-hint');
     this.hint.append(icon('hand', 'bhud-hand'), el('span', '', t('battle.hint')));
+    // 탭 안내는 안 보임 (탭으로 더 쏘기 없음, 사용자 2026-11-12)
+    this.hint.hidden = true;
     this.root.append(top, this.hint);
     this.root.hidden = true;
     parent.appendChild(this.root);

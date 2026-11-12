@@ -67,7 +67,7 @@ const STRINGS = {
   'fac.fountain': { en: 'Coin Fountain', ko: '동전 분수', ja: 'コインの噴水', 'zh-TW': '金幣噴泉', 'zh-CN': '金币喷泉' },
   'st.run': { en: 'Run! Fire rate training', ko: '달려라! 연사 훈련 중', ja: '走れ! 連射トレーニング', 'zh-TW': '快跑! 連射訓練中', 'zh-CN': '快跑! 连射训练中' },
   'st.coin': { en: 'Catch coins! Gold bonus training', ko: '동전을 받아라! 골드 보너스 훈련 중', ja: 'コインをキャッチ! ゴールドボーナス訓練', 'zh-TW': '接金幣! 金幣加成訓練中', 'zh-CN': '接金币! 金币加成训练中' },
-  'st.tap': { en: 'Tap to go faster!', ko: '탭하면 더 빨라요!', ja: 'タップでもっと速く!', 'zh-TW': '點擊更快!', 'zh-CN': '点击更快!' },
+  'st.tap': { en: 'Training on its own!', ko: '자동으로 훈련해요!', ja: '自動でトレーニング!', 'zh-TW': '自動訓練中!', 'zh-CN': '自动训练中!' },
   'fac.rangeSpd': { en: 'Fire rate', ko: '연사', ja: '連射', 'zh-TW': '連射', 'zh-CN': '连射' },
   'fac.rangeCoin': { en: 'Gold bonus', ko: '골드 보너스', ja: 'ゴールドボーナス', 'zh-TW': '金幣加成', 'zh-CN': '金币加成' },
   'range.atk': { en: 'Attack training!', ko: '공격 훈련 중!', ja: '攻撃トレーニング!', 'zh-TW': '攻擊訓練中!', 'zh-CN': '攻击训练中!' },
@@ -100,7 +100,7 @@ const STRINGS = {
   'portal.big': { en: 'Run from {s}!', ko: '{s}부터 연속 도전!', ja: '{s}から連続チャレンジ!', 'zh-TW': '從{s}連續挑戰!', 'zh-CN': '从{s}连续挑战!' },
 
   'range.title': { en: 'Training!', ko: '사격장 훈련 중!', ja: '訓練中!', 'zh-TW': '訓練中!', 'zh-CN': '训练中!' },
-  'range.big': { en: 'Tap to shoot faster!', ko: '화면을 탭하면 더 빨리 쏴요!', ja: 'タップでもっと速く撃てる!', 'zh-TW': '點擊畫面射得更快!', 'zh-CN': '点击屏幕射得更快!' },
+  'range.big': { en: 'Shooting on its own!', ko: '자동으로 쏴요!', ja: '自動で撃つよ!', 'zh-TW': '自動射擊!', 'zh-CN': '自动射击!' },
   'float.pop': { en: 'Pop!', ko: '팡!', ja: 'パン!', 'zh-TW': '砰!', 'zh-CN': '砰!' },
   'float.away': { en: 'While away +{n}', ko: '자리 비운 동안 +{n}', ja: '留守中 +{n}', 'zh-TW': '離開期間 +{n}', 'zh-CN': '离开期间 +{n}' },
 
@@ -129,7 +129,7 @@ const STRINGS = {
   'result.toHub': { en: 'Back to town', ko: '광장으로', ja: '広場へ', 'zh-TW': '回到廣場', 'zh-CN': '回到广场' },
 
   'peer.player': { en: 'Player', ko: '플레이어', ja: 'プレイヤー', 'zh-TW': '玩家', 'zh-CN': '玩家' },
-  'peer.atk': { en: 'ATK {n}', ko: '공격력 {n}', ja: '攻撃力 {n}', 'zh-TW': '攻擊力 {n}', 'zh-CN': '攻击力 {n}' },
+  'peer.atk': { en: 'DPS {n}', ko: 'DPS {n}', ja: 'DPS {n}', 'zh-TW': 'DPS {n}', 'zh-CN': 'DPS {n}' },
   'peer.battle': { en: 'In battle', ko: '전투 중', ja: 'バトル中', 'zh-TW': '戰鬥中', 'zh-CN': '战斗中' },
 
   'settings.title': { en: 'Settings', ko: '설정', ja: '設定', 'zh-TW': '設定', 'zh-CN': '设置' },

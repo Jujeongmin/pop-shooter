@@ -9,7 +9,6 @@ import { shotsPerSec } from '../sim/actions.ts';
 import { gainPerShot, train } from '../sim/training.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
-import { TapLimiter } from '../sim/tapLimiter.ts';
 import { ZoneEntry } from '../core/ZoneEntry';
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
@@ -31,7 +30,6 @@ export class TrainingRange {
   private readonly game: Game;
   private readonly fx: HitFx;
   private readonly float: FloatText;
-  private readonly limiter = new TapLimiter(BALANCE.tap.maxPerSec);
   private shotAcc = 0;
   /** 아직 반영 안 한 훈련 발 수 (flush 때 train) */
   private pendingShots = 0;
@@ -58,7 +56,7 @@ export class TrainingRange {
       // 발판(6×4m) 안 무작위 자리: 여러 명이 훈련해도 한 점에 겹치지 않음
       spot: () => ({ x: RANGE_SPOT.x + (Math.random() - 0.5) * 4.2, z: RANGE_SPOT.z + (Math.random() - 0.5) * 2.2 }),
       face: RANGE_TARGET,
-      text: { title: t('range.atk'), big: t('range.big'), hand: true },
+      text: { title: t('range.atk'), big: t('range.big') },
     });
     // 착지하자마자 한 발
     this.zone.onLanded = () => this.fire(false);
@@ -71,7 +69,7 @@ export class TrainingRange {
   start(): void {
     if (this.active) return;
     this.active = true;
-    this.game.tapHandler = (taps) => { for (let i = 0; i < taps.length; i++) this.tap(); };
+    // 탭으로 빨라지기 없음 (사용자 2026-11-12): 자동 발사만
     this.shotAcc = 0;
     this.zone.enter();
   }
@@ -84,13 +82,6 @@ export class TrainingRange {
     this.game.pose.aimAt = null;
     this.game.pose.kick = 0;
     this.zone.leave();
-  }
-
-  private tap(): void {
-    if (this.game.velocity.lengthSq() > 0.04) return;
-    if (!this.limiter.accept(this.clock)) return;
-    this.tapsAccepted++;
-    this.fire(true);
   }
 
   private fire(tapped: boolean): void {

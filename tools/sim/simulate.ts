@@ -31,7 +31,8 @@ for (let i = 0; i < args.length; i++) {
   const last = keys.at(-1)!;
   o[last] = val!.includes(',') ? val!.split(',').map(Number) : Number(val);
 }
-const TAPS = Math.min(opt('taps', 3), BALANCE.tap.maxPerSec);
+// 탭으로 빨라지기 없음 (사용자 2026-11-12) → 기본 0
+const TAPS = Math.min(opt('taps', 0), BALANCE.tap.maxPerSec);
 const FARM_SEC = opt('farm', 90);
 const ASAP = opt('asap', 1) === 1;
 const STALL_SEC = 600;

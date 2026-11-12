@@ -50,15 +50,15 @@ test('field validation', () => {
 
 test('packet validation and move rules', () => {
   assert.equal(sanitizeHubPacket([1, 2, 3]), null);
-  assert.equal(sanitizeHubPacket([1, 0, 20, 0, 0, 0, 0, 0]), null);
-  assert.deepEqual(sanitizeHubPacket([1, 0, 15.8, -15.9, 0, 0, 0, 7]), [1, 0, 15.5, -15.5, 0, 0, 0, 3]);
+  assert.equal(sanitizeHubPacket([1, 0, 26, 0, 0, 0, 0, 0]), null);
+  assert.deepEqual(sanitizeHubPacket([1, 0, 22.3, -21.4, 0, 0, 0, 7]), [1, 0, 22, -21, 0, 0, 0, 3]);
   const at = (x: number, z: number): HubPacket => [0, 0, x, z, 0, 0, 0, 0];
   assert.ok(hubMoveOk(undefined, 0, at(5, 5), 1000));
   assert.ok(hubMoveOk(at(0, 0), 0, at(0, 2.5), 166));
   assert.ok(!hubMoveOk(at(0, 0), 0, at(6, 0), 166));
   // 전투 복귀·시작 지점은 어디서든, 사격장 판은 가까운 곳에서만
-  assert.ok(hubMoveOk(at(10, 10), 0, at(0, -3.3), 100));
-  assert.ok(hubMoveOk(at(-14, -14), 0, at(0, 6), 100));
-  assert.ok(hubMoveOk(at(-6, 2), 0, at(-10.5, 0), 100));
-  assert.ok(!hubMoveOk(at(10, 10), 0, at(-9, 1), 100));
+  assert.ok(hubMoveOk(at(10, 10), 0, at(0, -7.3), 100));
+  assert.ok(hubMoveOk(at(-14, -14), 0, at(0, 8), 100));
+  assert.ok(hubMoveOk(at(-10, 2), 0, at(-15.5, 0), 100));
+  assert.ok(!hubMoveOk(at(10, 10), 0, at(-14, 0), 100));
 });

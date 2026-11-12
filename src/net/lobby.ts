@@ -2,7 +2,7 @@
 // 서버에 연결됐을 때만 시작. 멀티 층이 없거나 실패해도 혼자 게임은 그대로 (여기서 던지는 것은 모두 잡음).
 import type { Game } from '../core/Game';
 import type { CloudSave } from '../platform/CloudSave';
-import { damagePerShot } from '../sim/actions.ts';
+import { autoDps } from '../sim/actions.ts';
 import type { GameState } from '../sim/state.ts';
 import type { TrainingRange } from '../training/TrainingRange';
 import { LobbyHub, type HubLocal } from './LobbyHub';
@@ -20,7 +20,8 @@ function infoOf(s: GameState, status: HubStatus, out: HubInfo): HubInfo {
   out.c = s.char;
   out.g = s.gun;
   out.r = s.rebirths;
-  out.pw = damagePerShot(s);
+  // 머리 위 숫자·오라 = DPS (사용자 2026-11-12: 띄운다면 DPS)
+  out.pw = autoDps(s);
   out.s = status;
   return out;
 }
@@ -42,7 +43,7 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
     game.onStateChange((s) => hub.setInfo(infoOf(s, status, info)));
     cloud.onSaved.add((saved) => {
       const s = saved as unknown as GameState;
-      if (typeof s.rebirths === 'number') hub.savedCovers(s.rebirths, damagePerShot(s));
+      if (typeof s.rebirths === 'number') hub.savedCovers(s.rebirths, autoDps(s));
     });
     const local: HubLocal = { x: 0, z: 0, yaw: 0, vx: 0, vz: 0, f: 0 };
     let warned = false;

@@ -4,7 +4,6 @@ import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
 import { BALANCE } from '../sim/balance.ts';
-import { TapLimiter } from '../sim/tapLimiter.ts';
 import { gainPerShot, spdMaxed, train, type TrainKind } from '../sim/training.ts';
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
@@ -40,7 +39,6 @@ interface Station {
 export class Stations {
   private readonly game: Game;
   private readonly float: FloatText;
-  private readonly limiter = new TapLimiter(BALANCE.tap.maxPerSec);
   private readonly list: Station[];
   private clock = 0;
   private hiddenAt = 0;
@@ -55,7 +53,7 @@ export class Stations {
         spot,
         face,
         landY,
-        text: { title, big: t('st.tap'), hand: true },
+        text: { title, big: t('st.tap') },
       });
       const st: Station = { kind, zone, active: false, acc: 0, pending: 0, flushT: 0, recent: 0 };
       game.facilityActions[id] = () => this.start(st);
@@ -85,7 +83,7 @@ export class Stations {
     st.active = true;
     st.acc = 0;
     st.zone.enter();
-    this.game.tapHandler = (taps) => { for (let i = 0; i < taps.length; i++) this.tap(st); };
+    // 탭으로 빨라지기 없음 (사용자 2026-11-12)
     if (st.kind === 'spd' && spdMaxed(this.game.state)) this.float.show(t('range.spdMax'), _at.set(TREADMILL.x, 2.6, TREADMILL.z - 1), 'big');
   }
 
@@ -96,12 +94,6 @@ export class Stations {
     st.zone.leave();
     this.game.tapHandler = null;
     if (st.kind === 'spd') this.game.hub.treadmill.setSpeed(0);
-  }
-
-  private tap(st: Station): void {
-    if (!st.active || st.zone.snapping) return;
-    if (!this.limiter.accept(this.clock)) return;
-    this.act(st);
   }
 
   /** 동작 한 번: 러닝머신 = 한 걸음, 동전 분수 = 동전 하나 떨어짐(받으면 셈) */

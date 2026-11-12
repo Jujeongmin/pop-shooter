@@ -174,6 +174,11 @@ export class World1Hub {
   /**
    * 광장 월드 바꾸기: 바깥 꾸미기만 새로 (이전 것은 해제). 반환 = 해제된 꾸미기 root (가림 투명 대상에서 빼라고)
    */
+  /** 지금 바깥 꾸미기 root (가림 투명 대상 등록용) */
+  get decorRoot(): THREE.Object3D {
+    return this.decor.root;
+  }
+
   setWorld(world: number): THREE.Object3D | null {
     if (world === this.world) return null;
     const old = this.decor;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BrickBatch, BRICK_SCALE, type BrickName, type KitModel } from './kit';
-import { HUB_BOUNDS } from './facilities';
+import { HUB_BOUNDS, HUB_SPAWN, PORTAL_SPOT } from './facilities';
 import type { DecorKind, WorldTheme } from './worldThemes';
 
 /**
@@ -124,9 +124,10 @@ export class HubDecor {
     flat(new THREE.BoxGeometry(220, 1, 220), t.ground, -0.5);
     // 울타리 안 광장 바닥 + 길 (스폰 → 포털, 가로 길)
     flat(new THREE.BoxGeometry(hx * 2 + 1, 0.04, hz * 2 + 1), t.plaza, 0.02);
-    flat(new THREE.BoxGeometry(4, 0.05, 20), t.path, 0.03, 0, 1);
-    flat(new THREE.BoxGeometry(24, 0.05, 3.4), t.path, 0.031, 0, 1);
-    flat(new THREE.CylinderGeometry(3.6, 3.6, 0.06, 40), t.path, 0.032, 0, 6);
+    const len = HUB_SPAWN.z - PORTAL_SPOT.z + 4;
+    flat(new THREE.BoxGeometry(4, 0.05, len), t.path, 0.03, 0, (HUB_SPAWN.z + PORTAL_SPOT.z) / 2);
+    flat(new THREE.BoxGeometry(hx * 2 - 6, 0.05, 3.4), t.path, 0.031, 0, 1);
+    flat(new THREE.CylinderGeometry(3.6, 3.6, 0.06, 40), t.path, 0.032, HUB_SPAWN.x, HUB_SPAWN.z);
   }
 
   /** 울타리: 말뚝 + 가로대 */
@@ -150,7 +151,13 @@ export class HubDecor {
 
   /** 바깥 큰 소품 자리: 북·동·서 (남쪽은 카메라 쪽이라 비움) */
   private bigSpots(): Spot[] {
-    const xs: [number, number][] = [[-14, -21], [-4, -22], [7, -21], [17, -22], [-23, -10], [-23, 1], [-23, 12], [23, -10], [23, 1], [23, 12]];
+    const { hx, hz } = HUB_BOUNDS;
+    const X = hx + 7.5;
+    const Z = hz + 6;
+    const xs: [number, number][] = [
+      [-hx * 0.9, -Z], [-hx * 0.3, -Z - 1], [hx * 0.3, -Z], [hx * 0.9, -Z - 1],
+      [-X, -hz * 0.6], [-X, 0], [-X, hz * 0.6], [X, -hz * 0.6], [X, 0], [X, hz * 0.6],
+    ];
     return xs.map(([x, z], i) => ({ x, z, s: 1, i }));
   }
 
@@ -158,14 +165,15 @@ export class HubDecor {
   private fillSpots(): Spot[] {
     const out: Spot[] = [];
     let i = 0;
-    for (let x = -26; x <= 26; x += 3.2) {
-      out.push({ x: x + this.rnd() * 1.2, z: -18 - this.rnd() * 1.5, s: 0.9 + this.rnd() * 0.5, i: i++ });
-      out.push({ x: x + this.rnd() * 1.2, z: -26 - this.rnd() * 3, s: 1.1 + this.rnd() * 0.5, i: i++ });
+    const { hx, hz } = HUB_BOUNDS;
+    for (let x = -hx - 10; x <= hx + 10; x += 3.2) {
+      out.push({ x: x + this.rnd() * 1.2, z: -hz - 2.5 - this.rnd() * 1.5, s: 0.9 + this.rnd() * 0.5, i: i++ });
+      out.push({ x: x + this.rnd() * 1.2, z: -hz - 10.5 - this.rnd() * 3, s: 1.1 + this.rnd() * 0.5, i: i++ });
     }
-    for (let z = -16; z <= 18; z += 3.2) {
+    for (let z = -hz - 0.5; z <= hz + 2.5; z += 3.2) {
       for (const sx of [-1, 1]) {
-        out.push({ x: sx * (18.5 + this.rnd() * 1.2), z: z + this.rnd(), s: 0.9 + this.rnd() * 0.5, i: i++ });
-        out.push({ x: sx * (28 + this.rnd() * 3), z: z + this.rnd(), s: 1.1 + this.rnd() * 0.5, i: i++ });
+        out.push({ x: sx * (hx + 3 + this.rnd() * 1.2), z: z + this.rnd(), s: 0.9 + this.rnd() * 0.5, i: i++ });
+        out.push({ x: sx * (hx + 12.5 + this.rnd() * 3), z: z + this.rnd(), s: 1.1 + this.rnd() * 0.5, i: i++ });
       }
     }
     return out;
@@ -175,7 +183,7 @@ export class HubDecor {
   private lowSpots(): Spot[] {
     const out: Spot[] = [];
     let i = 0;
-    for (let x = -16; x <= 16; x += 2.4) out.push({ x, z: HUB_BOUNDS.hz + 2.2, s: 1, i: i++ });
+    for (let x = -HUB_BOUNDS.hx - 0.5; x <= HUB_BOUNDS.hx + 0.5; x += 2.4) out.push({ x, z: HUB_BOUNDS.hz + 2.2, s: 1, i: i++ });
     return out;
   }
 
@@ -184,7 +192,8 @@ export class HubDecor {
     const hills: [number, number, number, number][] = [
       [-40, -45, 22, 9], [0, -52, 28, 12], [40, -45, 22, 10], [-60, -10, 20, 8], [60, -10, 20, 9], [-55, 25, 18, 7], [55, 25, 18, 7],
     ];
-    for (const [x, z, r, h] of hills) this.p('hemi', color, x, -0.2, z, r * 2, h * 2, r * 2, 0, 0, 0, false);
+    const k = HUB_BOUNDS.hx / 15.5;
+    for (const [x, z, r, h] of hills) this.p('hemi', color, x * k, -0.2, z * k, r * 2, h * 2, r * 2, 0, 0, 0, false);
   }
 
   /** 월드 1 장난감 마을: 팝배틀 브릭 집 + 둥근 나무 + 덤불 */
