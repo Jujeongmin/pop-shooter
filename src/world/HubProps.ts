@@ -41,6 +41,16 @@ function outlineGeometry(geo: THREE.BufferGeometry): THREE.BufferGeometry {
 export class ToyBuilder {
   readonly root = new THREE.Group();
   readonly animators: Animate[] = [];
+  /** 시설 겉모양 묶음 (월드 2~8에서는 숨기고 FacilityDress의 월드 모양으로 대신, 기능 부품은 따로 남김) */
+  readonly housings: THREE.Object3D[] = [];
+
+  /** 겉모양 묶음 하나 (parent 아래, housings에 등록) */
+  housing(parent: THREE.Object3D): THREE.Group {
+    const h = new THREE.Group();
+    parent.add(h);
+    this.housings.push(h);
+    return h;
+  }
   private readonly owned: { dispose(): void }[] = [];
   private readonly mats = new Map<string, THREE.MeshStandardMaterial>();
   private readonly ink = outlineMaterial();

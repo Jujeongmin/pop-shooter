@@ -93,8 +93,9 @@ export function buildAltar(b: ToyBuilder, f: Facility, colliders: Collider[]): v
   const g = new THREE.Group();
   g.position.set(f.x, 0, f.z - 1.6);
   b.root.add(g);
-  b.toy(new THREE.CylinderGeometry(1.7, 1.95, 0.4, 8), '#b9a6ff', 0, 0.2, 0, g);
-  b.toy(new THREE.CylinderGeometry(1.3, 1.3, 0.08, 40), b.mat('#f3ecff', { emissive: '#b9a6ff' }), 0, 0.44, 0, g, false);
+  const ah = b.housing(g);
+  b.toy(new THREE.CylinderGeometry(1.7, 1.95, 0.4, 8), '#b9a6ff', 0, 0.2, 0, ah);
+  b.toy(new THREE.CylinderGeometry(1.3, 1.3, 0.08, 40), b.mat('#f3ecff', { emissive: '#b9a6ff' }), 0, 0.44, 0, ah, false);
   // 떠서 도는 환생 고리: 화살표 두 개가 원을 이룸
   const ring = new THREE.Group();
   ring.position.y = 1.9;
@@ -128,22 +129,23 @@ export function buildWardrobe(b: ToyBuilder, f: Facility, colliders: Collider[])
   const g = new THREE.Group();
   g.position.set(f.x, 0, f.z - 2.2);
   b.root.add(g);
-  // 탈의실: 분홍 틀 + 노란 커튼 주름 (살랑)
-  b.toy(b.box(1.8, 0.2, 1.4, 0.06), '#ff9ec4', -0.7, 2.7, 0, g);
-  for (const x of [-1.55, 0.15]) b.toy(new THREE.CylinderGeometry(0.08, 0.08, 2.7, 10), '#ff9ec4', x, 1.35, 0.55, g);
-  b.toy(b.box(1.8, 2.6, 0.12, 0.05), '#ffe9b8', -0.7, 1.35, -0.6, g);
+  // 탈의실: 분홍 틀 + 노란 커튼 주름 (살랑). 받침대 빼고 겉모양 묶음
+  const wh = b.housing(g);
+  b.toy(b.box(1.8, 0.2, 1.4, 0.06), '#ff9ec4', -0.7, 2.7, 0, wh);
+  for (const x of [-1.55, 0.15]) b.toy(new THREE.CylinderGeometry(0.08, 0.08, 2.7, 10), '#ff9ec4', x, 1.35, 0.55, wh);
+  b.toy(b.box(1.8, 2.6, 0.12, 0.05), '#ffe9b8', -0.7, 1.35, -0.6, wh);
   // 옆벽 (사용자 2026-11-12: 옆에서 안이 보이지 않게)
-  for (const x of [-1.6, 0.2]) b.toy(b.box(0.12, 2.6, 1.15, 0.05), '#ff9ec4', x, 1.35, -0.02, g);
+  for (const x of [-1.6, 0.2]) b.toy(b.box(0.12, 2.6, 1.15, 0.05), '#ff9ec4', x, 1.35, -0.02, wh);
   const folds: THREE.Mesh[] = [];
-  for (let i = 0; i < 6; i++) folds.push(b.toy(new THREE.CylinderGeometry(0.15, 0.15, 2.3, 10), '#ffd34d', -1.42 + i * 0.27, 1.4, 0.55, g));
+  for (let i = 0; i < 6; i++) folds.push(b.toy(new THREE.CylinderGeometry(0.15, 0.15, 2.3, 10), '#ffd34d', -1.42 + i * 0.27, 1.4, 0.55, wh));
   // 거울 (둥근 틀)
   const mirror = new THREE.MeshStandardMaterial({ color: '#d9f0ff', metalness: 0.6, roughness: 0.12, emissive: '#bfe3ff', emissiveIntensity: 0.3 });
   b.own(mirror);
-  const glass = b.toy(new THREE.CircleGeometry(0.62, 32), mirror, 1.0, 1.55, -0.02, g, false);
+  const glass = b.toy(new THREE.CircleGeometry(0.62, 32), mirror, 1.0, 1.55, -0.02, wh, false);
   glass.scale.set(0.75, 1.15, 1);
-  const frame = b.toy(new THREE.TorusGeometry(0.62, 0.09, 10, 36), '#ff9ec4', 1.0, 1.55, 0, g);
+  const frame = b.toy(new THREE.TorusGeometry(0.62, 0.09, 10, 36), '#ff9ec4', 1.0, 1.55, 0, wh);
   frame.scale.set(0.75, 1.15, 1);
-  b.toy(b.box(0.2, 0.9, 0.2, 0.06), '#ff9ec4', 1.0, 0.45, 0, g);
+  b.toy(b.box(0.2, 0.9, 0.2, 0.06), '#ff9ec4', 1.0, 0.45, 0, wh);
   // 캐릭터 받침대 (돌아감, 위 캐릭터는 CharacterPanel)
   b.toy(new THREE.CylinderGeometry(0.62, 0.7, 0.24, 28), '#ffd34d', CHAR_TURNTABLE.x - f.x, 0.12, CHAR_TURNTABLE.z - (f.z - 2.2), g);
   b.animators.push((_dt, c) => folds.forEach((m, i) => { m.rotation.z = Math.sin(c * 1.6 + i * 0.7) * 0.04; }));
@@ -157,8 +159,9 @@ export function buildWardrobe(b: ToyBuilder, f: Facility, colliders: Collider[])
 export function buildRangeBooths(b: ToyBuilder): void {
   const z = RANGE_TARGET.z - 0.45;
   const lane = RANGE_LANES[0];
-  for (const dx of [-3.25, 3.25]) b.toy(new THREE.CylinderGeometry(0.1, 0.1, 3.0, 10), lane.color, RANGE_SPOT.x + dx, 1.5, z);
-  b.toy(b.box(6.8, 0.2, 0.32, 0.07), lane.color, RANGE_SPOT.x, 3.02, z);
+  const rh = b.housing(b.root);
+  for (const dx of [-3.25, 3.25]) b.toy(new THREE.CylinderGeometry(0.1, 0.1, 3.0, 10), lane.color, RANGE_SPOT.x + dx, 1.5, z, rh);
+  b.toy(b.box(6.8, 0.2, 0.32, 0.07), lane.color, RANGE_SPOT.x, 3.02, z, rh);
   b.sign('target', `${t('fac.range')} · ${t('fac.rangeAtk')}`, RANGE_SPOT.x, 3.5, z, { w: 2.8, h: 0.7, color: lane.color, post: false });
 }
 
@@ -180,12 +183,14 @@ export function buildTreadmill(b: ToyBuilder, colliders: Collider[]): TreadmillP
     const g = new THREE.Group();
     g.position.set(TREADMILL.x + dx, 0, TREADMILL.z);
     b.root.add(g);
-    b.toy(b.box(1.45, 0.32, 2.8, 0.12), '#5d6a92', 0, 0.16, 0, g);
+    // 겉모양(받침·손잡이·화면) 묶음, 벨트는 기능 부품이라 따로
+    const th = b.housing(g);
+    b.toy(b.box(1.45, 0.32, 2.8, 0.12), '#5d6a92', 0, 0.16, 0, th);
     const belt = b.toy(new THREE.PlaneGeometry(1.15, 2.5), beltMat, 0, 0.33, 0.05, g, false);
     belt.rotation.x = -Math.PI / 2;
-    for (const x of [-0.62, 0.62]) b.toy(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 10), '#dfe5f2', x, 0.95, -1.15, g);
-    b.toy(b.box(1.4, 0.12, 0.14, 0.05), '#4f9dff', 0, 1.6, -1.15, g);
-    b.toy(b.box(0.85, 0.45, 0.12, 0.06), '#bfeaff', 0, 1.82, -1.2, g);
+    for (const x of [-0.62, 0.62]) b.toy(new THREE.CylinderGeometry(0.06, 0.06, 1.3, 10), '#dfe5f2', x, 0.95, -1.15, th);
+    b.toy(b.box(1.4, 0.12, 0.14, 0.05), '#4f9dff', 0, 1.6, -1.15, th);
+    b.toy(b.box(0.85, 0.45, 0.12, 0.06), '#bfeaff', 0, 1.82, -1.2, th);
     colliders.push({ kind: 'box', x: TREADMILL.x + dx, z: TREADMILL.z - 1.2, hx: 0.72, hz: 0.12 });
   }
   let speed = 0.6;
@@ -206,10 +211,12 @@ export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainPro
   const g = new THREE.Group();
   g.position.set(mx, 0, mz);
   b.root.add(g);
-  b.toy(new THREE.CylinderGeometry(0.9, 1.05, 0.35, 24), '#ffe48a', 0, 0.18, 0, g);
+  // 겉모양(받침·몸통·관) 묶음. 도는 동전·떨어지는 동전은 기능 부품이라 따로
+  const fh = b.housing(g);
+  b.toy(new THREE.CylinderGeometry(0.9, 1.05, 0.35, 24), '#ffe48a', 0, 0.18, 0, fh);
   // 몸통 + 뚜껑(동전 뿜을 때 통통 찌그러짐)
   const body = new THREE.Group();
-  g.add(body);
+  fh.add(body);
   b.toy(new THREE.CylinderGeometry(0.62, 0.7, 1.7, 24), '#ffc928', 0, 1.2, 0, body);
   b.toy(new THREE.SphereGeometry(0.66, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), '#ff9ec4', 0, 2.05, 0, body);
   b.toy(new THREE.CylinderGeometry(0.22, 0.22, 0.12, 18), '#ffffff', 0, 2.68, 0, body);
@@ -221,7 +228,7 @@ export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainPro
   b.toy(new THREE.CylinderGeometry(0.17, 0.2, 0.16, 16), '#ffffff', 0, 2.86, 0.78, body);
   // 꼭대기에서 도는 큰 동전 (늘 움직여서 동전 분수인 걸 알아보게)
   const coinMat = b.mat('#ffd34d', { emissive: '#ffb000', metal: 0.4, rough: 0.3 });
-  const topper = b.toy(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 28), coinMat, 0, 3.35, 0, body);
+  const topper = b.toy(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 28), coinMat, 0, 3.35, 0, g);
   topper.rotation.x = Math.PI / 2;
   // 떨어지는 동전 (크게, 관 끝에서 위로 튀었다가 손으로)
   const coinGeo = b.own(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 18));
@@ -271,8 +278,9 @@ export function buildTravel(b: ToyBuilder, f: Facility, colliders: Collider[]): 
   const g = new THREE.Group();
   g.position.set(f.x, 0, f.z - 1.6);
   b.root.add(g);
-  b.toy(new THREE.CylinderGeometry(1.6, 1.8, 0.35, 24), '#7cc4ff', 0, 0.18, 0, g);
-  b.toy(new THREE.CylinderGeometry(1.2, 1.2, 0.06, 32), b.mat('#e9f6ff', { emissive: '#7cc4ff' }), 0, 0.39, 0, g, false);
+  const vh = b.housing(g);
+  b.toy(new THREE.CylinderGeometry(1.6, 1.8, 0.35, 24), '#7cc4ff', 0, 0.18, 0, vh);
+  b.toy(new THREE.CylinderGeometry(1.2, 1.2, 0.06, 32), b.mat('#e9f6ff', { emissive: '#7cc4ff' }), 0, 0.39, 0, vh, false);
   const globe = new THREE.Group();
   globe.position.y = 2.1;
   g.add(globe);

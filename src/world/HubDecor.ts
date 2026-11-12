@@ -3,6 +3,7 @@ import { BrickBatch, BRICK_SCALE, type BrickName, type KitModel } from './kit';
 import { HUB_BOUNDS, HUB_SPAWN, PORTAL_SPOT } from './facilities';
 import type { DecorKind, WorldTheme } from './worldThemes';
 import { dressFacilities } from './FacilityDress';
+import { buildHousings } from './FacilityHousings';
 
 /**
  * 월드별 광장 바깥 꾸미기 (바닥·길·울타리·바깥 큰 소품·나무 자리 소품·먼 언덕). 시설(사격장·상점 등)은 World1Hub가 따로 가짐.
@@ -64,6 +65,7 @@ export class HubDecor {
     this.hills(theme.hill);
     // 월드별 시설 모양 (지붕·받침·소품·포털 기둥)
     dressFacilities(this, theme.decor);
+    buildHousings(this, theme.decor);
     this.build();
   }
 

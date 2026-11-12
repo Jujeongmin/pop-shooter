@@ -81,6 +81,8 @@ export class World1Hub {
     this.themed?.dispose();
     this.themed = null;
     for (const g of this.baseBodies) g.visible = th.decor === 'town';
+    // 나머지 시설 겉모양도 월드 2~8은 숨김 (FacilityHousings가 월드 모양으로 그림, 기능 부품은 남음)
+    for (const h of this.toys.housings) h.visible = th.decor === 'town';
     if (th.decor !== 'town') {
       const f = (id: string): Facility => this.facilities.find((x) => x.id === id)!;
       this.themed = new ToyBuilder();

@@ -189,7 +189,8 @@ export function dressFacilities(d: HubDecor, kind: DecorKind): void {
   if (kind === 'town') return;
   const dr = DRESS[kind];
   for (const f of FOOTPRINTS) {
-    dr.base(d, f);
+    // 러닝머신·동전 분수는 겉모양 자체가 월드 모양(FacilityHousings)이라 받침 장식 생략 (복잡해 보임)
+    if (f.id !== 'treadmill' && f.id !== 'fountain') dr.base(d, f);
     // 상점·업그레이드는 본체 자체가 월드 모양(FacilityBodies)이라 지붕 안 씌움
     if (f.cap && f.id !== 'upgrade' && f.id !== 'guns') dr.cap(d, f);
     // 뒤쪽 두 모서리 소품 (앞은 드나드는 쪽이라 비움)
