@@ -9,7 +9,7 @@ import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 import { Panel } from './Panel';
 
-type Tab = 'free' | 'pass' | 'gems' | 'heroes';
+export type Tab = 'free' | 'pass' | 'gems' | 'heroes';
 const TABS: readonly Tab[] = ['free', 'pass', 'gems', 'heroes'];
 
 /** 남은 시간 mm:ss / h:mm:ss */
@@ -52,7 +52,9 @@ export class ShopPanel {
     game.onStateChange(() => { if (this.panel.isOpen) this.render(); });
   }
 
-  open(): void {
+  /** tab = 열 탭 (오른쪽 이벤트 버튼에서 바로 그 탭으로) */
+  open(tab?: Tab): void {
+    if (tab) { this.tab = tab; this.msg = ''; }
     this.prem.startShop();
     void this.prem.refresh();
     this.render();

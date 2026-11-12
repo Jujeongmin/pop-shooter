@@ -33,6 +33,8 @@ import { UpgradePanel } from './ui/UpgradePanel';
 import { GunPanel } from './ui/GunPanel';
 import { RebirthPanel } from './ui/RebirthPanel';
 import { TravelPanel } from './ui/TravelPanel';
+import { DailyPanel } from './ui/DailyPanel';
+import { EventBar } from './ui/EventBar';
 import { startKeepAwake } from './platform/keepAwake';
 import { CharacterPanel } from './ui/CharacterPanel';
 import { showOfflineReward } from './ui/OfflinePanel';
@@ -109,13 +111,16 @@ async function boot(): Promise<void> {
   rebirthPanel.prem = prem;
   const shop = new ShopPanel(game, ui, prem);
   game.menuActions.shop = () => shop.open();
+  // 출석 창 + 오른쪽 이벤트 버튼 (선물·골드 2배·패스·팝젬·새 캐릭터)
+  const daily = new DailyPanel(game, ui, prem);
+  new EventBar(game, ui, prem, shop, daily);
   if (!showOfflineReward(game, ui, save.now, prem)) game.saver.saveNow();
   // 광장 멀티 (서버에 연결됐을 때만, 실패해도 혼자 게임은 그대로)
   const lobby = startLobby(game, net, cloud, training);
   // 첫 접속이면 닉네임 정하기 (서버 연결 뒤, 오프라인 보상 창과 겹치지 않게 조금 뒤)
   if (nickPanel) window.setTimeout(() => void nickPanel.checkOnConnect(), 1500);
   if (import.meta.env.DEV) Object.assign(window, { __hub: lobby });
-  if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud, __net: net, __audio: audio });
+  if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud, __net: net, __audio: audio, __prem: prem, __daily: daily });
 }
 
 boot().catch((e) => {

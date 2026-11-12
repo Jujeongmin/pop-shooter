@@ -7,6 +7,8 @@ import { adsAvailable, redeem, watchAd } from './ads';
 /** 서버 premView (server.ts) */
 export interface PremView {
   gems: number; passMult: number; boostUntil: number; chars: string[]; char: string; ads: Record<AdKind, number>;
+  /** 출석 (예전 서버면 없음) */
+  daily?: { ready: boolean; idx: number };
 }
 
 export type AdOutcome = 'granted' | 'dismissed' | 'busy' | 'unsupported' | 'failed' | 'limit' | 'offline';
@@ -22,6 +24,8 @@ export class Premium {
   private readonly game: Game;
   private readonly net: NetClient | null;
   ads: Record<AdKind, number> = { ...AD_LIMIT };
+  /** 출석: 오늘 받을 수 있는지, 다음 칸 */
+  daily = { ready: false, idx: 0 };
   /** 서버 값을 한 번이라도 받았는지 (못 받으면 결제 버튼 끔) */
   known = false;
   private shopStarted = false;
@@ -54,6 +58,7 @@ export class Premium {
     if (!p) return;
     this.known = true;
     for (const k of AD_KINDS) this.ads[k] = Math.max(0, p.ads?.[k] ?? 0);
+    if (p.daily) this.daily = { ready: !!p.daily.ready, idx: Math.max(0, Math.floor(p.daily.idx ?? 0)) % 7 };
     this.game.adoptServer({ ok: true, prem: p });
     this.emit();
   }
@@ -88,6 +93,18 @@ export class Premium {
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
       return msg.includes('limit') ? 'limit' : msg.includes('nothing') ? 'offline' : 'failed';
+    }
+  }
+
+  /** 출석 받기 (서버가 하루 한 번만). 받은 칸 번호, 못 받으면 null */
+  async claimDaily(): Promise<number | null> {
+    if (!this.net) return null;
+    try {
+      const r = await this.net.call<{ ok: boolean; idx?: number; prem: PremView }>('dailyClaim');
+      this.apply(r.prem);
+      return r.ok ? (r.idx ?? null) : null;
+    } catch {
+      return null;
     }
   }
 

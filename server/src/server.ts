@@ -13,7 +13,7 @@
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
 import { allowedChars, checkSave } from '../../src/sim/econ.ts';
-import { AD_KINDS, AD_LIMIT, buySkipRebirth, claimAd, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
+import { AD_KINDS, AD_LIMIT, buySkipRebirth, claimAd, claimDaily, dailyReady, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
 import type { CharId, GameState } from '../../src/sim/state.ts';
 import { autoDps, skipRebirthGems } from '../../src/sim/actions.ts';
@@ -48,6 +48,8 @@ interface SaveWriteResult {
 /** 화면에 돌려주는 프리미엄 (광고 남은 횟수 포함, 기록 id는 안 줌) */
 interface PremView {
   gems: number; passMult: number; boostUntil: number; chars: string[]; char: string; ads: Record<AdKind, number>;
+  /** 출석: 오늘 받을 수 있는지, 다음 칸 (0..6) */
+  daily: { ready: boolean; idx: number };
 }
 
 /** 서버 프리미엄 (글로벌 사용자 상태 prem, sim/premium). 처음이면 기존 저장의 팝젬만 이어받음 (최대 1000, 한 번만 믿음) */
@@ -61,7 +63,7 @@ function premView(p: PremState, s: GameState | null, now = Date.now()): PremView
   const today = p.adDay === dayKey(now);
   const ads = {} as Record<AdKind, number>;
   for (const k of AD_KINDS) ads[k] = AD_LIMIT[k] - (today ? p.adUsed[k] : 0);
-  return { gems: p.gems, passMult: p.passMult, boostUntil: p.boostUntil, chars, char: s && chars.includes(s.char) ? s.char : 'blue', ads };
+  return { gems: p.gems, passMult: p.passMult, boostUntil: p.boostUntil, chars, char: s && chars.includes(s.char) ? s.char : 'blue', ads, daily: { ready: dailyReady(p, now), idx: p.dailyIdx } };
 }
 
 /**
@@ -325,6 +327,23 @@ export class Server {
       await $global.updateMyState({ prem: r.prem });
       slog(`ad_${kind as string}`, '-', account);
       return { status: 'granted' as const, prem: premView(r.prem, prev, now) };
+    });
+  }
+
+  /** 출석 보상 받기 (하루 한 번, 서버 날짜 기준, sim/premium claimDaily). 이미 받았으면 ok false + 지금 값 */
+  async dailyClaim(): Promise<{ ok: boolean; idx?: number; prem: PremView }> {
+    const account = $sender.account;
+    return $lock(`save:${account}`, async () => {
+      const now = Date.now();
+      const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+      const raw = saveOf(st);
+      const prev = raw ? normalizeState(raw, now) : null;
+      const prem = premOf(st, prev);
+      const r = claimDaily(prem, now);
+      if (!r) return { ok: false, prem: premView(prem, prev, now) };
+      await $global.updateMyState({ prem: r.prem });
+      slog('daily', String(r.idx), account);
+      return { ok: true, idx: r.idx, prem: premView(r.prem, prev, now) };
     });
   }
 

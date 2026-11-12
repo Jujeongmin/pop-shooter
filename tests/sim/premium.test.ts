@@ -101,3 +101,35 @@ test('skip rebirth: gems buy one skip, the next early rebirth save uses it', asy
   const r2 = checkSave(fair, doRebirth(fair)!, 5, p, NOW);
   assert.ok(r2.ok && r2.prem.skip === 1);
 });
+
+test('daily reward: once per UTC day, 7-slot cycle, a missed day does not reset the cycle', async () => {
+  const { DAILY, claimDaily, dailyReady } = await import('../../src/sim/premium.ts');
+  const DAY = 86_400_000;
+  let p = readPrem(null);
+  expect0(p.dailyIdx);
+  assert.ok(dailyReady(p, NOW));
+  const a = claimDaily(p, NOW)!;
+  assert.ok(a);
+  assert.equal(a.idx, 0);
+  assert.equal(a.prem.gems, (DAILY[0] as { gems: number }).gems);
+  p = a.prem;
+  assert.equal(claimDaily(p, NOW + 1000), null, 'same day');
+  assert.ok(!dailyReady(p, NOW + 1000));
+  // 다음 날: 2칸째 (골드 2배)
+  const b = claimDaily(p, NOW + DAY)!;
+  assert.equal(b.idx, 1);
+  assert.ok(b.prem.boostUntil > NOW + DAY);
+  // 사흘 쉬고 와도 3칸째부터 (처음으로 안 돌아감)
+  const c = claimDaily(b.prem, NOW + DAY * 5)!;
+  assert.equal(c.idx, 2);
+  // 7칸 뒤 다시 처음
+  let q = c.prem;
+  for (let d = 6; d <= 9; d++) q = claimDaily(q, NOW + DAY * d)!.prem;
+  assert.equal(q.dailyIdx, 0);
+  // 저장값 읽기: 깨진 값은 기본값
+  assert.equal(readPrem({ dailyIdx: 'x', dailyDay: 5 }).dailyDay, '');
+});
+
+function expect0(v: number): void {
+  assert.equal(v, 0);
+}

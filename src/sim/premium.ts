@@ -45,6 +45,33 @@ export interface PremState extends Premium {
   buys: string[];
   adDay: string;
   adUsed: Record<AdKind, number>;
+  /** 출석: 마지막으로 받은 날(UTC 'YYYY-MM-DD'), 다음에 받을 칸 0..6 */
+  dailyDay: string;
+  dailyIdx: number;
+}
+
+/**
+ * 출석 보상 (사용자 2026-11-12: 가볍게). 하루 첫 접속에 한 번, 7칸 순환.
+ * 하루 빠져도 처음으로 돌아가지 않고 다음 칸부터 (연속 출석 강요 없음). 지급은 서버가 하루 한 번만 (기기 날짜와 무관).
+ */
+export type DailyReward = { gems: number } | { boostMin: number };
+export const DAILY: readonly DailyReward[] = [
+  { gems: 10 }, { boostMin: 15 }, { gems: 15 }, { boostMin: 15 }, { gems: 20 }, { gems: 30 }, { gems: 50 },
+];
+
+export function dailyReady(p: PremState, now: number): boolean {
+  return p.dailyDay !== dayKey(now);
+}
+
+/** 출석 받기 (오늘 이미 받았으면 null) */
+export function claimDaily(p: PremState, now: number): { prem: PremState; reward: DailyReward; idx: number } | null {
+  if (!dailyReady(p, now)) return null;
+  const idx = p.dailyIdx % DAILY.length;
+  const reward = DAILY[idx]!;
+  const next: PremState = { ...p, dailyDay: dayKey(now), dailyIdx: (idx + 1) % DAILY.length };
+  if ('gems' in reward) next.gems = p.gems + reward.gems;
+  else next.boostUntil = addBoost(p.boostUntil, now, reward.boostMin * 60_000);
+  return { prem: next, reward, idx };
 }
 
 export function dayKey(now: number): string {
@@ -69,6 +96,8 @@ export function readPrem(raw: unknown): PremState {
     buys: strs(p.buys),
     adDay: typeof p.adDay === 'string' ? p.adDay : '',
     adUsed: { boost: Math.floor(num(used.boost, 0)), offline: Math.floor(num(used.offline, 0)), gift: Math.floor(num(used.gift, 0)) },
+    dailyDay: typeof p.dailyDay === 'string' ? p.dailyDay : '',
+    dailyIdx: Math.floor(num(p.dailyIdx, 0)) % 7,
   };
 }
 

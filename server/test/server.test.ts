@@ -725,4 +725,20 @@ describe('save economy check', () => {
     const r2 = await server.saveWrite({ v: 2, rebirths: 2, tokens: 2, char: 'blue', chars: ['blue'] });
     expect(r2.ok).toBe(false);
   });
+
+  test('dailyClaim: once per day, gives the first slot (gems), view tells ready/next slot', async (server) => {
+    server.connect({ account: 'dy' });
+    const g = await server.premGet();
+    expect(g.prem.daily.ready).toBe(true);
+    expect(g.prem.daily.idx).toBe(0);
+    const a = await server.dailyClaim();
+    expect(a.ok).toBe(true);
+    expect(a.idx).toBe(0);
+    expect(a.prem.gems).toBe(10);
+    expect(a.prem.daily.ready).toBe(false);
+    expect(a.prem.daily.idx).toBe(1);
+    const b = await server.dailyClaim();
+    expect(b.ok).toBe(false);
+    expect(b.prem.gems).toBe(10);
+  });
 });
