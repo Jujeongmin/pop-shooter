@@ -1,4 +1,9 @@
+import * as THREE from 'three';
 import { CHARACTERS } from '../config/characters';
+import { gearTiers } from '../core/Game';
+import { Avatar } from '../player/Avatar';
+import { GUNS } from '../sim/guns.ts';
+import { CHAR_TURNTABLE } from '../world/HubFacilities';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { WORLD1_FACILITIES } from '../world/facilities';
@@ -12,6 +17,8 @@ import { button, el } from './dom';
 import { icon } from './icons';
 import { Panel } from './Panel';
 
+const ZERO = new THREE.Vector3();
+
 /** 잠긴 캐릭터 해금 조건: 월드 1~3 대장 첫 클리어 (sim BOSS_UNLOCKS와 같은 순서), 나머지는 상점 */
 const UNLOCK: Partial<Record<CharId, number>> = { yellow: 10, red: 20, pink: 30 };
 
@@ -21,6 +28,12 @@ export class CharacterPanel {
   private readonly panel: Panel;
   private thumbs: Record<CharId, string> | null = null;
   private readonly zone: ZoneEntry;
+  /** 탈의실 받침대 위에서 도는 지금 캐릭터 (캐릭터·총이 바뀌면 다시 만듦) */
+  private display: Avatar | null = null;
+  private displayKey = '';
+  private displayYaw = 0;
+  private displayGear = -1;
+  private readonly displayPos = new THREE.Vector3(CHAR_TURNTABLE.x, 0.24, CHAR_TURNTABLE.z);
 
   constructor(game: Game, ui: HTMLElement, callout: ZoneCallout) {
     this.game = game;
@@ -37,7 +50,29 @@ export class CharacterPanel {
     this.zone.onLanded = () => { this.render(); this.panel.open(); };
     game.facilityActions.chars = () => this.zone.enter();
     game.facilityLeave.chars = () => { this.zone.leave(); this.panel.close(); };
-    game.onTick((dt) => this.zone.update(dt));
+    game.onTick((dt) => {
+      this.zone.update(dt);
+      this.updateDisplay(dt);
+    });
+  }
+
+  private updateDisplay(dt: number): void {
+    const g = this.game;
+    const key = `${g.state.char}:${g.state.gun}`;
+    if (key !== this.displayKey) {
+      this.displayKey = key;
+      this.display?.root.removeFromParent();
+      this.display?.dispose();
+      this.display = new Avatar(g.assets, g.state.char, GUNS[g.state.gun]!);
+      g.hub.root.add(this.display.root);
+      this.displayGear = -1;
+    }
+    const d = this.display!;
+    if (g.mode === 'battle') return;
+    // 장비가 바뀔 때만 다시 붙임 (매 프레임 setGear는 행렬 갱신이 들어 비쌈)
+    if (g.state.gear !== this.displayGear) { this.displayGear = g.state.gear; d.setGear(gearTiers(g.state)); }
+    this.displayYaw += dt * 0.8;
+    d.update(dt, { pos: this.displayPos, yaw: this.displayYaw, velocity: ZERO, aimAt: null, kick: 0 });
   }
 
   private render(): void {

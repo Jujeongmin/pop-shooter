@@ -93,7 +93,7 @@ export class Game {
     this.saver = new AutoSaver(() => this.state, save.account, save.cloud);
     this.saver.start();
     this.cam = new FollowCamera(stage.camera);
-    this.hub = new World1Hub(kit);
+    this.hub = new World1Hub(kit, assets.guns);
     stage.scene.add(this.hub.root);
     this.hub.setBest(state.bestStage);
     this.avatar = new Avatar(assets, state.char, GUNS[state.gun]!);

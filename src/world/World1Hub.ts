@@ -5,6 +5,9 @@ import { disposeLabel, makeLabel } from './labels';
 import type { Collider } from './movement';
 import { BALANCE } from '../sim/balance.ts';
 import { stageLabel } from '../sim/stages.ts';
+import type { GunModel } from '../sim/guns.ts';
+import { buildAltar, buildGunShop, buildRangeBooths, buildUpgrade, buildWardrobe } from './HubFacilities';
+import { ToyBuilder } from './HubProps';
 import { HUB_BOUNDS, PORTAL_GATE, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
 
 /** 이 광장 월드의 스테이지 수 (포털 기록은 월드 1 안에서만) */
@@ -29,8 +32,14 @@ export class World1Hub {
   private swirl: THREE.Mesh | null = null;
   private bestLabel: THREE.Sprite | null = null;
   private readonly mats = new Map<string, THREE.MeshStandardMaterial>();
+  /** 시설 장난감 도형 (간판·외곽선·움직임) */
+  private readonly toys = new ToyBuilder();
+  private readonly guns: Record<GunModel, THREE.Object3D> | null;
+  private clock = 0;
 
-  constructor(kit: Record<BrickName, KitModel>) {
+  constructor(kit: Record<BrickName, KitModel>, guns: Record<GunModel, THREE.Object3D> | null = null) {
+    this.guns = guns;
+    this.root.add(this.toys.root);
     this.buildGround();
     const bricks = new BrickBatch();
     this.buildTown(bricks);
@@ -197,7 +206,8 @@ export class World1Hub {
     this.mesh(new THREE.BoxGeometry(6, 0.06, 10), '#e8f4ff', RANGE_SPOT.x, 0.03, (RANGE_SPOT.z + RANGE_TARGET.z) / 2 - 1).castShadow = false;
     const post = new THREE.CylinderGeometry(0.08, 0.08, 1.2, 8);
     this.owned.push(post);
-    const discs = [0, 1, 2, 3].map((k) => new THREE.CylinderGeometry(0.7 - k * 0.16, 0.7 - k * 0.16, 0.12 + k * 0.02, 28));
+    // 과녁 1.4배 (사용자 2026-11-11: 훈련장 존재감)
+    const discs = [0, 1, 2, 3].map((k) => new THREE.CylinderGeometry((0.7 - k * 0.16) * 1.4, (0.7 - k * 0.16) * 1.4, 0.12 + k * 0.02, 28));
     this.owned.push(...discs);
     for (let i = -1; i <= 1; i++) {
       const lane = RANGE_LANES[i + 1]!;
@@ -219,46 +229,16 @@ export class World1Hub {
       this.targets.push(t);
       this.colliders.push({ kind: 'circle', x: t.position.x, z: t.position.z, r: 0.5 });
     }
-    this.label(t('fac.range'), RANGE_SPOT.x - 3.4, 3, RANGE_SPOT.z - 2, 0.8);
-    for (const lane of RANGE_LANES) this.label(t(lane.id === 'range' ? 'fac.rangeAtk' : lane.id === 'rangeSpd' ? 'fac.rangeSpd' : 'fac.rangeCoin'), lane.x, 2.6, RANGE_TARGET.z, 0.55);
+    buildRangeBooths(this.toys);
   }
 
-  /** 업그레이드 기계 · 총 상점 · 환생 제단 (임시 도형) */
+  /** 업그레이드 기계 · 총 상점 · 환생 제단 · 탈의실 (HubFacilities, 장난감 도형) */
   private buildFacilities(): void {
     const f = (id: string): Facility => this.facilities.find((x) => x.id === id)!;
-    const up = f('upgrade');
-    this.mesh(new THREE.BoxGeometry(2.2, 2.4, 1.6), '#ff8a5b', up.x, 1.2, up.z - 1.6);
-    this.mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 20), '#ffd34d', up.x, 2.55, up.z - 1.6);
-    this.colliders.push({ kind: 'box', x: up.x, z: up.z - 1.6, hx: 1.1, hz: 0.8 });
-    this.label(t('fac.upgrade'), up.x, 3.6, up.z - 1.6);
-
-    const gs = f('guns');
-    this.mesh(new THREE.BoxGeometry(3.2, 1.1, 1.4), '#7cc4ff', gs.x + 1.8, 0.55, gs.z);
-    this.mesh(new THREE.BoxGeometry(3.6, 0.2, 2), '#ff9ec4', gs.x + 1.8, 2.6, gs.z).rotation.z = -0.15;
-    this.mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.5, 8), '#ffffff', gs.x + 0.2, 1.25, gs.z - 0.8);
-    this.mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.5, 8), '#ffffff', gs.x + 0.2, 1.25, gs.z + 0.8);
-    this.colliders.push({ kind: 'box', x: gs.x + 1.8, z: gs.z, hx: 1.6, hz: 0.7 });
-    this.label(t('fac.guns'), gs.x + 1.8, 3.6, gs.z);
-
-    const ch = f('chars');
-    this.mesh(new THREE.CylinderGeometry(1.5, 1.7, 0.3, 32), '#ffd34d', ch.x, 0.15, ch.z).castShadow = false;
-    this.mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.06, 32), '#ffffff', ch.x, 0.33, ch.z).castShadow = false;
-    const mirrorMat = new THREE.MeshStandardMaterial({ color: '#d9f0ff', metalness: 0.6, roughness: 0.15, emissive: '#bfe3ff', emissiveIntensity: 0.25 });
-    this.owned.push(mirrorMat);
-    this.mesh(new THREE.BoxGeometry(1.6, 2.4, 0.12), '', ch.x, 1.6, ch.z - 2.2, mirrorMat);
-    const frame = this.mesh(new THREE.TorusGeometry(1.3, 0.12, 10, 40), '#ff9ec4', ch.x, 1.6, ch.z - 2.15);
-    frame.scale.set(0.72, 1.05, 1);
-    this.mesh(new THREE.BoxGeometry(0.2, 0.5, 0.2), '#ff9ec4', ch.x, 0.25, ch.z - 2.2);
-    this.colliders.push({ kind: 'box', x: ch.x, z: ch.z - 2.2, hx: 1, hz: 0.3 });
-    this.label(t('fac.chars'), ch.x, 3.4, ch.z - 2.2);
-
-    const al = f('altar');
-    this.mesh(new THREE.CylinderGeometry(1.6, 1.9, 0.6, 6), '#b9a6ff', al.x, 0.3, al.z - 1.6);
-    const orbMat = new THREE.MeshStandardMaterial({ color: '#f3ecff', emissive: '#b9a6ff', emissiveIntensity: 0.6 });
-    this.owned.push(orbMat);
-    this.mesh(new THREE.SphereGeometry(0.7, 24, 16), '', al.x, 1.5, al.z - 1.6, orbMat);
-    this.colliders.push({ kind: 'circle', x: al.x, z: al.z - 1.6, r: 1.8 });
-    this.label(t('fac.altar'), al.x, 3, al.z - 1.6);
+    buildUpgrade(this.toys, f('upgrade'), this.colliders);
+    buildGunShop(this.toys, f('guns'), this.colliders, this.guns);
+    buildAltar(this.toys, f('altar'), this.colliders);
+    buildWardrobe(this.toys, f('chars'), this.colliders);
   }
 
   /** 월드 포털: 받침 + 세운 고리 + 안쪽 소용돌이(돌아감) + 위에 최고 기록 */
@@ -313,6 +293,8 @@ export class World1Hub {
 
   update(dt: number, camPos?: THREE.Vector3): void {
     if (this.swirl) this.swirl.rotation.z -= dt * 1.6;
+    this.clock += dt;
+    this.toys.update(dt, this.clock);
     // 3D 이름표: 카메라에 가까우면 흐리게 (가까이서 화면을 꽉 채우지 않게). LABEL_NEAR 안은 안 보임, LABEL_FAR 밖은 그대로
     if (!camPos) return;
     for (const l of this.labels) {
@@ -326,6 +308,7 @@ export class World1Hub {
   dispose(): void {
     for (const o of this.owned) o.dispose();
     for (const l of this.labels) disposeLabel(l);
+    this.toys.dispose();
     this.root.removeFromParent();
   }
 }
