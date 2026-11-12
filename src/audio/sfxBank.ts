@@ -16,6 +16,36 @@ function click(c: BaseAudioContext, o: AudioNode, t: number, freq: number, peak:
 }
 
 const RECIPES: Record<SynthSoundId, { len: number; make: Recipe }> = {
+  // 러닝머신 발소리 "톡": 낮은 고무 바닥 소리 + 벨트 쓸림
+  step: {
+    len: 0.16,
+    make: (c, o) => {
+      tone(c, o, { t: 0, f0: 140, f1: 70, glide: 0.05, decay: 0.07, peak: 0.7 });
+      noise(c, o, { t: 0, decay: 0.05, peak: 0.25, filter: 'lowpass', f0: 900 });
+    },
+  },
+  // 월드 이동 "슈웅 띵": 내려가는 바람 + 올라가는 종 두 개 (환생 소리와 다르게 짧게)
+  travel: {
+    len: 0.9,
+    make: (c, o) => {
+      noise(c, o, { t: 0, attack: 0.08, decay: 0.3, peak: 0.45, filter: 'bandpass', f0: 3000, f1: 400, q: 1.4 });
+      tone(c, o, { t: 0, f0: 900, f1: 260, glide: 0.3, decay: 0.3, peak: 0.25 });
+      [988, 1480].forEach((f, i) => tone(c, o, { t: 0.36 + i * 0.1, type: 'triangle', f0: f, decay: 0.35, peak: 0.38 }));
+      tone(c, o, { t: 0.46, f0: 2960, decay: 0.3, peak: 0.08 });
+    },
+  },
+  // 월드 클리어 만세 "빠바밤!": 팡파르 세 음 + 폭죽 터짐
+  cheer: {
+    len: 1.1,
+    make: (c, o) => {
+      noise(c, o, { t: 0, decay: 0.08, peak: 0.5, filter: 'highpass', f0: 2500 });
+      [[523, 0.1], [659, 0.1], [784, 0.12], [1047, 0.5]].forEach(([f, d], i) => {
+        tone(c, o, { t: 0.08 + i * 0.11, type: 'square', f0: f!, decay: d!, peak: 0.22, lowpass: 3000 });
+        tone(c, o, { t: 0.08 + i * 0.11, type: 'triangle', f0: f!, decay: d!, peak: 0.3 });
+      });
+      for (let k = 0; k < 6; k++) tone(c, o, { t: 0.5 + k * 0.05, f0: 2000 + k * 260, decay: 0.12, peak: 0.07 });
+    },
+  },
   // 코인 "찰랑": 높은 두 음 (작고 짧게, 자주 나도 거슬리지 않게)
   coin: {
     len: 0.26,

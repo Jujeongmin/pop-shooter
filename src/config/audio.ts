@@ -19,7 +19,10 @@ export type SoundId =
   | 'playerHit'
   | 'win'
   | 'lose'
-  | 'uiTick';
+  | 'uiTick'
+  | 'step'
+  | 'travel'
+  | 'cheer';
 
 export type MusicId = 'hub' | 'battle';
 
@@ -54,6 +57,10 @@ export const SOUNDS: Record<SoundId, SoundSpec> = {
   win: s(1, 1, 0.4),
   lose: s(1, 1, 0.36),
   uiTick: s(1, 0.05, 0.2),
+  // 러닝머신 발소리 (초당 2번 이상, 작게), 월드 이동 "슈웅", 월드 클리어 만세 "빠바밤"
+  step: s(2, 0.12, 0.12, 0.08),
+  travel: s(1, 0.5, 0.38),
+  cheer: s(1, 1, 0.4),
 };
 
 const base = import.meta.env.BASE_URL;

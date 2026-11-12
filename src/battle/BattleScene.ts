@@ -255,6 +255,7 @@ export class BattleScene {
     if (run.done) this.endT = 0;
     if (run.done === 'worldClear') {
       this.cheerT = 0;
+      audio.play('cheer');
       this.game.pose.aimAt = null;
     }
   }

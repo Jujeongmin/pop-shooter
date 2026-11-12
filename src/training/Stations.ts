@@ -103,6 +103,7 @@ export class Stations {
     st.recent += 1;
     if (st.kind === 'spd') {
       st.pending += 1;
+      audio.play('step');
       return;
     }
     const g = this.game;

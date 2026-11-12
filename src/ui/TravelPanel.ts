@@ -79,7 +79,7 @@ export class TravelPanel {
     this.panel.close();
     this.zone.leave();
     this.callout.flash('rgba(255, 255, 255, 1)');
-    audio.play('rebirth');
+    audio.play('travel');
     this.game.setWorld(w);
     this.callout.show({ title: t('fac.travel'), big: t(`world.${w}` as StrKey) });
     window.setTimeout(() => this.callout.hide(), 1400);
