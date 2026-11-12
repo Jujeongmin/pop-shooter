@@ -36,6 +36,15 @@ interface Station {
  * - 동전 분수(골드 보너스): 떨어지는 동전을 받을 때마다 골드 보너스 훈련.
  * 둘 다 기본 초당 actionsPerSec번 + 탭(초당 8회까지). 걷기 시작하면 쉼(구역을 나가면 끝). 0.25초마다 모아 setState.
  */
+/**
+ * 서는 자리: 줄(러닝머신 벨트·분수 자리) 하나를 무작위로 + 그 안에서 무작위 위치 (사용자 2026-11-12).
+ * 빈자리 찾기·겹침 막기는 하지 않음 (같은 줄을 여럿이 써도 됨, 위치가 흩어져 한 점에 겹치지 않을 뿐)
+ */
+function randomSpot(lanes: readonly number[], cx: number, cz: number, jx: number, jz: number): { x: number; z: number } {
+  const dx = lanes[Math.floor(Math.random() * lanes.length)] ?? 0;
+  return { x: cx + dx + (Math.random() * 2 - 1) * jx, z: cz + (Math.random() * 2 - 1) * jz };
+}
+
 export class Stations {
   private readonly game: Game;
   private readonly float: FloatText;
@@ -63,21 +72,14 @@ export class Stations {
     this.list = [
       // 벨트 윗면(0.33m) 위에 섬
       // 빈 벨트·빈 자리를 고름 (다른 사람과 겹치지 않게, 다 차면 아무 데나)
-      make('spd', 'treadmill', () => this.freeSpot(TREADMILL_LANES, TREADMILL.x, TREADMILL.z + 0.2), { x: TREADMILL.x, z: TREADMILL.z - 30 }, '#4f9dff', t('st.run'), BELT_Y),
-      make('coin', 'fountain', () => this.freeSpot(FOUNTAIN_SPOTS, FOUNTAIN.x, FOUNTAIN.z), { x: FOUNTAIN.x, z: FOUNTAIN.z - 3 }, '#ffc928', t('st.coin')),
+      make('spd', 'treadmill', () => randomSpot(TREADMILL_LANES, TREADMILL.x, TREADMILL.z + 0.2, 0.3, 0.6), { x: TREADMILL.x, z: TREADMILL.z - 30 }, '#4f9dff', t('st.run'), BELT_Y),
+      make('coin', 'fountain', () => randomSpot(FOUNTAIN_SPOTS, FOUNTAIN.x, FOUNTAIN.z, 0.3, 0.25), { x: FOUNTAIN.x, z: FOUNTAIN.z - 3 }, '#ffc928', t('st.coin')),
     ];
     game.onTick((dt) => this.update(dt));
     document.addEventListener('visibilitychange', this.onVisibility);
   }
 
   /** 줄 가운데 cx에서 offsets만큼 옆 자리 중 다른 사람이 없는 곳 (내게 가까운 쪽 먼저) */
-  private freeSpot(offsets: readonly number[], cx: number, z: number): { x: number; z: number } {
-    const g = this.game;
-    const order = [...offsets].sort((a, b) => Math.abs(cx + a - g.pos.x) - Math.abs(cx + b - g.pos.x));
-    const free = order.find((dx) => !g.peerAt?.(cx + dx, z, 0.6));
-    return { x: cx + (free ?? order[0]!), z };
-  }
-
   private start(st: Station): void {
     if (st.active) return;
     st.active = true;

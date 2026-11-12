@@ -153,15 +153,6 @@ export class LobbyPeers {
     return this.items.size;
   }
 
-  /** (x, z) 반경 r 안에 서 있는 다른 사람이 있는지 (러닝머신·동전 분수 빈자리 고르기) */
-  occupied(x: number, z: number, r: number): boolean {
-    for (let i = 0; i < this.list.length; i++) {
-      const p = this.list[i]!.pose.pos;
-      if ((p.x - x) ** 2 + (p.z - z) ** 2 < r * r) return true;
-    }
-    return false;
-  }
-
   add(peer: HubPeer): void {
     if (this.disposed || this.items.has(peer.account)) return;
     const char = peer.char as CharId;

@@ -31,7 +31,6 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
   if (!net.hasVerse) return null;
   try {
     const peers = new LobbyPeers({ assets: game.assets, parent: game.hub.root, targets: game.hub.targets });
-    game.peerAt = (x, z, r) => peers.occupied(x, z, r);
     const hub = new LobbyHub(net, {
       onPeerJoin: (p) => peers.add(p),
       onPeerLeave: (a) => peers.remove(a),
