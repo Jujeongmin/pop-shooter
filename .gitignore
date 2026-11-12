@@ -6,3 +6,4 @@ dist/
 # Verse8: .env는 플랫폼이 관리 (커밋 유지)
 art-src/ui-icons/*.log
 art-src/thumbnail/*.log
+art-src/vxshop/*.log

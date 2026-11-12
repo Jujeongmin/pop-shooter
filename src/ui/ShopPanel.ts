@@ -2,7 +2,7 @@ import type { Game } from '../core/Game';
 import { t, type StrKey } from '../i18n/i18n';
 import type { Premium } from '../platform/Premium';
 import { formatNum } from '../sim/format.ts';
-import { BOOST_AD_MS, GEM_BOOST, GIFT_GEMS, nextPassProduct, PASS_ORDER, PRODUCTS, type AdKind } from '../sim/premium.ts';
+import { BOOST_AD_MS, GEM_BOOST, GIFT_GEMS, PASS_ORDER, PRODUCTS, type AdKind } from '../sim/premium.ts';
 import { bakeCharIcons } from './charIcons';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
@@ -21,7 +21,7 @@ export function clockText(ms: number): string {
 }
 
 /**
- * 상점 (계획 3, HUD [상점]): 무료(광고: 골드 2배 15분·하루 선물 / 팝젬으로 골드 2배 30분) / 공격력 패스(순서대로) / 팝젬 묶음 / 캐릭터.
+ * 상점 (계획 3, HUD [상점]): 무료(광고: 골드 2배 15분·하루 선물 / 팝젬으로 골드 2배 30분) / 공격력 패스(지금보다 높은 단계 아무거나) / 팝젬 묶음 / 캐릭터.
  * 가격은 VXShop 조회값(못 받으면 버튼 끔), 지급·값은 서버(Premium) 응답만 반영.
  */
 export class ShopPanel {
@@ -107,11 +107,11 @@ export class ShopPanel {
       b.append(this.row('timer', t('shop.gemBoost'), t('shop.adBoostDesc', { m: GEM_BOOST.ms / 60000 }), gb));
     } else if (this.tab === 'pass') {
       b.append(el('div', 'up-hint', t('shop.passHint')));
-      const next = nextPassProduct(s.passMult);
+      // 지금보다 높은 패스는 어느 단계든 바로 살 수 있음 (사용자 2026-11-12), 가진 것 이하는 '보유'
       for (const m of PASS_ORDER) {
         const id = `pass_x${m}`;
         const owned = s.passMult >= m;
-        const action = owned ? el('div', 'mentor-st', t('shop.owned')) : id === next ? this.vxButton(id) : el('div', 'mentor-st', t('shop.passLocked'));
+        const action = owned ? el('div', 'mentor-st', t('shop.owned')) : this.vxButton(id);
         b.append(this.row('bullet', t('shop.pass', { m }), t('shop.passDesc', { m }), action));
       }
     } else if (this.tab === 'gems') {
