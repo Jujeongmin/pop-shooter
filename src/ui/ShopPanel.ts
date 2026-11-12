@@ -1,6 +1,7 @@
 import type { Game } from '../core/Game';
 import { t, type StrKey } from '../i18n/i18n';
 import type { Premium } from '../platform/Premium';
+import { charMult } from '../sim/actions.ts';
 import { formatNum } from '../sim/format.ts';
 import { BOOST_AD_MS, GEM_BOOST, GIFT_GEMS, PASS_ORDER, PRODUCTS, type AdKind } from '../sim/premium.ts';
 import { bakeCharIcons } from './charIcons';
@@ -126,7 +127,7 @@ export class ShopPanel {
         face.src = faces[c];
         face.alt = '';
         const owned = s.chars.includes(c);
-        b.append(this.row(face, name, t('shop.heroDesc'), owned ? el('div', 'mentor-st', t('shop.owned')) : this.vxButton(id)));
+        b.append(this.row(face, name, t('shop.heroDesc', { p: Math.round((charMult(c) - 1) * 100) }), owned ? el('div', 'mentor-st', t('shop.owned')) : this.vxButton(id)));
       }
     }
     // 결제·광고 결과 한 줄

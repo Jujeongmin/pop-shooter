@@ -11,9 +11,19 @@ export function charMult(c: CharId): number {
   return BALANCE.charMult[c];
 }
 
-/** 한 발 피해 = (1 + 공격 훈련 점수) × 총 × 캐릭터 × 패스 */
+/**
+ * 캐릭터 보유 효과 (사용자 2026-11-12): 가진 캐릭터마다 (배율 − 1)을 더함. 장착한 캐릭터는 외형만.
+ * 예: BUBU만 = ×1, 무료 셋(MOCHI·ROKO·POPI) = ×4.5, 여섯 다 = ×15.5.
+ */
+export function ownedCharMult(s: GameState): number {
+  let m = 1;
+  for (const c of s.chars) m += charMult(c) - 1;
+  return m;
+}
+
+/** 한 발 피해 = (1 + 공격 훈련 점수) × 총 × 캐릭터 보유 효과 × 패스 */
 export function damagePerShot(s: GameState): number {
-  return atkTrainMult(s) * gunMult(s.gun) * s.passMult * charMult(s.char);
+  return atkTrainMult(s) * gunMult(s.gun) * s.passMult * ownedCharMult(s);
 }
 
 /** 초당 발사 = 1 × (1 + 연사 훈련%) (12발까지) */

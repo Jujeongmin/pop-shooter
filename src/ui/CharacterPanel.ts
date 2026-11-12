@@ -9,7 +9,7 @@ import { ZoneEntry } from '../core/ZoneEntry';
 import { WORLD1_FACILITIES } from '../world/facilities';
 import type { ZoneCallout } from './ZoneCallout';
 import { t } from '../i18n/i18n';
-import { charMult } from '../sim/actions.ts';
+import { charMult, ownedCharMult } from '../sim/actions.ts';
 import { stageLabel } from '../sim/stages.ts';
 import { CHAR_IDS, type CharId } from '../sim/state.ts';
 import { bakeCharIcons } from './charIcons';
@@ -78,6 +78,8 @@ export class CharacterPanel {
   private render(): void {
     const s = this.game.state;
     this.thumbs ??= bakeCharIcons(this.game.assets);
+    // 보유 효과 합계 (사용자 2026-11-12: 가진 캐릭터마다 피해 보너스가 더해짐, 장착은 외형만)
+    const total = el('div', 'up-hint', t('char.owned', { m: Number(ownedCharMult(s).toFixed(2)) }));
     const grid = el('div', 'char-grid');
     for (const id of CHAR_IDS) {
       const owned = s.chars.includes(id);
@@ -86,7 +88,7 @@ export class CharacterPanel {
       img.src = this.thumbs[id];
       img.alt = '';
       img.draggable = false;
-      card.append(img, el('div', 'char-name', CHARACTERS[id].name), el('div', 'char-power', t('char.power', { m: charMult(id) })));
+      card.append(img, el('div', 'char-name', CHARACTERS[id].name), el('div', 'char-power', id === 'blue' ? t('char.powerBase') : t('char.power', { m: Math.round((charMult(id) - 1) * 100) })));
       if (id === s.char) {
         const tag = el('span', 'tag eq');
         tag.append(icon('check'), el('span', '', t('char.using')));
@@ -101,6 +103,6 @@ export class CharacterPanel {
       }
       grid.append(card);
     }
-    this.panel.body.replaceChildren(grid);
+    this.panel.body.replaceChildren(total, grid);
   }
 }

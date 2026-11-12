@@ -48,8 +48,8 @@ Verse8 대시보드 VXShop에 아래 **상품 ID 그대로** 등록한다. 지�
 | gems_s | 팝젬 100개 | 100 | 팝젬 100개. 골드 2배 부스트에 쓸 수 있어요. | 없음 |
 | gems_m | 팝젬 550개 | 500 | 팝젬 550개 (10% 더). 골드 2배 부스트에 쓸 수 있어요. | 없음 |
 | gems_l | 팝젬 1200개 | 1000 | 팝젬 1200개 (20% 더). 골드 2배 부스트에 쓸 수 있어요. | 없음 |
-| char_shoni | 캐릭터 SHONI | 300 | 피해 5배 캐릭터 SHONI를 영구히 가집니다. | Lifetime Limit 1 |
-| char_bam | 캐릭터 BAM | 500 | 피해 8배 캐릭터 BAM을 영구히 가집니다. | Lifetime Limit 1 |
+| char_shoni | 캐릭터 SHONI | 300 | 캐릭터 SHONI를 영구히 가집니다. 보유 효과: 어떤 캐릭터를 쓰든 피해 +400%. | Lifetime Limit 1 |
+| char_bam | 캐릭터 BAM | 500 | 캐릭터 BAM을 영구히 가집니다. 보유 효과: 어떤 캐릭터를 쓰든 피해 +700%. | Lifetime Limit 1 |
 
 상품 이미지: art-src/vxshop/<상품 ID>.png (1024×1024, Codex).
 
@@ -66,7 +66,7 @@ Verse8 대시보드 VXShop에 아래 **상품 ID 그대로** 등록한다. 지�
 | gems_s | 100 Pop Gems | 100 Pop Gems. Use them for Gold ×2 boosts. |
 | gems_m | 550 Pop Gems | 550 Pop Gems (10% bonus). Use them for Gold ×2 boosts. |
 | gems_l | 1200 Pop Gems | 1200 Pop Gems (20% bonus). Use them for Gold ×2 boosts. |
-| char_shoni | Hero SHONI | Unlock SHONI forever, a hero who deals 5× damage. |
-| char_bam | Hero BAM | Unlock BAM forever, a hero who deals 8× damage. |
+| char_shoni | Hero SHONI | Unlock SHONI forever. Owned bonus: +400% damage, whichever hero you play. |
+| char_bam | Hero BAM | Unlock BAM forever. Owned bonus: +700% damage, whichever hero you play. |
 
 SHONI·BAM 상품 이미지는 팝배틀 때 대시보드에 올린 이미지를 그대로 씀 (사용자 2026-11-12).

@@ -38,9 +38,16 @@ test('doRebirth resets only training, keeps gold, guns, machines, gear', () => {
   assert.equal(r.rebirths, 1);
 });
 
-test('heroes get stronger in unlock order', () => {
+test('heroes get stronger in unlock order and every owned hero adds its bonus (equipped one is only the look)', async () => {
+  const { ownedCharMult } = await import('../../src/sim/actions.ts');
   assert.equal(charMult('blue'), 1);
   for (let i = 1; i < CHAR_IDS.length; i++) assert.ok(charMult(CHAR_IDS[i]!) > charMult(CHAR_IDS[i - 1]!), CHAR_IDS[i]);
   const s = newState(0);
-  assert.equal(damagePerShot({ ...s, char: 'red', chars: ['blue', 'red'] }), damagePerShot(s) * charMult('red'));
+  assert.equal(ownedCharMult(s), 1);
+  const two = { ...s, chars: ['blue', 'red'] as CharId[] };
+  assert.equal(ownedCharMult(two), 1 + (charMult('red') - 1));
+  assert.equal(damagePerShot({ ...two, char: 'blue' }), damagePerShot({ ...two, char: 'red' }), 'look does not change power');
+  const all = { ...s, chars: [...CHAR_IDS] };
+  assert.equal(ownedCharMult(all), 1 + CHAR_IDS.reduce((a, c) => a + charMult(c) - 1, 0));
+  assert.equal(damagePerShot(all), damagePerShot(s) * ownedCharMult(all));
 });
