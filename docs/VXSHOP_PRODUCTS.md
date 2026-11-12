@@ -33,40 +33,182 @@ Verse8 대시보드 VXShop에 아래 **상품 ID 그대로** 등록한다. 지�
 5. 무료 탭 광고 → 골드 2배 시간이 HUD에 뜨는지, 하루 선물로 팝젬 +5.
 6. 1분 넘게 끄고 다시 켜서 오프라인 창 [광고 보고 2배] → 골드·훈련이 2배로 들어오고 저장이 잘리지 않는지.
 
-## 등록 양식 값 (2026-11-12 제안, 가격은 사용자가 확정)
+## 등록 양식 값 (복사해서 붙여 넣기)
 
-공통: Product ID는 위 표와 정확히 같게. Stock Quantity는 넣을 수 있는 가장 큰 값(0이 되면 판매 중단). Metadata 비움(게임이 안 읽음). Period Limit·Time-Limited Sale은 쓰지 않음.
+공통: Product ID는 정확히 같게. Price는 제안값(사용자 확정, 100 VX ≈ $1). Stock Quantity는 넣을 수 있는 가장 큰 값(0이 되면 판매 중단). Metadata 비움(게임이 안 읽음). Period Limit·Time-Limited Sale은 쓰지 않음. 이미지: `art-src/vxshop/<Product ID>.png` (SHONI·BAM은 팝배틀 때 쓰던 이미지).
 
-| Product ID | Product Name | Price (VX) | Description | Purchase Constraints |
-|---|---|---|---|---|
-| pass_x2 | 공격력 패스 ×2 | 300 | 피해 영구 ×2 | Lifetime Limit 1 |
-| pass_x4 | 공격력 패스 ×4 | 500 | 피해 영구 ×4 | Lifetime Limit 1 |
-| pass_x8 | 공격력 패스 ×8 | 900 | 피해 영구 ×8 | Lifetime Limit 1 |
-| pass_x16 | 공격력 패스 ×16 | 1500 | 피해 영구 ×16 | Lifetime Limit 1 |
-| pass_x32 | 공격력 패스 ×32 | 2500 | 피해 영구 ×32 | Lifetime Limit 1 |
-| pass_x64 | 공격력 패스 ×64 | 4000 | 피해 영구 ×64 | Lifetime Limit 1 |
-| gems_s | 팝젬 100개 | 100 | 팝젬 100개 | 없음 |
-| gems_m | 팝젬 550개 | 500 | 팝젬 550개 (+10%) | 없음 |
-| gems_l | 팝젬 1200개 | 1000 | 팝젬 1200개 (+20%) | 없음 |
-| char_shoni | 캐릭터 SHONI | 300 | 보유 시 피해 +400% | Lifetime Limit 1 |
-| char_bam | 캐릭터 BAM | 500 | 보유 시 피해 +700% | Lifetime Limit 1 |
+### pass_x2
 
-상품 이미지: art-src/vxshop/<상품 ID>.png (1024×1024, Codex).
+- Price (VX): 300
+- Purchase Constraints: Lifetime Limit 1
 
-### English
+Product Name
+```
+공격력 패스 ×2 / Attack Pass ×2
+```
 
-| Product ID | Product Name | Description |
-|---|---|---|
-| pass_x2 | Attack Pass ×2 | Permanent damage ×2 |
-| pass_x4 | Attack Pass ×4 | Permanent damage ×4 |
-| pass_x8 | Attack Pass ×8 | Permanent damage ×8 |
-| pass_x16 | Attack Pass ×16 | Permanent damage ×16 |
-| pass_x32 | Attack Pass ×32 | Permanent damage ×32 |
-| pass_x64 | Attack Pass ×64 | Permanent damage ×64 |
-| gems_s | 100 Pop Gems | 100 Pop Gems |
-| gems_m | 550 Pop Gems | 550 Pop Gems (+10%) |
-| gems_l | 1200 Pop Gems | 1200 Pop Gems (+20%) |
-| char_shoni | Hero SHONI | Owned: +400% damage |
-| char_bam | Hero BAM | Owned: +700% damage |
+Description
+```
+피해 영구 ×2
+Permanent damage ×2
+```
 
-SHONI·BAM 상품 이미지는 팝배틀 때 쓰던 이미지 그대로 (art-src/vxshop/char_shoni.png·char_bam.png, 원본 Downloads 쇼니.png·밤.png).
+### pass_x4
+
+- Price (VX): 500
+- Purchase Constraints: Lifetime Limit 1
+
+Product Name
+```
+공격력 패스 ×4 / Attack Pass ×4
+```
+
+Description
+```
+피해 영구 ×4
+Permanent damage ×4
+```
+
+### pass_x8
+
+- Price (VX): 900
+- Purchase Constraints: Lifetime Limit 1
+
+Product Name
+```
+공격력 패스 ×8 / Attack Pass ×8
+```
+
+Description
+```
+피해 영구 ×8
+Permanent damage ×8
+```
+
+### pass_x16
+
+- Price (VX): 1500
+- Purchase Constraints: Lifetime Limit 1
+
+Product Name
+```
+공격력 패스 ×16 / Attack Pass ×16
+```
+
+Description
+```
+피해 영구 ×16
+Permanent damage ×16
+```
+
+### pass_x32
+
+- Price (VX): 2500
+- Purchase Constraints: Lifetime Limit 1
+
+Product Name
+```
+공격력 패스 ×32 / Attack Pass ×32
+```
+
+Description
+```
+피해 영구 ×32
+Permanent damage ×32
+```
+
+### pass_x64
+
+- Price (VX): 4000
+- Purchase Constraints: Lifetime Limit 1
+
+Product Name
+```
+공격력 패스 ×64 / Attack Pass ×64
+```
+
+Description
+```
+피해 영구 ×64
+Permanent damage ×64
+```
+
+### gems_s
+
+- Price (VX): 100
+- Purchase Constraints: 없음 (반복 구매)
+
+Product Name
+```
+팝젬 100개 / 100 Pop Gems
+```
+
+Description
+```
+팝젬 100개
+100 Pop Gems
+```
+
+### gems_m
+
+- Price (VX): 500
+- Purchase Constraints: 없음 (반복 구매)
+
+Product Name
+```
+팝젬 550개 / 550 Pop Gems
+```
+
+Description
+```
+팝젬 550개 (+10%)
+550 Pop Gems (+10%)
+```
+
+### gems_l
+
+- Price (VX): 1000
+- Purchase Constraints: 없음 (반복 구매)
+
+Product Name
+```
+팝젬 1200개 / 1200 Pop Gems
+```
+
+Description
+```
+팝젬 1200개 (+20%)
+1200 Pop Gems (+20%)
+```
+
+### char_shoni
+
+- Price (VX): 300
+- Purchase Constraints: Lifetime Limit 1
+
+Product Name
+```
+캐릭터 SHONI / Hero SHONI
+```
+
+Description
+```
+보유 시 피해 +400%
+Owned: +400% damage
+```
+
+### char_bam
+
+- Price (VX): 500
+- Purchase Constraints: Lifetime Limit 1
+
+Product Name
+```
+캐릭터 BAM / Hero BAM
+```
+
+Description
+```
+보유 시 피해 +700%
+Owned: +700% damage
+```
