@@ -43,6 +43,10 @@ export class Controls {
     target.addEventListener('contextmenu', this.onContext);
     document.addEventListener('pointerlockchange', this.onLockEvt);
     window.addEventListener('resize', this.placeRest);
+    // 터치만 있는 기기(폰·태블릿)는 처음부터 터치 모드: 쉬는 조이스틱 보임, 'Tab: 마우스 고정' 안내 숨김
+    try {
+      if (matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches) this.setTouchMode(true);
+    } catch { /* matchMedia 없음 */ }
   }
 
   get locked(): boolean {
