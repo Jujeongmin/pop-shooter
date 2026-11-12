@@ -184,8 +184,9 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 /* 시설 창(가로 폰 오른쪽 패널)·결과 창이 열리면 숨김 */
 #ui:has(.sheet:not([hidden])) .event-bar, #ui:has(.result-wrap:not([hidden])) .event-bar { display: none; }
 @media (max-height: 460px) {
-  .event-bar { gap: 6px; right: 8px; }
-  .ev-btn { width: 52px; }
+  /* 가로 폰: 위쪽 버튼(상점·설정) 아래에서 2열 (한 줄 5개면 설정 버튼과 겹침), 첫 버튼이 오른쪽 */
+  .event-bar { top: 54px; transform: none; display: grid; grid-template-columns: repeat(2, auto); direction: rtl; gap: 4px 4px; right: 8px; }
+  .ev-btn { direction: ltr; width: 62px; }
   .ev-face { width: 42px; height: 42px; border-radius: 13px; }
   .ev-face .ico { width: 28px; height: 28px; }
   .ev-img { width: 34px; height: 34px; }
