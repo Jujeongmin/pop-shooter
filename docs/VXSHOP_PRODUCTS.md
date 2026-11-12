@@ -39,17 +39,17 @@ Verse8 대시보드 VXShop에 아래 **상품 ID 그대로** 등록한다. 지�
 
 | Product ID | Product Name | Price (VX) | Description | Purchase Constraints |
 |---|---|---|---|---|
-| pass_x2 | 공격력 패스 ×2 | 300 | 피해가 영구히 2배가 됩니다. 패스는 가장 높은 하나만 적용됩니다. | Lifetime Limit 1 |
-| pass_x4 | 공격력 패스 ×4 | 500 | 피해가 영구히 4배가 됩니다. 패스는 가장 높은 하나만 적용됩니다. | Lifetime Limit 1 |
-| pass_x8 | 공격력 패스 ×8 | 900 | 피해가 영구히 8배가 됩니다. 패스는 가장 높은 하나만 적용됩니다. | Lifetime Limit 1 |
-| pass_x16 | 공격력 패스 ×16 | 1500 | 피해가 영구히 16배가 됩니다. 패스는 가장 높은 하나만 적용됩니다. | Lifetime Limit 1 |
-| pass_x32 | 공격력 패스 ×32 | 2500 | 피해가 영구히 32배가 됩니다. 패스는 가장 높은 하나만 적용됩니다. | Lifetime Limit 1 |
-| pass_x64 | 공격력 패스 ×64 | 4000 | 피해가 영구히 64배가 됩니다. 패스는 가장 높은 하나만 적용됩니다. | Lifetime Limit 1 |
-| gems_s | 팝젬 100개 | 100 | 팝젬 100개. 골드 2배 부스트에 쓸 수 있어요. | 없음 |
-| gems_m | 팝젬 550개 | 500 | 팝젬 550개 (10% 더). 골드 2배 부스트에 쓸 수 있어요. | 없음 |
-| gems_l | 팝젬 1200개 | 1000 | 팝젬 1200개 (20% 더). 골드 2배 부스트에 쓸 수 있어요. | 없음 |
-| char_shoni | 캐릭터 SHONI | 300 | 캐릭터 SHONI를 영구히 가집니다. 보유 효과: 어떤 캐릭터를 쓰든 피해 +400%. | Lifetime Limit 1 |
-| char_bam | 캐릭터 BAM | 500 | 캐릭터 BAM을 영구히 가집니다. 보유 효과: 어떤 캐릭터를 쓰든 피해 +700%. | Lifetime Limit 1 |
+| pass_x2 | 공격력 패스 ×2 | 300 | 피해 영구 ×2 | Lifetime Limit 1 |
+| pass_x4 | 공격력 패스 ×4 | 500 | 피해 영구 ×4 | Lifetime Limit 1 |
+| pass_x8 | 공격력 패스 ×8 | 900 | 피해 영구 ×8 | Lifetime Limit 1 |
+| pass_x16 | 공격력 패스 ×16 | 1500 | 피해 영구 ×16 | Lifetime Limit 1 |
+| pass_x32 | 공격력 패스 ×32 | 2500 | 피해 영구 ×32 | Lifetime Limit 1 |
+| pass_x64 | 공격력 패스 ×64 | 4000 | 피해 영구 ×64 | Lifetime Limit 1 |
+| gems_s | 팝젬 100개 | 100 | 팝젬 100개 | 없음 |
+| gems_m | 팝젬 550개 | 500 | 팝젬 550개 (+10%) | 없음 |
+| gems_l | 팝젬 1200개 | 1000 | 팝젬 1200개 (+20%) | 없음 |
+| char_shoni | 캐릭터 SHONI | 300 | 보유 시 피해 +400% | Lifetime Limit 1 |
+| char_bam | 캐릭터 BAM | 500 | 보유 시 피해 +700% | Lifetime Limit 1 |
 
 상품 이미지: art-src/vxshop/<상품 ID>.png (1024×1024, Codex).
 
@@ -57,16 +57,16 @@ Verse8 대시보드 VXShop에 아래 **상품 ID 그대로** 등록한다. 지�
 
 | Product ID | Product Name | Description |
 |---|---|---|
-| pass_x2 | Attack Pass ×2 | Permanently doubles your damage. Only your highest pass applies. |
-| pass_x4 | Attack Pass ×4 | Permanently multiplies your damage by 4. Only your highest pass applies. |
-| pass_x8 | Attack Pass ×8 | Permanently multiplies your damage by 8. Only your highest pass applies. |
-| pass_x16 | Attack Pass ×16 | Permanently multiplies your damage by 16. Only your highest pass applies. |
-| pass_x32 | Attack Pass ×32 | Permanently multiplies your damage by 32. Only your highest pass applies. |
-| pass_x64 | Attack Pass ×64 | Permanently multiplies your damage by 64. Only your highest pass applies. |
-| gems_s | 100 Pop Gems | 100 Pop Gems. Use them for Gold ×2 boosts. |
-| gems_m | 550 Pop Gems | 550 Pop Gems (10% bonus). Use them for Gold ×2 boosts. |
-| gems_l | 1200 Pop Gems | 1200 Pop Gems (20% bonus). Use them for Gold ×2 boosts. |
-| char_shoni | Hero SHONI | Unlock SHONI forever. Owned bonus: +400% damage, whichever hero you play. |
-| char_bam | Hero BAM | Unlock BAM forever. Owned bonus: +700% damage, whichever hero you play. |
+| pass_x2 | Attack Pass ×2 | Permanent damage ×2 |
+| pass_x4 | Attack Pass ×4 | Permanent damage ×4 |
+| pass_x8 | Attack Pass ×8 | Permanent damage ×8 |
+| pass_x16 | Attack Pass ×16 | Permanent damage ×16 |
+| pass_x32 | Attack Pass ×32 | Permanent damage ×32 |
+| pass_x64 | Attack Pass ×64 | Permanent damage ×64 |
+| gems_s | 100 Pop Gems | 100 Pop Gems |
+| gems_m | 550 Pop Gems | 550 Pop Gems (+10%) |
+| gems_l | 1200 Pop Gems | 1200 Pop Gems (+20%) |
+| char_shoni | Hero SHONI | Owned: +400% damage |
+| char_bam | Hero BAM | Owned: +700% damage |
 
-SHONI·BAM 상품 이미지는 팝배틀 때 대시보드에 올린 이미지를 그대로 씀 (사용자 2026-11-12).
+SHONI·BAM 상품 이미지는 팝배틀 때 쓰던 이미지 그대로 (art-src/vxshop/char_shoni.png·char_bam.png, 원본 Downloads 쇼니.png·밤.png).
