@@ -225,7 +225,7 @@ const STRINGS = {
   'reb.no': { en: 'Not yet', ko: '아직', ja: 'まだ', 'zh-TW': '還不要', 'zh-CN': '还不要' },
   'reb.done': { en: 'Reborn! ×{m}', ko: '환생! ×{m}', ja: '転生! ×{m}', 'zh-TW': '轉生! ×{m}', 'zh-CN': '转生! ×{m}' },
   'off.title': { en: 'Welcome back!', ko: '어서 와요!', ja: 'おかえり!', 'zh-TW': '歡迎回來!', 'zh-CN': '欢迎回来!' },
-  'off.body': { en: 'Training while you were away ({t})', ko: '자리 비운 {t} 동안 훈련했어요', ja: '留守の{t}の間に訓練したよ', 'zh-TW': '離開的{t}期間持續訓練', 'zh-CN': '离开的{t}期间持续训练' },
+  'off.body': { en: 'Gold earned while you were away ({t})', ko: '자리 비운 {t} 동안 모은 골드예요', ja: '留守の{t}の間に集めたゴールド', 'zh-TW': '離開的{t}期間賺到的金幣', 'zh-CN': '离开的{t}期间赚到的金币' },
   'off.claim': { en: 'Collect', ko: '받기', ja: '受け取る', 'zh-TW': '領取', 'zh-CN': '领取' },
   'time.hm': { en: '{h}h {m}m', ko: '{h}시간 {m}분', ja: '{h}時間{m}分', 'zh-TW': '{h}小時{m}分', 'zh-CN': '{h}小时{m}分' },
   'time.m': { en: '{m}m', ko: '{m}분', ja: '{m}分', 'zh-TW': '{m}分鐘', 'zh-CN': '{m}分钟' },
