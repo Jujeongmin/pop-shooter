@@ -206,3 +206,11 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 .daily-val { font-size: 12px; color: var(--ink); text-align: center; line-height: 1.1; }
 .daily-check { position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; color: #3fbf5a; -webkit-text-stroke: 3px #fff; paint-order: stroke fill; }
 @media (max-width: 440px) { .daily-row { grid-template-columns: repeat(4, 1fr); } }
+
+/* 상점 팝젬 가격 (사용자 2026-11-12: 패스·캐릭터는 팝젬으로) */
+.my-gems { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.my-gems .ico { width: 20px; height: 20px; }
+.btn.buy .ico { width: 18px; height: 18px; margin-right: 4px; vertical-align: -3px; }
+.gem-need { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.gem-price { display: flex; align-items: center; gap: 3px; font-size: 12px; color: #e0455a; }
+.gem-price .ico { width: 14px; height: 14px; }

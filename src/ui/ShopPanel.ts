@@ -3,7 +3,7 @@ import { t, type StrKey } from '../i18n/i18n';
 import type { Premium } from '../platform/Premium';
 import { charMult } from '../sim/actions.ts';
 import { formatNum } from '../sim/format.ts';
-import { BOOST_AD_MS, GEM_BOOST, GIFT_GEMS, nextPassProduct, PASS_ORDER, PRODUCTS, type AdKind } from '../sim/premium.ts';
+import { BOOST_AD_MS, GEM_BOOST, GEM_ITEMS, nextPassProduct, PASS_ORDER, PRODUCTS, type AdKind } from '../sim/premium.ts';
 import { bakeCharIcons } from './charIcons';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
@@ -22,8 +22,8 @@ export function clockText(ms: number): string {
 }
 
 /**
- * 상점 (계획 3, HUD [상점]): 무료(광고: 골드 2배 15분·하루 선물 / 팝젬으로 골드 2배 30분) / 공격력 패스(순서대로, 단계마다 ×2) / 팝젬 묶음 / 캐릭터.
- * 가격은 VXShop 조회값(못 받으면 버튼 끔), 지급·값은 서버(Premium) 응답만 반영.
+ * 상점 (계획 3, HUD [상점]): 무료(광고 골드 2배 15분 / 팝젬으로 골드 2배 30분) / 공격력 패스(팝젬, 순서대로, 단계마다 ×2) / 팝젬 묶음(VX) / 캐릭터(팝젬).
+ * VX로 파는 것은 팝젬 묶음뿐 (사용자 2026-11-12: 팝젬 = 결제 화폐). VX 가격은 VXShop 조회값(못 받으면 버튼 끔), 지급·값은 서버(Premium) 응답만 반영.
  */
 export class ShopPanel {
   private readonly game: Game;
@@ -93,6 +93,37 @@ export class ShopPanel {
     return b;
   }
 
+  /** 보유 팝젬 한 줄 */
+  private myGems(): HTMLDivElement {
+    const d = el('div', 'up-hint my-gems');
+    d.append(icon('gem'), el('span', '', t('shop.myGems', { n: formatNum(this.game.state.gems) })));
+    return d;
+  }
+
+  /** 팝젬 구매 버튼: 팝젬이 모자라면 [팝젬 충전] → 팝젬 탭 */
+  private gemButton(id: string): HTMLElement {
+    const price = GEM_ITEMS[id]!.gems;
+    if (this.prem.online && this.game.state.gems < price) {
+      const c = button(t('shop.charge'), () => { this.tab = 'gems'; this.msg = ''; this.render(); }, 'btn buy charge');
+      c.prepend(icon('gem'));
+      const wrap = el('div', 'gem-need');
+      wrap.append(el('div', 'gem-price', `${formatNum(price)}`), c);
+      wrap.querySelector('.gem-price')!.prepend(icon('gem'));
+      return wrap;
+    }
+    const b = button(formatNum(price), () => void this.gemBuy(id, b), 'btn buy');
+    b.prepend(icon('gem'));
+    b.disabled = !this.prem.online || !this.prem.known;
+    return b;
+  }
+
+  private async gemBuy(id: string, b: HTMLButtonElement): Promise<void> {
+    b.disabled = true;
+    const r = await this.prem.gemBuy(id);
+    this.msg = r === 'ok' ? t('shop.note.done') : r === 'gems' ? t('shop.gemShort') : t('shop.ad.failed');
+    this.render();
+  }
+
   private render(): void {
     for (const [k, b] of this.tabBtns) b.classList.toggle('on', k === this.tab);
     const s = this.game.state;
@@ -103,20 +134,19 @@ export class ShopPanel {
       const left = s.boostUntil - Date.now();
       b.append(el('div', 'up-hint', left > 0 ? t('shop.boostOn', { t: clockText(left) }) : t('shop.boostOff')));
       b.append(this.row('coin', t('shop.adBoost'), t('shop.adBoostDesc', { m: BOOST_AD_MS / 60000 }), this.adButton('boost')));
-      b.append(this.row('gem', t('shop.adGift'), t('shop.adGiftDesc', { n: GIFT_GEMS }), this.adButton('gift')));
       const gb = button(`${GEM_BOOST.gems}`, () => void this.prem.gemBoost().then((ok) => { this.msg = ok ? t('shop.ad.granted') : t('shop.gemShort'); this.render(); }), 'btn buy');
       gb.prepend(icon('gem'));
       gb.disabled = !this.prem.online || s.gems < GEM_BOOST.gems;
       b.append(this.row('timer', t('shop.gemBoost'), t('shop.adBoostDesc', { m: GEM_BOOST.ms / 60000 }), gb));
     } else if (this.tab === 'pass') {
-      b.append(el('div', 'up-hint', t('shop.passHint')));
+      b.append(el('div', 'up-hint', t('shop.passHint')), this.myGems());
       // 순서대로만 구매 (키보드 탈출 Speed Multiplier Tier 방식, 사용자 2026-11-12): 단계마다 피해 ×2가 쌓임.
       // 가진 것은 '보유', 바로 다음 단계만 구매 버튼, 그 뒤는 잠김
       const next = nextPassProduct(s.passMult);
       PASS_ORDER.forEach((m, i) => {
         const id = `pass_x${m}`;
         const action = s.passMult >= m ? el('div', 'mentor-st', t('shop.owned'))
-          : id === next ? this.vxButton(id)
+          : id === next ? this.gemButton(id)
           : el('div', 'mentor-st', t('shop.passNeed'));
         b.append(this.row('bullet', t('shop.pass', { n: i + 1 }), t('shop.passDesc', { m }), action));
       });
@@ -126,13 +156,14 @@ export class ShopPanel {
         b.append(this.row('gem', t('shop.gemPack', { n: formatNum(n) }), t('shop.gemPackDesc'), this.vxButton(id)));
       }
     } else {
+      b.append(this.myGems());
       const faces = bakeCharIcons(this.game.assets);
       for (const [id, c, name] of [['char_shoni', 'white', 'SHONI'], ['char_bam', 'black', 'BAM']] as const) {
         const face = el('img', 'mentor-face');
         face.src = faces[c];
         face.alt = '';
         const owned = s.chars.includes(c);
-        b.append(this.row(face, name, t('shop.heroDesc', { p: Math.round((charMult(c) - 1) * 100) }), owned ? el('div', 'mentor-st', t('shop.owned')) : this.vxButton(id)));
+        b.append(this.row(face, name, t('shop.heroDesc', { p: Math.round((charMult(c) - 1) * 100) }), owned ? el('div', 'mentor-st', t('shop.owned')) : this.gemButton(id)));
       }
     }
     // 결제·광고 결과 한 줄

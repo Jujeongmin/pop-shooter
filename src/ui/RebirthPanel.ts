@@ -94,7 +94,7 @@ export class RebirthPanel {
     bar.append(fill);
     price.append(bar);
     const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: formatNum(need - s.trAtk) }));
-    b.append(card, gems, lists, price, tip);
+    b.append(card, ...(BALANCE.gems.perRebirth > 0 ? [gems] : []), lists, price, tip);
     const skipGems = skipRebirthGems(s);
     if (this.confirming === 'skip' && !can) {
       const row = el('div', 'reb-confirm');

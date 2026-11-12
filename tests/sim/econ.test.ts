@@ -44,7 +44,7 @@ test('legit rebirth passes (training reached), gems and tokens server-computed; 
   const next: GameState = { ...newState(0), rebirths: 1, tokens: 99, bestStage: 3, gems: 99999 };
   const r = checkSave(prev, next, 5, P, NOW);
   assert.ok(r.ok);
-  if (r.ok) { assert.equal(r.state.tokens, 1); assert.equal(r.state.gems, P.gems + 10); assert.equal(r.prem.gems, P.gems + 10); }
+  if (r.ok) { assert.equal(r.state.tokens, 1); assert.equal(r.state.gems, P.gems + BALANCE.gems.perRebirth); assert.equal(r.prem.gems, P.gems + BALANCE.gems.perRebirth); }
   assert.equal(checkSave({ ...prev, trAtk: 0 }, next, 1, P, NOW).ok, false);
 });
 

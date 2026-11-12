@@ -13,7 +13,7 @@
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
 import { allowedChars, checkSave } from '../../src/sim/econ.ts';
-import { AD_KINDS, AD_LIMIT, buySkipRebirth, claimAd, claimDaily, dailyReady, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
+import { AD_KINDS, AD_LIMIT, buySkipRebirth, buyWithGems, claimAd, claimDaily, dailyReady, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
 import type { CharId, GameState } from '../../src/sim/state.ts';
 import { autoDps, skipRebirthGems } from '../../src/sim/actions.ts';
@@ -52,10 +52,9 @@ interface PremView {
   daily: { ready: boolean; idx: number };
 }
 
-/** 서버 프리미엄 (글로벌 사용자 상태 prem, sim/premium). 처음이면 기존 저장의 팝젬만 이어받음 (최대 1000, 한 번만 믿음) */
-function premOf(st: Record<string, unknown>, prev: GameState | null): PremState {
-  if (st.prem && typeof st.prem === 'object') return readPrem(st.prem);
-  return readPrem({ gems: prev ? Math.min(prev.gems, 1000) : 0 });
+/** 서버 프리미엄 (글로벌 사용자 상태 prem, sim/premium). 처음이면 0에서 시작 (기기 저장의 팝젬은 믿지 않음: 팝젬 = 결제 화폐) */
+function premOf(st: Record<string, unknown>, _prev: GameState | null): PremState {
+  return readPrem(st.prem && typeof st.prem === 'object' ? st.prem : null);
 }
 
 function premView(p: PremState, s: GameState | null, now = Date.now()): PremView {
@@ -381,6 +380,23 @@ export class Server {
       await $global.updateMyState({ prem: next });
       slog('skip_rebirth', '-', account);
       return { ok: true, prem: premView(next, prev, now) };
+    });
+  }
+
+  /** 팝젬으로 공격력 패스(순서대로)·유료 캐릭터 사기 (sim/premium buyWithGems). 실패 이유 bad·owned·order·gems + 지금 값 */
+  async gemBuy(id: unknown): Promise<{ ok: boolean; reason?: string; prem: PremView }> {
+    const account = $sender.account;
+    return $lock(`save:${account}`, async () => {
+      const now = Date.now();
+      const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+      const raw = saveOf(st);
+      const prev = raw ? normalizeState(raw, now) : null;
+      const prem = premOf(st, prev);
+      const r = buyWithGems(prem, typeof id === 'string' ? id : '');
+      if (!r.ok) return { ok: false, reason: r.reason, prem: premView(prem, prev, now) };
+      await $global.updateMyState({ prem: r.prem });
+      slog(`gem_${id as string}`, '-', account);
+      return { ok: true, prem: premView(r.prem, prev, now) };
     });
   }
 

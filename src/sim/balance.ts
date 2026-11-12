@@ -32,7 +32,7 @@ export const BALANCE = {
   /** 캐릭터 피해 배율: 해금 순서대로 점점 좋게 */
   charMult: { blue: 1, yellow: 1.5, red: 2, pink: 3, white: 5, black: 8 },
   offline: { rate: 0.5, capSec: 7200, goldRate: 0.25 },
-  gems: { worldBossFirst: 50, perRebirth: 10 },
+  gems: { worldBossFirst: 10, perRebirth: 0 },
   /** 팝젬으로 환생 조건 건너뛰기 (키보드 탈출 Skip Rebirth, 사용자 2026-11-12): 값 = base + step × 환생 횟수 */
   skipRebirth: { base: 100, step: 50 },
   boost: { coinMult: 2 },

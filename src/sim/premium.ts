@@ -3,38 +3,40 @@ import type { CharId } from './state.ts';
 
 /**
  * 프리미엄 규칙 (서버·게임 공용 순수 코드, 계획 3). 서버가 계정 상태 prem으로 가지고, 클라이언트 값은 믿지 않음.
- * - 리워드 광고 3종: 골드 2배 15분(누적 최대 2시간) / 오프라인 보상 2배(서버가 계산한 오프라인 골드만큼 다음 저장에서 더 허용) / 하루 선물(팝젬).
- *   종류별 하루 횟수, 광고 id 하나에 한 번만 (기록은 최근 50개).
- * - VX 상품: 공격력 패스(순서대로만 구매, 단계마다 ×2 → passMult = 산 단계의 최고 배율; 순서가 뒤바뀌어 도착해도 max라 같음), 팝젬 묶음(반복 구매), 유료 캐릭터. 결제 id 하나에 한 번만 (최근 50개).
- * - 팝젬으로 골드 2배 30분, 팝젬으로 환생 조건 건너뛰기(skip 1회, 다음 저장에서 씀).
+ * - 리워드 광고 2종: 골드 2배 15분(누적 최대 2시간) / 오프라인 보상 2배(서버가 계산한 오프라인 골드만큼 다음 저장에서 더 허용).
+ *   종류별 하루 횟수, 광고 id 하나에 한 번만 (기록은 최근 50개). 무과금 팝젬은 거의 없음 (사용자 2026-11-12: 광고 팝젬 선물 없앰).
+ * - VX 상품은 팝젬 묶음만 (반복 구매, 할인 없이 1 VX = 1 팝젬). 결제 id 하나에 한 번만 (최근 50개).
+ * - 팝젬으로: 공격력 패스(순서대로만, 단계마다 ×2 → passMult), 유료 캐릭터, 골드 2배 30분, 환생 조건 건너뛰기(skip 1회, 다음 저장에서 씀).
  */
 
-export type AdKind = 'boost' | 'offline' | 'gift';
-export const AD_KINDS: readonly AdKind[] = ['boost', 'offline', 'gift'];
-export const AD_LIMIT: Record<AdKind, number> = { boost: 8, offline: 10, gift: 5 };
+export type AdKind = 'boost' | 'offline';
+export const AD_KINDS: readonly AdKind[] = ['boost', 'offline'];
+export const AD_LIMIT: Record<AdKind, number> = { boost: 8, offline: 10 };
 export const BOOST_AD_MS = 15 * 60_000;
 export const BOOST_CAP_MS = 2 * 3_600_000;
-export const GIFT_GEMS = 5;
 export const GEM_BOOST = { gems: 20, ms: 30 * 60_000 };
 const KEEP_IDS = 50;
 
-export type Product = { kind: 'pass'; mult: number } | { kind: 'gems'; gems: number } | { kind: 'char'; char: CharId };
-
-/** VXShop 상품 id → 내용 (대시보드에 같은 id로 등록) */
-export const PRODUCTS: Record<string, Product> = {
-  pass_x2: { kind: 'pass', mult: 2 },
-  pass_x4: { kind: 'pass', mult: 4 },
-  pass_x8: { kind: 'pass', mult: 8 },
-  pass_x16: { kind: 'pass', mult: 16 },
-  pass_x32: { kind: 'pass', mult: 32 },
-  pass_x64: { kind: 'pass', mult: 64 },
-  gems_s: { kind: 'gems', gems: 100 },
-  gems_m: { kind: 'gems', gems: 550 },
-  gems_l: { kind: 'gems', gems: 1200 },
-  char_shoni: { kind: 'char', char: 'white' },
-  char_bam: { kind: 'char', char: 'black' },
+/** VXShop 상품 id → 팝젬 수 (대시보드에 같은 id로 등록, 가격 VX = 팝젬 수, 묶음 할인 없음) */
+export const PRODUCTS: Record<string, { gems: number }> = {
+  gems_s: { gems: 100 },
+  gems_m: { gems: 500 },
+  gems_l: { gems: 1000 },
 };
 export const PASS_ORDER = [2, 4, 8, 16, 32, 64] as const;
+
+/** 팝젬 상점 물건 (서버 gemBuy가 팝젬을 빼고 지급). 패스는 순서대로만 */
+export type GemItem = { kind: 'pass'; mult: number; gems: number } | { kind: 'char'; char: CharId; gems: number };
+export const GEM_ITEMS: Record<string, GemItem> = {
+  pass_x2: { kind: 'pass', mult: 2, gems: 100 },
+  pass_x4: { kind: 'pass', mult: 4, gems: 200 },
+  pass_x8: { kind: 'pass', mult: 8, gems: 400 },
+  pass_x16: { kind: 'pass', mult: 16, gems: 700 },
+  pass_x32: { kind: 'pass', mult: 32, gems: 1200 },
+  pass_x64: { kind: 'pass', mult: 64, gems: 2000 },
+  char_shoni: { kind: 'char', char: 'white', gems: 300 },
+  char_bam: { kind: 'char', char: 'black', gems: 500 },
+};
 const PAID: readonly CharId[] = ['white', 'black'];
 
 /** 서버가 가진 프리미엄 전부 (econ Premium + 광고·결제 기록) */
@@ -51,12 +53,12 @@ export interface PremState extends Premium {
 }
 
 /**
- * 출석 보상 (사용자 2026-11-12: 가볍게). 하루 첫 접속에 한 번, 7칸 순환.
+ * 출석 보상 (사용자 2026-11-12: 가볍게, 무과금 팝젬은 거의 없게 → 골드 2배 위주, 7일째만 팝젬 10). 하루 첫 접속에 한 번, 7칸 순환.
  * 하루 빠져도 처음으로 돌아가지 않고 다음 칸부터 (연속 출석 강요 없음). 지급은 서버가 하루 한 번만 (기기 날짜와 무관).
  */
 export type DailyReward = { gems: number } | { boostMin: number };
 export const DAILY: readonly DailyReward[] = [
-  { gems: 10 }, { boostMin: 15 }, { gems: 15 }, { boostMin: 15 }, { gems: 20 }, { gems: 30 }, { gems: 50 },
+  { boostMin: 15 }, { boostMin: 15 }, { boostMin: 30 }, { boostMin: 30 }, { boostMin: 45 }, { boostMin: 60 }, { gems: 10 },
 ];
 
 export function dailyReady(p: PremState, now: number): boolean {
@@ -95,7 +97,7 @@ export function readPrem(raw: unknown): PremState {
     adIds: strs(p.adIds),
     buys: strs(p.buys),
     adDay: typeof p.adDay === 'string' ? p.adDay : '',
-    adUsed: { boost: Math.floor(num(used.boost, 0)), offline: Math.floor(num(used.offline, 0)), gift: Math.floor(num(used.gift, 0)) },
+    adUsed: { boost: Math.floor(num(used.boost, 0)), offline: Math.floor(num(used.offline, 0)) },
     dailyDay: typeof p.dailyDay === 'string' ? p.dailyDay : '',
     dailyIdx: Math.floor(num(p.dailyIdx, 0)) % 7,
   };
@@ -110,14 +112,13 @@ export function claimAd(p: PremState, kind: AdKind, adId: string, now: number, o
   | { ok: true; prem: PremState } | { ok: false; reason: 'dup' | 'limit' | 'nothing' } {
   if (p.adIds.includes(adId)) return { ok: false, reason: 'dup' };
   const day = dayKey(now);
-  const used = day === p.adDay ? { ...p.adUsed } : { boost: 0, offline: 0, gift: 0 };
+  const used = day === p.adDay ? { ...p.adUsed } : { boost: 0, offline: 0 };
   if (used[kind] >= AD_LIMIT[kind]) return { ok: false, reason: 'limit' };
   if (kind === 'boost' && p.boostUntil >= now + BOOST_CAP_MS) return { ok: false, reason: 'limit' };
   if (kind === 'offline' && !(offlineCoins > 0)) return { ok: false, reason: 'nothing' };
   used[kind] += 1;
   const next: PremState = { ...p, adDay: day, adUsed: used, adIds: [...p.adIds, adId].slice(-KEEP_IDS) };
   if (kind === 'boost') next.boostUntil = addBoost(p.boostUntil, now, BOOST_AD_MS);
-  else if (kind === 'gift') next.gems = p.gems + GIFT_GEMS;
   else next.extra = p.extra + offlineCoins;
   return { ok: true, prem: next };
 }
@@ -134,15 +135,28 @@ export function buySkipRebirth(p: PremState, gems: number): PremState | null {
   return { ...p, gems: p.gems - gems, skip: 1 };
 }
 
-/** 결제 지급 (서버 $onItemPurchased). 같은 결제 id는 한 번만 */
+/** 결제 지급 (서버 $onItemPurchased, 팝젬 묶음만). 같은 결제 id는 한 번만 */
 export function grantPurchase(p: PremState, productId: string, purchaseId: string, quantity: number): { ok: true; prem: PremState } | { ok: false } {
   const prod = PRODUCTS[productId];
   if (!prod || !purchaseId || p.buys.includes(purchaseId)) return { ok: false };
   const q = Math.max(1, Math.min(99, Math.floor(Number(quantity) || 1)));
-  const next: PremState = { ...p, buys: [...p.buys, purchaseId].slice(-KEEP_IDS) };
-  if (prod.kind === 'pass') next.passMult = Math.max(p.passMult, prod.mult);
-  else if (prod.kind === 'gems') next.gems = p.gems + prod.gems * q;
-  else if (!p.paid.includes(prod.char)) next.paid = [...p.paid, prod.char];
+  return { ok: true, prem: { ...p, gems: p.gems + prod.gems * q, buys: [...p.buys, purchaseId].slice(-KEEP_IDS) } };
+}
+
+export type GemBuyFail = 'bad' | 'owned' | 'order' | 'gems';
+
+/** 팝젬으로 사기 (서버 gemBuy). 패스는 바로 다음 단계만, 캐릭터는 안 가진 것만, 팝젬이 모자라면 실패 */
+export function buyWithGems(p: PremState, id: string): { ok: true; prem: PremState } | { ok: false; reason: GemBuyFail } {
+  const it = Object.prototype.hasOwnProperty.call(GEM_ITEMS, id) ? GEM_ITEMS[id] : undefined;
+  if (!it) return { ok: false, reason: 'bad' };
+  if (it.kind === 'pass') {
+    if (p.passMult >= it.mult) return { ok: false, reason: 'owned' };
+    if (nextPassProduct(p.passMult) !== id) return { ok: false, reason: 'order' };
+  } else if (p.paid.includes(it.char)) return { ok: false, reason: 'owned' };
+  if (p.gems < it.gems) return { ok: false, reason: 'gems' };
+  const next: PremState = { ...p, gems: p.gems - it.gems };
+  if (it.kind === 'pass') next.passMult = it.mult;
+  else next.paid = [...p.paid, it.char];
   return { ok: true, prem: next };
 }
 

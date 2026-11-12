@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  AD_LIMIT, BOOST_AD_MS, BOOST_CAP_MS, claimAd, dayKey, GEM_BOOST, GIFT_GEMS, grantPurchase, nextPassProduct, PRODUCTS, readPrem, spendGemBoost,
+  AD_LIMIT, BOOST_AD_MS, BOOST_CAP_MS, buyWithGems, claimAd, dayKey, GEM_BOOST, GEM_ITEMS, grantPurchase, nextPassProduct, PRODUCTS, readPrem, spendGemBoost,
 } from '../../src/sim/premium.ts';
 import { checkSave } from '../../src/sim/econ.ts';
 import { newState } from '../../src/sim/state.ts';
@@ -38,9 +38,7 @@ test('boost ad adds 15 min, stacks up to 2 hours, daily limit, one reward per ad
   assert.ok(tomorrow.ok);
 });
 
-test('gift ad gives gems, offline ad grants an allowance the next save may use', () => {
-  const g = claimAd(readPrem(null), 'gift', 'g1', NOW, 0);
-  assert.ok(g.ok && g.prem.gems === GIFT_GEMS);
+test('offline ad grants an allowance the next save may use', () => {
   const o = claimAd(readPrem(null), 'offline', 'o1', NOW, 12345);
   assert.ok(o.ok && o.prem.extra === 12345);
   // 그 허용치만큼 골드가 더 늘어난 저장이 잘리지 않음, 저장 뒤 허용치는 0
@@ -58,23 +56,42 @@ test('gems buy a boost', () => {
   assert.equal(p.boostUntil, NOW + GEM_BOOST.ms);
 });
 
-test('purchases: passes keep the highest, gems add, characters unlock, one grant per purchase id', () => {
-  let p = readPrem(null);
+test('VX purchases are gem packs only (1 VX = 1 gem, no bulk bonus), one grant per purchase id', () => {
+  const p = readPrem(null);
+  assert.deepEqual(Object.keys(PRODUCTS), ['gems_s', 'gems_m', 'gems_l']);
+  assert.deepEqual(Object.values(PRODUCTS).map((x) => x.gems), [100, 500, 1000]);
+  const a = grantPurchase(p, 'gems_m', 'buy-1', 2);
+  assert.ok(a.ok && a.prem.gems === 1000);
+  if (!a.ok) return;
+  assert.equal(grantPurchase(a.prem, 'gems_s', 'buy-1', 1).ok, false, 'same purchase id');
+  assert.equal(grantPurchase(p, 'pass_x2', 'buy-2', 1).ok, false, 'passes are not VX products');
+  assert.equal(grantPurchase(p, 'char_shoni', 'buy-3', 1).ok, false, 'heroes are not VX products');
+  assert.equal(nextPassProduct(64), null);
+  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(dayKey(NOW)));
+});
+
+test('gems buy passes in order and paid heroes once', () => {
+  let p = { ...readPrem(null), gems: 350 };
   assert.equal(nextPassProduct(1), 'pass_x2');
-  const a = grantPurchase(p, 'pass_x2', 'buy-1', 1);
+  assert.deepEqual(buyWithGems(p, 'pass_x4'), { ok: false, reason: 'order' });
+  const a = buyWithGems(p, 'pass_x2');
   assert.ok(a.ok);
   if (!a.ok) return;
   p = a.prem;
   assert.equal(p.passMult, 2);
+  assert.equal(p.gems, 350 - GEM_ITEMS.pass_x2!.gems);
+  assert.deepEqual(buyWithGems(p, 'pass_x2'), { ok: false, reason: 'owned' });
   assert.equal(nextPassProduct(p.passMult), 'pass_x4');
-  assert.equal(grantPurchase(p, 'pass_x2', 'buy-1', 1).ok, false, 'same purchase id');
-  const b = grantPurchase(p, 'gems_m', 'buy-2', 2);
-  assert.ok(b.ok && b.prem.gems === (PRODUCTS.gems_m as { gems: number }).gems * 2);
-  const c = grantPurchase(p, 'char_shoni', 'buy-3', 1);
-  assert.ok(c.ok && c.prem.paid.includes('white'));
-  assert.equal(grantPurchase(p, 'nope', 'buy-4', 1).ok, false);
-  assert.equal(nextPassProduct(64), null);
-  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(dayKey(NOW)));
+  const b = buyWithGems(p, 'pass_x4');
+  assert.ok(b.ok && b.prem.passMult === 4 && b.prem.gems === 50);
+  if (!b.ok) return;
+  assert.deepEqual(buyWithGems(b.prem, 'char_shoni'), { ok: false, reason: 'gems' });
+  const c = buyWithGems({ ...b.prem, gems: 300 }, 'char_shoni');
+  assert.ok(c.ok && c.prem.paid.includes('white') && c.prem.gems === 0);
+  if (!c.ok) return;
+  assert.deepEqual(buyWithGems({ ...c.prem, gems: 999 }, 'char_shoni'), { ok: false, reason: 'owned' });
+  assert.deepEqual(buyWithGems(p, 'gems_s'), { ok: false, reason: 'bad' });
+  assert.deepEqual(buyWithGems(p, 'toString'), { ok: false, reason: 'bad' });
 });
 
 test('skip rebirth: gems buy one skip, the next early rebirth save uses it', async () => {
@@ -111,7 +128,10 @@ test('daily reward: once per UTC day, 7-slot cycle, a missed day does not reset 
   const a = claimDaily(p, NOW)!;
   assert.ok(a);
   assert.equal(a.idx, 0);
-  assert.equal(a.prem.gems, (DAILY[0] as { gems: number }).gems);
+  // 무과금 팝젬은 거의 없음: 6칸 골드 2배, 7일째만 팝젬
+  assert.equal(a.prem.gems, 0);
+  assert.ok(a.prem.boostUntil > NOW);
+  assert.equal(DAILY.filter((r) => 'gems' in r).length, 1);
   p = a.prem;
   assert.equal(claimDaily(p, NOW + 1000), null, 'same day');
   assert.ok(!dailyReady(p, NOW + 1000));

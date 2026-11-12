@@ -119,6 +119,18 @@ export class Premium {
     }
   }
 
+  /** 팝젬으로 패스·캐릭터 사기 (서버가 팝젬을 빼고 지급) */
+  async gemBuy(id: string): Promise<'ok' | 'gems' | 'failed'> {
+    if (!this.net) return 'failed';
+    try {
+      const r = await this.net.call<{ ok: boolean; reason?: string; prem?: PremView }>('gemBuy', [id]);
+      this.apply(r.prem);
+      return r.ok ? 'ok' : r.reason === 'gems' ? 'gems' : 'failed';
+    } catch {
+      return 'failed';
+    }
+  }
+
   /** 팝젬으로 환생 조건 건너뛰기 1회 (서버가 팝젬을 뺌). 성공하면 바로 doRebirth(state, true) + 저장 */
   async skipRebirth(): Promise<'ok' | 'gems' | 'failed'> {
     if (!this.net) return 'failed';

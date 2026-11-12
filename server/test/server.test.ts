@@ -726,7 +726,25 @@ describe('save economy check', () => {
     expect(r2.ok).toBe(false);
   });
 
-  test('dailyClaim: once per day, gives the first slot (gems), view tells ready/next slot', async (server) => {
+  test('gemBuy: passes in order and heroes for gems, server checks gems/order/owned', async (server) => {
+    server.connect({ account: 'gb' });
+    await server.saveWrite({ v: 2, char: 'blue', chars: ['blue'] });
+    expect((await server.gemBuy('pass_x2')).reason).toBe('gems');
+    await $global.updateUserState('gb', { prem: { gems: 600 } });
+    expect((await server.gemBuy('pass_x4')).reason).toBe('order');
+    const a = await server.gemBuy('pass_x2');
+    expect(a.ok).toBe(true);
+    expect(a.prem.passMult).toBe(2);
+    expect(a.prem.gems).toBe(500);
+    expect((await server.gemBuy('pass_x2')).reason).toBe('owned');
+    const c = await server.gemBuy('char_bam');
+    expect(c.ok).toBe(true);
+    expect(c.prem.gems).toBe(0);
+    expect(c.prem.chars).toContain('black');
+    expect((await server.gemBuy('gems_l')).reason).toBe('bad');
+  });
+
+  test('dailyClaim: once per day, gives the first slot (gold x2), view tells ready/next slot', async (server) => {
     server.connect({ account: 'dy' });
     const g = await server.premGet();
     expect(g.prem.daily.ready).toBe(true);
@@ -734,11 +752,12 @@ describe('save economy check', () => {
     const a = await server.dailyClaim();
     expect(a.ok).toBe(true);
     expect(a.idx).toBe(0);
-    expect(a.prem.gems).toBe(10);
+    expect(a.prem.gems).toBe(0);
+    expect(a.prem.boostUntil > Date.now()).toBe(true);
     expect(a.prem.daily.ready).toBe(false);
     expect(a.prem.daily.idx).toBe(1);
     const b = await server.dailyClaim();
     expect(b.ok).toBe(false);
-    expect(b.prem.gems).toBe(10);
+    expect(b.prem.boostUntil).toBe(a.prem.boostUntil);
   });
 });
