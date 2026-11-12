@@ -190,7 +190,8 @@ export function dressFacilities(d: HubDecor, kind: DecorKind): void {
   const dr = DRESS[kind];
   for (const f of FOOTPRINTS) {
     dr.base(d, f);
-    if (f.cap) dr.cap(d, f);
+    // 상점·업그레이드는 본체 자체가 월드 모양(FacilityBodies)이라 지붕 안 씌움
+    if (f.cap && f.id !== 'upgrade' && f.id !== 'guns') dr.cap(d, f);
     // 뒤쪽 두 모서리 소품 (앞은 드나드는 쪽이라 비움)
     dr.prop(d, f.x - f.w / 2 - 0.7, f.z - f.d / 2 - 0.3, 0);
     dr.prop(d, f.x + f.w / 2 + 0.7, f.z - f.d / 2 - 0.3, 1);

@@ -18,7 +18,8 @@ import type { Collider } from './movement';
 /** 캐릭터 받침대 위치 (CharacterPanel이 현재 캐릭터를 올려 돌림) */
 export const CHAR_TURNTABLE = { x: 12.6, z: 14.2 };
 
-export function buildUpgrade(b: ToyBuilder, f: Facility, colliders: Collider[]): void {
+/** 반환 = 본체 묶음 (월드별 본체로 바꿀 때 숨김, 간판은 따로) */
+export function buildUpgrade(b: ToyBuilder, f: Facility, colliders: Collider[]): THREE.Group {
   const g = new THREE.Group();
   g.position.set(f.x, 0, f.z - 1.6);
   b.root.add(g);
@@ -42,9 +43,11 @@ export function buildUpgrade(b: ToyBuilder, f: Facility, colliders: Collider[]):
   });
   colliders.push({ kind: 'box', x: f.x, z: f.z - 1.6, hx: 1.2, hz: 0.9 });
   b.sign('bolt', t('fac.upgrade'), f.x - 2.2, 2.2, f.z - 1.2, { w: 2.4, color: '#ff8a5b', rotY: 0.35 });
+  return g;
 }
 
-export function buildGunShop(b: ToyBuilder, f: Facility, colliders: Collider[], guns: Record<GunModel, THREE.Object3D> | null): void {
+/** 반환 = 본체 묶음 (월드별 본체로 바꿀 때 숨김, 간판은 따로) */
+export function buildGunShop(b: ToyBuilder, f: Facility, colliders: Collider[], guns: Record<GunModel, THREE.Object3D> | null): THREE.Group {
   const cx = f.x + 1.8;
   const g = new THREE.Group();
   g.position.set(cx, 0, f.z);
@@ -83,6 +86,7 @@ export function buildGunShop(b: ToyBuilder, f: Facility, colliders: Collider[], 
   }
   colliders.push({ kind: 'box', x: cx, z: f.z, hx: 1.65, hz: 0.85 });
   b.sign('bullet', t('fac.guns'), cx, 3.45, f.z + 1.05, { w: 2.2, color: '#7cc4ff', post: false });
+  return g;
 }
 
 export function buildAltar(b: ToyBuilder, f: Facility, colliders: Collider[]): void {

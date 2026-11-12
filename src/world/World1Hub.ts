@@ -2,6 +2,7 @@ import { t } from '../i18n/i18n';
 import * as THREE from 'three';
 import { type BrickName, type KitModel } from './kit';
 import { HubDecor } from './HubDecor';
+import { buildThemedBodies } from './FacilityBodies';
 import { themeOf } from './worldThemes';
 import { disposeLabel, makeLabel } from './labels';
 import type { Collider } from './movement';
@@ -53,6 +54,10 @@ export class World1Hub {
   private readonly portalBaseMat = new THREE.MeshStandardMaterial({ color: '#ffe9b8', roughness: 0.55 });
   private readonly targetMats = [new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.55 }), new THREE.MeshStandardMaterial({ color: '#ff6b6b', roughness: 0.55 })] as const;
   private swirlCanvas: HTMLCanvasElement | null = null;
+  /** 월드 1 상점·업그레이드 본체 (다른 월드에서는 숨기고 themed로 대신) */
+  private readonly baseBodies: THREE.Group[] = [];
+  /** 월드 2~8 상점·업그레이드 본체 (월드마다 새로, 꾸미기 root 아래) */
+  private themed: ToyBuilder | null = null;
   private swirlTex: THREE.CanvasTexture | null = null;
 
   constructor(kit: Record<BrickName, KitModel>, guns: Record<GunModel, THREE.Object3D> | null = null, world = 1) {
@@ -72,6 +77,18 @@ export class World1Hub {
   /** 월드 색: 시설 재질 섞기 + 포털 고리·받침·소용돌이 + 과녁 */
   private applyLook(world: number): void {
     const th = themeOf(world);
+    // 상점·업그레이드 본체 (월드 2~8은 테마 모양, 사용자 2026-11-12)
+    this.themed?.dispose();
+    this.themed = null;
+    for (const g of this.baseBodies) g.visible = th.decor === 'town';
+    if (th.decor !== 'town') {
+      const f = (id: string): Facility => this.facilities.find((x) => x.id === id)!;
+      this.themed = new ToyBuilder();
+      buildThemedBodies(this.themed, th.decor, f('upgrade'), f('guns'), this.guns);
+      const fc = th.facility;
+      if (fc) this.themed.tint(fc.tint, fc.k * 0.4);
+      this.decor.root.add(this.themed.root);
+    }
     this.toys.tint(th.facility?.tint ?? null, th.facility?.k ?? 0);
     this.portalRingMat.color.set(th.portal.ring);
     this.portalBaseMat.color.set(th.portal.base);
@@ -164,8 +181,7 @@ export class World1Hub {
   /** 업그레이드 기계 · 총 상점 · 환생 제단 · 탈의실 (HubFacilities, 장난감 도형) */
   private buildFacilities(): void {
     const f = (id: string): Facility => this.facilities.find((x) => x.id === id)!;
-    buildUpgrade(this.toys, f('upgrade'), this.colliders);
-    buildGunShop(this.toys, f('guns'), this.colliders, this.guns);
+    this.baseBodies.push(buildUpgrade(this.toys, f('upgrade'), this.colliders), buildGunShop(this.toys, f('guns'), this.colliders, this.guns));
     buildAltar(this.toys, f('altar'), this.colliders);
     buildWardrobe(this.toys, f('chars'), this.colliders);
     buildTravel(this.toys, f('travel'), this.colliders);
@@ -234,6 +250,7 @@ export class World1Hub {
     if (this.swirl) this.swirl.rotation.z -= dt * 1.6;
     this.clock += dt;
     this.toys.update(dt, this.clock);
+    this.themed?.update(dt, this.clock);
     // 3D 이름표: 카메라에 가까우면 흐리게 (가까이서 화면을 꽉 채우지 않게). LABEL_NEAR 안은 안 보임, LABEL_FAR 밖은 그대로
     if (!camPos) return;
     for (const l of this.labels) {
@@ -248,6 +265,7 @@ export class World1Hub {
     for (const o of this.owned) o.dispose();
     for (const l of this.labels) disposeLabel(l);
     this.toys.dispose();
+    this.themed?.dispose();
     this.decor.dispose();
     this.root.removeFromParent();
   }
