@@ -257,3 +257,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
   .char-card .tag .ico { width: 14px; height: 14px; }
   .char-card .btn.small { padding: 5px 8px; font-size: 12px; }
 }
+
+/* 훈련 막대 = 지금 필요한 정도 (trainNeeds): 빨강 지금 훈련 · 주황 다음 · 초록 충분 */
+.tr-fill[data-need="red"] { background: #ff4f5e; }
+.tr-fill[data-need="orange"] { background: #ffa53d; }
+.tr-fill[data-need="green"] { background: #4fcf6a; }

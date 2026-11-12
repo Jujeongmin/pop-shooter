@@ -4,6 +4,7 @@ import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import type { GameState } from '../sim/state.ts';
 import { rebirthMult, TRAIN_KINDS, trainValue, type TrainKind } from '../sim/training.ts';
+import { trainNeeds } from '../sim/trainNeed.ts';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 
@@ -98,8 +99,11 @@ export class Hud {
     setText(this.atk, formatNum(damagePerShot(s)));
     setText(this.sps, shotsPerSec(s).toFixed(2).replace(/\.?0+$/, ''));
     setText(this.dps, formatNum(autoDps(s)));
+    const need = trainNeeds(s);
     for (const [k, b] of this.bars) {
       const v = trainValue(s, k);
+      // 지금 필요한 훈련 색 (빨강·주황·초록, 골드 줄은 막대 없음)
+      if (k !== 'coin') b.fill.dataset.need = need[k];
       const goal = k === 'atk' ? rebirthReq(s) : k === 'spd' ? BALANCE.train.spdMax : 0;
       // 막대가 없는 줄도 칸은 남김 (값 칸이 왼쪽으로 밀려 줄이 안 맞던 것)
       b.fill.parentElement!.style.visibility = goal <= 0 ? 'hidden' : '';
