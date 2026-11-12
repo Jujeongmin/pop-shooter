@@ -1,5 +1,5 @@
 // 사운드 설정: 효과음 종류·음량·동시 재생 제한, 배경음 (pop-battle의 오디오 구조를 가져와 줄임).
-// 총소리·보스 쓰러짐·타격은 녹음 파일(짧은 mp3 → 디코드), 나머지 효과음은 코드 합성 (audio/sfxBank.ts). 배경음은 실제 곡 파일 스트리밍 (MUSIC_FILE).
+// 효과음은 모두 녹음 파일(짧은 mp3 → 디코드, 2026-11-12 코드 합성 소리 없앰), 배경음은 실제 곡 파일 스트리밍 (MUSIC_FILE).
 // 오디오가 처음 켜질 때(첫 사용자 입력) 한 번 버퍼로 만들어 두고 재생 때는 버퍼만 재사용한다.
 import type { GunModel } from '../sim/guns.ts';
 
@@ -69,16 +69,29 @@ const base = import.meta.env.BASE_URL;
  * 녹음 파일 효과음 (public/assets/audio/sfx/<id>.mp3, pop-battle에서 가져옴: Mixkit 원본을 자르고 정규화)과 음량 보정.
  * SOUNDS의 gain·동시 재생 제한은 그대로 곱해짐. 파일을 못 받으면 그 소리만 안 남
  */
-const FILE_GAIN = {
+const FILE_GAIN: Record<SoundId, number> = {
   firePistol: 0.91,
   fireRifle: 0.51,
   fireShotgun: 0.61,
   fireSniper: 0.5,
   bossHit: 1.64,
   bossDown: 1.46,
-} as const;
-export type FileSoundId = keyof typeof FILE_GAIN;
-export type SynthSoundId = Exclude<SoundId, FileSoundId>;
+  // 2026-11-12 Pixabay 녹음 (art-src/sfx, 변환 tools/audio/sfx_to_game.py: 최고점 -1 dBFS로 맞춤 → 크기는 SOUNDS gain으로)
+  coin: 1,
+  zoneLand: 1,
+  upgrade: 1,
+  gunBuy: 1,
+  rebirth: 1,
+  bossThrow: 1,
+  playerHit: 1,
+  win: 1,
+  lose: 1,
+  uiTick: 1,
+  step: 1,
+  travel: 1,
+  cheer: 1,
+};
+export type FileSoundId = SoundId;
 
 /** 파일 이름은 pop-battle 것을 그대로 (impact = 탄착, kill = 처치) */
 const FILE_NAME: Record<FileSoundId, string> = {
@@ -88,6 +101,19 @@ const FILE_NAME: Record<FileSoundId, string> = {
   fireSniper: 'fireSniper',
   bossHit: 'impact',
   bossDown: 'kill',
+  coin: 'coin',
+  zoneLand: 'zoneLand',
+  upgrade: 'upgrade',
+  gunBuy: 'gunBuy',
+  rebirth: 'rebirth',
+  bossThrow: 'bossThrow',
+  playerHit: 'playerHit',
+  win: 'win',
+  lose: 'lose',
+  uiTick: 'uiTick',
+  step: 'step',
+  travel: 'travel',
+  cheer: 'cheer',
 };
 
 export const SFX_FILES = Object.fromEntries(
@@ -115,8 +141,6 @@ export const MUSIC_FILE = (id: TrackId): string => `${import.meta.env.BASE_URL}a
 export const MIX = {
   /** 배경음 바꿀 때 페이드 (s) */
   musicFade: 0.8,
-  /** 합성 효과음 샘플레이트 (작은 버퍼, 재생 때 자동 변환) */
-  sfxRate: 32000,
 };
 
 /** 설정 저장 키 (localStorage) */

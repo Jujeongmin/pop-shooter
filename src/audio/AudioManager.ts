@@ -1,9 +1,8 @@
-import { AUDIO_STORAGE_KEY, MIX, MUSIC, MUSIC_FILE, SFX_FILES, SOUNDS, type FileSoundId, type MusicId, type SoundId, type TrackId } from '../config/audio';
-import { renderSfx } from './sfxBank';
+import { AUDIO_STORAGE_KEY, MIX, MUSIC, MUSIC_FILE, SFX_FILES, SOUNDS, type MusicId, type SoundId, type TrackId } from '../config/audio';
 
 /**
  * 소리 관리 (pop-battle의 AudioManager에서 공간음을 뺀 것). 게임 코드는 play(id) · setMusic(id)만 부른다.
- * - 총소리·보스 쓰러짐은 짧은 녹음 파일(mp3 → 디코드), 나머지 효과음은 코드 합성: 오디오가 켜질 때 버퍼로 한 번 만들고 재생은 버퍼 재사용
+ * - 효과음은 모두 짧은 녹음 파일(mp3 → 디코드, Pixabay·Mixkit): 오디오가 켜질 때 버퍼로 한 번 만들고 재생은 버퍼 재사용
  * - 배경음은 실제 곡 파일(월드별 광장 8곡 + 전투, Pixabay)을 <audio> + MediaElementAudioSourceNode로 스트리밍 (디코드해 메모리에 올리지 않음,
  *   웹게임 메모리 체크리스트). 곡마다 엘리먼트 하나를 재사용(소스 노드는 엘리먼트당 한 번만), 안 쓰는 월드 곡은 src를 비워 버퍼를 놓음.
  *   iOS는 입력 없이 element.play()를 거부 → 첫 입력 때 전투 곡을 소리 0으로 한 번 재생·멈춰 미리 열어 둠 (포털 착지로 전투가 시작돼 입력이 없음)
@@ -20,7 +19,6 @@ export interface PlayOpts {
   pitch?: number;
 }
 
-const isFileSound = (id: SoundId): id is FileSoundId => id in SFX_FILES;
 
 export class AudioManager {
   private ctx: AudioContext | null = null;
@@ -186,7 +184,7 @@ export class AudioManager {
     const buffer = this.bank.get(id);
     if (!ctx || !bus || !buffer || ctx.state !== 'running') return;
     const spec = SOUNDS[id];
-    const gain = spec.gain * (isFileSound(id) ? SFX_FILES[id].gain : 1) * (opts?.gain ?? 1);
+    const gain = spec.gain * SFX_FILES[id].gain * (opts?.gain ?? 1);
     if (gain <= 0.004) return;
     const channel = opts?.channel ?? id;
     const now = ctx.currentTime;
@@ -300,13 +298,9 @@ export class AudioManager {
     await Promise.all(
       ids.map(async (id) => {
         try {
-          if (isFileSound(id)) {
-            const r = await fetch(SFX_FILES[id].url);
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            this.bank.set(id, await ctx.decodeAudioData(await r.arrayBuffer()));
-          } else {
-            this.bank.set(id, await renderSfx(id));
-          }
+          const r = await fetch(SFX_FILES[id].url);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          this.bank.set(id, await ctx.decodeAudioData(await r.arrayBuffer()));
         } catch (err) {
           console.warn(`[audio] 효과음 ${id}을 준비하지 못함`, err);
         }
