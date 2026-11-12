@@ -22,6 +22,7 @@ import type { HubSample } from './hubBuffer';
 import type { HubPeer } from './LobbyHub';
 import { battleSpot } from './peerView';
 import { PowerAura } from '../player/PowerAura';
+import { standY } from '../world/facilities';
 import { HUB_TIMING } from './shared/hub.ts';
 import { NICK_PLACEHOLDER, safeDisplayNick } from './shared/nickFilter.ts';
 
@@ -33,6 +34,8 @@ export interface LobbyPeersContext {
   readonly targets: readonly THREE.Object3D[];
   /** 내 위치 (가까운 사람부터 그리기) */
   readonly me?: { readonly x: number; readonly z: number };
+  /** 동전 분수 연출 (만세 중인 사람에게 동전이 떨어짐) */
+  readonly coinDrop?: (to: THREE.Vector3) => void;
 }
 
 /**
@@ -41,7 +44,7 @@ export interface LobbyPeersContext {
  */
 const DRAW_BUDGET = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 9 : 15;
 /** 이 거리(m)보다 멀면 오라·발사 연출 생략 */
-const FAR_FX = 18;
+const FAR_FX = 40;
 /** 가까운 순서 다시 고르는 간격 (초) */
 const PICK_SEC = 0.5;
 /** 캐릭터를 안 그릴 때 이름표 높이 (m) */
@@ -64,8 +67,9 @@ interface Item {
   kick: number;
   /** DPS 오라 (광장 root 아래) */
   aura: PowerAura;
-  /** 만세 섞기 0..1 (패킷 비트 4) */
+  /** 만세 섞기 0..1 (패킷 비트 4), 다음 동전까지 (초) */
   cheer: number;
+  coinT: number;
   /** 내 화면에 캐릭터로 그리는지 (DRAW_BUDGET 안), 나와의 거리 제곱 */
   drawn: boolean;
   dist2: number;
@@ -194,6 +198,7 @@ export class LobbyPeers {
       kick: 0,
       aura: new PowerAura(),
       cheer: 0,
+      coinT: Math.random() * 0.5,
       drawn: true,
       dist2: 0,
     };
@@ -270,7 +275,7 @@ export class LobbyPeers {
           label.visible = false;
           continue;
         }
-        p.pos.set(s.x, 0, s.z);
+        p.pos.set(s.x, standY(s.x, s.z), s.z);
         p.velocity.set(s.vx, 0, s.vz);
         p.yaw = s.yaw;
       }
@@ -307,9 +312,16 @@ export class LobbyPeers {
       item.kick = Math.max(0, item.kick - dt * 0.6);
       p.kick = item.kick;
       // 만세 (동전 분수): 비트 4, 서서히 올리고 내림
-      const cheering = status === 'training' && (s.f & 4) !== 0;
+      const cheering = status !== 'battle' && (s.f & 4) !== 0;
       item.cheer = cheering ? Math.min(1, item.cheer + dt * 4) : Math.max(0, item.cheer - dt * 5);
       p.cheer = item.cheer;
+      if (cheering && near && this.ctx.coinDrop) {
+        item.coinT -= dt;
+        if (item.coinT <= 0) {
+          item.coinT += 0.5;
+          this.ctx.coinDrop(_hit.set(p.pos.x, 1.1, p.pos.z + 0.15));
+        }
+      }
       item.avatar.update(dt, p);
       item.aura.root.visible = near;
       if (near) item.aura.update(dt, p.pos.x, 0, p.pos.z);

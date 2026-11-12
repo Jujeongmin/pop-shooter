@@ -30,6 +30,15 @@ export type RangeLane = (typeof RANGE_LANES)[number];
 /** 러닝머신(연사) 세 대 가운데 (북쪽(−z)을 보고 달림). 여러 명이 겹치지 않게 빈 벨트를 고름 */
 export const TREADMILL = { x: -18.5, z: 10 };
 export const TREADMILL_LANES: readonly number[] = [-1.6, 0, 1.6];
+/** 러닝머신 벨트 윗면 높이 (m) */
+export const BELT_Y = 0.34;
+
+/** 이 자리가 러닝머신 벨트 위면 벨트 높이, 아니면 0 (다른 사람이 벨트에 묻히지 않게) */
+export function standY(x: number, z: number): number {
+  if (Math.abs(z - (TREADMILL.z + 0.05)) > 1.25) return 0;
+  for (const dx of TREADMILL_LANES) if (Math.abs(x - (TREADMILL.x + dx)) < 0.6) return BELT_Y;
+  return 0;
+}
 /** 동전 분수(골드 보너스): 받는 자리 가운데 (기계는 북쪽 1.5m), 좌우로 세 자리 */
 export const FOUNTAIN = { x: -9.5, z: 9 };
 export const FOUNTAIN_SPOTS: readonly number[] = [0, -1.1, 1.1];

@@ -193,8 +193,8 @@ export function buildTreadmill(b: ToyBuilder, colliders: Collider[]): TreadmillP
 
 /** 동전 분수 (골드 보너스 훈련): 금색 기계 꼭대기 관에서 동전이 떨어지고 캐릭터가 받음. 기계는 서는 자리 북쪽 */
 export interface FountainProps {
-  /** 동전 하나 떨어뜨림 (받는 곳 = to). 닿으면 onCatch */
-  drop(to: THREE.Vector3, onCatch: () => void): void;
+  /** 동전 하나 떨어뜨림 (받는 곳 = to). 닿으면 onCatch. onCatch 없음 = 다른 사람 연출: 빈 동전이 없으면 건너뜀 (내 동전을 빼앗지 않게) */
+  drop(to: THREE.Vector3, onCatch: (() => void) | null): void;
 }
 export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainProps {
   const mx = FOUNTAIN.x;
@@ -248,7 +248,9 @@ export function buildFountain(b: ToyBuilder, colliders: Collider[]): FountainPro
   b.sign('cointarget', t('fac.fountain'), mx - 2.1, 2.0, mz + 0.6, { w: 2.1, color: '#ffc928', rotY: 0.35 });
   return {
     drop: (to, onCatch) => {
-      const p = pool.find((x) => x.t >= 1) ?? pool[0]!;
+      const free = pool.find((x) => x.t >= 1);
+      if (!free && !onCatch) return;
+      const p = free ?? pool.find((x) => !x.done) ?? pool[0]!;
       p.from.set(mx, 2.2, mz + 1.45);
       p.to.copy(to);
       p.t = 0;
