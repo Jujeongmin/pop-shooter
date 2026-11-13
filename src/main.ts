@@ -46,6 +46,9 @@ import { installRetentionConsole } from './net/retentionConsole';
 import type { RetentionResult } from './net/shared/retention';
 
 async function boot(): Promise<void> {
+  // 시작 구간 시간 (콘솔 한 줄 '[boot] …', 페이지 열린 뒤 ms): 로딩이 길 때 어디서 걸리는지 배포본에서 바로 보려고 (2026-11-13)
+  const marks: Array<[string, number]> = [['script', Math.round(performance.now())]];
+  const mark = (name: string): void => { marks.push([name, Math.round(performance.now())]); };
   const ui = document.getElementById('ui')!;
   const loading = new Loading(ui);
   // 첫 입력(클릭·터치·키)에서 소리를 켬. 광장 음악은 그때부터
@@ -70,6 +73,7 @@ async function boot(): Promise<void> {
     }
   };
   const savePick = loadSave();
+  void savePick.then(() => mark('save'), () => undefined);
   const stage = new Stage3D(document.getElementById('view') as HTMLCanvasElement);
   // 캐릭터는 내 캐릭터(기기 사본으로 짐작)만 먼저, 나머지는 시작 뒤 뒤에서 (2026-11-13 로딩 줄이기). 개발용 ?allchars=1 = 6종 다
   const firstChars: CharId[] = import.meta.env.DEV && new URLSearchParams(location.search).has('allchars') ? [...CHAR_IDS] : [guessChar()];
@@ -77,8 +81,10 @@ async function boot(): Promise<void> {
     loadAssets(stage.renderer, firstChars, (p) => loading.set(p * 0.9), savePick.then((sv) => sv.state.char, () => null)),
     loadBricks(),
   ]);
+  mark('assets');
   // 3D 글자 라벨이 언어 글꼴로 구워지도록 글꼴 먼저
   await fontReady;
+  mark('font');
   const save = await savePick;
   // retention access log: once per account per UTC day, not awaited
   if (cloud.online) void net.call('actPing').catch(() => undefined);
@@ -170,9 +176,12 @@ async function boot(): Promise<void> {
   const settings = new SettingsPanel(ui, guide, nickPanel, resetAccount);
   game.menuActions.settings = () => settings.open();
   // 처음 보이는 순간의 텍스처 올리기·셰이더 만들기 끊김을 로딩 중에 미리 (다른 사람이 쓸 캐릭터·총 원본까지)
+  mark('built');
   warmGpu(stage.renderer, stage.scene, stage.camera, [...Object.values(assets.characters).map((c) => c.scene), ...Object.values(assets.guns)]);
+  mark('warm');
   stage.start();
   loading.done();
+  console.log(`[boot] ${marks.map(([n, t]) => `${n} ${t}`).join(' · ')} ms`);
   // 나머지 캐릭터(다른 사람·멘토·캐릭터 창)는 화면이 뜬 뒤 하나씩
   window.setTimeout(() => assets.loadRest(), 1500);
   // 고른 저장을 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기).
