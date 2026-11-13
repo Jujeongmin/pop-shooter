@@ -731,6 +731,19 @@ describe('save economy check', () => {
     expect(r2.ok).toBe(false);
   });
 
+  test('purchase webhook: numeric purchase id works, same id only once, unknown product refused', async (server) => {
+    server.connect({ account: 'pay' });
+    await server.saveWrite({ v: 2, char: 'blue', chars: ['blue'] });
+    const a = await server.$onItemPurchased({ account: 'pay', purchaseId: 12345, productId: 'gems_l', quantity: 1, metadata: null });
+    expect(a.success).toBe(true);
+    expect((await server.premGet()).prem.gems).toBe(1000);
+    const again = await server.$onItemPurchased({ account: 'pay', purchaseId: 12345, productId: 'gems_l', quantity: 1, metadata: null });
+    expect(again.success).toBe(true);
+    expect((await server.premGet()).prem.gems).toBe(1000);
+    const bad = await server.$onItemPurchased({ account: 'pay', purchaseId: 'p2', productId: 'nope', quantity: 1 });
+    expect(bad.success).toBe(false);
+  });
+
   test('gemBuy: passes in order and heroes for gems, server checks gems/order/owned', async (server) => {
     server.connect({ account: 'gb' });
     await server.saveWrite({ v: 2, char: 'blue', chars: ['blue'] });

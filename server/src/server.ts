@@ -13,7 +13,7 @@
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
 import { allowedChars, checkSave } from '../../src/sim/econ.ts';
-import { AD_KINDS, AD_LIMIT, buySkipRebirth, buyWithGems, claimAd, claimDaily, dailyReady, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
+import { AD_KINDS, AD_LIMIT, buySkipRebirth, buyWithGems, claimAd, PRODUCTS, claimDaily, dailyReady, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
 import type { CharId, GameState } from '../../src/sim/state.ts';
 import { autoDps, skipRebirthGems } from '../../src/sim/actions.ts';
@@ -403,17 +403,35 @@ export class Server {
   }
 
   /** VXShop 결제 웹훅 (Verse8이 부름): 저장과 같은 락, 같은 purchaseId는 한 번만 (sim/premium grantPurchase) */
-  async $onItemPurchased(p: { account: string; purchaseId: string; productId: string; quantity: number }): Promise<{ success: boolean }> {
-    if (!p || typeof p.account !== 'string' || typeof p.purchaseId !== 'string' || typeof p.productId !== 'string') return { success: false };
-    return $lock(`save:${p.account}`, async () => {
-      const st = ((await $global.getUserState(p.account)) || {}) as Record<string, unknown>;
+  async $onItemPurchased(e: { account?: unknown; purchaseId?: unknown; productId?: unknown; quantity?: unknown; metadata?: unknown }): Promise<{ success: boolean; reason?: string }> {
+    // purchaseId는 숫자로 올 수 있음 (2026-11-13 실제 테스트 구매 실패: 문자열만 받아서 success false) → 문자열로 맞춤. pop-battle과 같은 처리
+    const account = typeof e?.account === 'string' ? e.account : '';
+    const purchaseId = typeof e?.purchaseId === 'string' || typeof e?.purchaseId === 'number' ? String(e.purchaseId) : '';
+    const productId = typeof e?.productId === 'string' ? e.productId : '';
+    const quantity = Number(e?.quantity) || 1;
+    if (!account || !purchaseId) {
+      console.log('[ps] purchase_bad_event', JSON.stringify({ account: !!account, purchaseId: typeof e?.purchaseId, productId }));
+      return { success: false, reason: 'bad_event' };
+    }
+    if (!Object.prototype.hasOwnProperty.call(PRODUCTS, productId)) {
+      // 이 게임에 없는 상품 (대시보드 Product ID 확인)
+      console.log('[ps] purchase_unknown_product', JSON.stringify({ account, productId }));
+      return { success: false, reason: 'unknown_product' };
+    }
+    return $lock(`save:${account}`, async () => {
+      const st = ((await $global.getUserState(account)) || {}) as Record<string, unknown>;
       const raw = saveOf(st);
       const prev = raw ? normalizeState(raw, Date.now()) : null;
-      const r = grantPurchase(premOf(st, prev), p.productId, p.purchaseId, p.quantity);
+      const prem = premOf(st, prev);
       // 이미 준 결제 id면 성공으로 답함 (Verse8이 다시 보내도 한 번만)
-      if (!r.ok) return { success: premOf(st, prev).buys.includes(p.purchaseId) };
-      await $global.updateUserState(p.account, { prem: r.prem });
-      slog(`buy_${p.productId}`, '-', p.account);
+      if (prem.buys.includes(purchaseId)) return { success: true };
+      const r = grantPurchase(prem, productId, purchaseId, quantity);
+      if (!r.ok) {
+        console.log('[ps] purchase_grant_failed', JSON.stringify({ account, productId, purchaseId }));
+        return { success: false, reason: 'grant_failed' };
+      }
+      await $global.updateUserState(account, { prem: r.prem });
+      slog(`buy_${productId}`, '-', account);
       return { success: true };
     });
   }

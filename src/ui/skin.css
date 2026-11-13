@@ -298,3 +298,5 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 .sheet-sticky { position: sticky; top: -10px; z-index: 3; margin: -10px -16px 0; padding: 10px 16px 8px; display: flex; flex-direction: column; gap: 8px;
   background: linear-gradient(#fff6dc, #fff3d4); box-shadow: 0 6px 8px -6px rgba(43, 58, 103, .25); }
 @media (max-height: 460px) { .sheet-sticky { top: -8px; margin: -8px -12px 0; padding: 8px 12px 6px; gap: 6px; } }
+/* 닫기 버튼이 위에 붙는 탭 줄(.sheet-sticky z 3)에 가려 잘려 보이던 것 */
+.sheet-x { z-index: 6; }
