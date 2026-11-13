@@ -7,7 +7,7 @@ import { buyNextGun, worldUnlocked } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import { gunMult, gunPrice, GUNS } from '../sim/guns.ts';
-import { FOOTPRINTS, WORLD1_FACILITIES } from '../world/facilities';
+import { FOOTPRINTS, GUN_SHOP_AT, WORLD1_FACILITIES } from '../world/facilities';
 import { button, el } from './dom';
 import type { FloatText } from './FloatText';
 import { icon } from './icons';
@@ -54,7 +54,8 @@ export class GunPanel {
     game.facilityLeave.guns = () => { this.zone.leave(); this.panel.close(); };
     game.onTick((dt) => this.zone.update(dt));
     game.onStateChange(() => { if (this.panel.isOpen) this.render(); });
-    this.buildDisplay(f.x, f.z);
+    // 진열은 가판대 기준점 (들어가는 원은 가판대 앞이라 f와 다름 — 원을 옮길 때 진열이 따라 나가 공중에 떠 있던 것)
+    this.buildDisplay(GUN_SHOP_AT.x, GUN_SHOP_AT.z);
   }
 
   /** 가판대 위에 월드 1 총 4자루를 옆으로 눕혀 진열 */

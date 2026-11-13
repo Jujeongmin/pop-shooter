@@ -64,11 +64,12 @@ export class ShopPanel {
 
   /** tab = 열 탭 (오른쪽 이벤트 버튼에서 바로 그 탭으로) */
   open(tab?: Tab): void {
+    const changed = !!tab && tab !== this.tab;
     if (tab) { this.tab = tab; this.msg = ''; }
     this.prem.startShop();
     void this.prem.refresh();
     this.render();
-    this.panel.open();
+    this.panel.open(changed);
   }
 
   private row(ic: IconName | HTMLElement, title: string, desc: string, action: HTMLElement): HTMLDivElement {
@@ -138,7 +139,10 @@ export class ShopPanel {
     for (const [k, b] of this.tabBtns) b.classList.toggle('on', k === this.tab);
     const s = this.game.state;
     const b = this.body;
+    // 다시 그려도 스크롤 유지 (창 스크롤은 Panel의 sheet-body)
+    const sc = this.panel.body.scrollTop;
     b.replaceChildren();
+    requestAnimationFrame(() => { if (this.panel.isOpen && this.panel.body.scrollTop !== sc) this.panel.body.scrollTop = sc; });
     if (!this.prem.online) b.append(el('div', 'up-hint', t('shop.offline')));
     if (this.tab === 'free') {
       const left = s.boostUntil - Date.now();
