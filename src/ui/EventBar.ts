@@ -16,7 +16,7 @@ import { clockText } from './ShopPanel';
 /**
  * 오른쪽 이벤트 버튼 묶음 (사용자 2026-11-12: 로블록스처럼 결제·보상을 화면 오른쪽에 이벤트처럼).
  * 세로로 둥근 버튼: 선물(출석, 받을 수 있으면 통통 + 빨간 점) · 골드 2배(광고 바로 보기, 켜져 있으면 남은 시간) ·
- * 공격력 패스(다음 단계) · 팝젬 · 새 캐릭터(안 가진 유료 캐릭터가 있을 때). 서버 연결이 없으면(혼자 모드) 결제·광고 버튼은 숨김.
+ * 공격력 패스(다음 단계) · 새 캐릭터 (팝젬 버튼은 뺌, 사용자 2026-11-13 — 상점·충전 버튼으로)(안 가진 유료 캐릭터가 있을 때). 서버 연결이 없으면(혼자 모드) 결제·광고 버튼은 숨김.
  * 1초마다 표시만 갱신 (DOM은 처음 한 번 만듦).
  */
 interface Item { root: HTMLButtonElement; label: HTMLSpanElement; dot: HTMLSpanElement }
@@ -25,7 +25,7 @@ export class EventBar {
   private readonly root: HTMLDivElement;
   private readonly game: Game;
   private readonly prem: Premium;
-  private readonly items: Record<'reb' | 'daily' | 'boost' | 'pass' | 'gems' | 'hero', Item>;
+  private readonly items: Record<'reb' | 'daily' | 'boost' | 'pass' | 'hero', Item>;
   private acc = 1;
   private faces: Record<string, string> = {};
   private heroImg: HTMLImageElement | null = null;
@@ -63,7 +63,6 @@ export class EventBar {
         else shop.open('free');
       }),
       pass: make('bullet', 'ev.pass', 'ev-pass', () => shop.open('pass')),
-      gems: make('gem', 'ev.gems', 'ev-gems', () => shop.open('gems')),
       hero: make(heroFace, 'ev.hero', 'ev-hero', () => shop.open('heroes')),
     };
     ui.append(this.root);
@@ -117,7 +116,6 @@ export class EventBar {
       const tier = PASS_ORDER.indexOf(Number(next.slice(6)) as (typeof PASS_ORDER)[number]) + 1;
       setText(it.pass.label, `${t('ev.pass')} ${tier}`);
     }
-    it.gems.root.hidden = !online;
     const missing = ['white', 'black'].find((c) => !s.chars.includes(c as 'white' | 'black'));
     it.hero.root.hidden = !online || !missing;
     // 안 가진 유료 캐릭터 얼굴 (SHONI → BAM)
