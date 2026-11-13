@@ -4,6 +4,7 @@ import './style.css';
 import './ui/ui.css';
 import './ui/skin.css';
 import { GUN_MODELS, loadAssets } from './assets/loadAssets';
+import { DOHYEON_REST_SAMPLE } from './dohyeonRest';
 import { GUNS, type GunModel } from './sim/guns.ts';
 import { CHAR_IDS, type CharId } from './sim/state.ts';
 import { Game } from './core/Game';
@@ -199,8 +200,11 @@ async function boot(): Promise<void> {
   stage.start();
   loading.done();
   console.log(`[boot] ${marks.map(([n, t]) => `${n} ${t}`).join(' · ')} ms`);
-  // 나머지 캐릭터(다른 사람·멘토·캐릭터 창)는 화면이 뜬 뒤 하나씩
-  window.setTimeout(() => assets.loadRest(), 1500);
+  // 나머지 총·캐릭터(다른 사람·멘토·캐릭터 창)는 화면이 뜬 뒤 하나씩, 글꼴 나머지 한글(닉네임용: rest 파일에만 있는 글자로 받게 함)
+  window.setTimeout(() => {
+    assets.loadRest();
+    void document.fonts.load("16px 'Do Hyeon'", DOHYEON_REST_SAMPLE).catch(() => undefined);
+  }, 1500);
   // 고른 저장을 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기).
   // 오프라인 보상 창이 떠 있으면 [받기] 때 저장 (먼저 저장하면 lastSeen이 갱신돼 받기 전에 페이지를 닫으면 보상이 사라짐)
   // 프리미엄 (광고·결제): 서버 값 받아 두기 (서버 없으면 버튼 없음)
