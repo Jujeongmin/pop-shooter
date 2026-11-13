@@ -371,9 +371,16 @@ function usedText(): string {
   return [...set].join('');
 }
 
+/**
+ * 글꼴 기다리기 상한 (ms). 2026-11-13: 3.5초였는데 Verse8 배포 서버는 파일 하나에 1~3초씩 걸려 첫 방문에 자주 넘김 →
+ * 기본 글꼴로 게임이 떠서 닉네임 창 글자가 다른 글꼴로 보였고(오류처럼 보임) 3D 라벨도 기본 글꼴로 구워졌음.
+ * 로딩 화면이 어차피 에셋을 기다리는 동안이라 길게 잡아도 시작이 늦어지지 않음
+ */
+const FONT_WAIT_MS = 15_000;
+
 async function waitFont(spec: string, text: string): Promise<void> {
   try {
-    await Promise.race([document.fonts.load(spec, text), new Promise((r) => setTimeout(r, 3500))]);
+    await Promise.race([document.fonts.load(spec, text), new Promise((r) => setTimeout(r, FONT_WAIT_MS))]);
   } catch { /* 글꼴 실패: 기본 글꼴 */ }
 }
 
