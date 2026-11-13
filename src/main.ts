@@ -167,6 +167,8 @@ async function boot(): Promise<void> {
   const guide = new Tutorial(game, ui);
   const lobbyApi = net.hasVerse ? new LobbyApi(net) : null;
   const nickPanel = lobbyApi ? new NicknamePanel(ui, net, lobbyApi) : null;
+  // 닉네임 확인은 로딩 화면이 걷히기 전에 시작 (첫 접속이면 화면이 뜰 때 닉네임 창이 이미 떠 있게, 사용자 2026-11-13)
+  const nickReady = nickPanel ? nickPanel.checkOnConnect() : Promise.resolve();
   // 광장 3D 기록판 (북동쪽, 남쪽=카메라 쪽을 봄). 내 저장 뒤 조금 있다가 갱신
   // 기록판: 포털 오른쪽 옆 (시작 지점에서 포털을 보면 같이 보임, 2026-11-13 북동쪽 구석에서 옮김)
   const board = new RankBoard(6.8, -14.2, lobbyApi);
@@ -196,11 +198,18 @@ async function boot(): Promise<void> {
     return true;
   };
   const settings = new SettingsPanel(ui, guide, nickPanel, resetAccount);
+  // 닉네임을 바꾸면 3D 기록판도 곧 다시 받음 (서버 nickSet이 기록판 줄도 같이 고침)
+  if (nickPanel) {
+    const prevChange = nickPanel.onChange;
+    nickPanel.onChange = (n) => { prevChange?.(n); board.refreshSoon(); };
+  }
   game.menuActions.settings = () => settings.open();
   // 처음 보이는 순간의 텍스처 올리기·셰이더 만들기 끊김을 로딩 중에 미리 (다른 사람이 쓸 캐릭터·총 원본까지)
   mark('built');
   warmGpu(stage.renderer, stage.scene, stage.camera, [...Object.values(assets.characters).map((c) => c.scene), ...Object.values(assets.guns)]);
   mark('warm');
+  // 닉네임 확인을 기다림 (최대 4초: 서버가 느리면 게임부터 띄우고 창은 답이 오는 대로)
+  await Promise.race([nickReady, new Promise((r) => window.setTimeout(r, 4000))]);
   stage.start();
   loading.done();
   console.log(`[boot] ${marks.map(([n, t]) => `${n} ${t}`).join(' · ')} ms`);
@@ -235,9 +244,7 @@ async function boot(): Promise<void> {
   if (!showOfflineReward(game, ui, save.now, prem)) game.saver.saveNow();
   // 광장 멀티 (서버에 연결됐을 때만, 실패해도 혼자 게임은 그대로)
   const lobby = startLobby(game, net, cloud, training);
-  // 첫 접속이면 닉네임 정하기: 화면이 뜨자마자 바로 확인 (게임 화면은 뒤에서 계속 그려짐). 오늘의 선물은 닉네임을 정한 뒤에 뜸
-  // (예전엔 1.5초 뒤에 확인해서 선물 창이 먼저 떴음, 사용자 2026-11-13)
-  if (nickPanel) void nickPanel.checkOnConnect();
+  // 첫 접속 닉네임 확인은 위에서 로딩 중에 시작함 (nickReady). 오늘의 선물은 닉네임을 정한 뒤에 뜸
   if (import.meta.env.DEV) Object.assign(window, { __hub: lobby });
   if (import.meta.env.DEV) {
     // 개발용 단축 (콘솔): __dev.fire(30) = 초당 30발, __dev.atk(1e6) = 공격 훈련치, __dev.gold(1e9) = 골드 (?offline=1과 같이 쓰면 서버가 되돌리지 않음)

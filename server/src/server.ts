@@ -829,6 +829,11 @@ export class Server {
     });
     if (!res.ok) return res;
     if (hubOf()) await $room.updateMyState({ n: r.value }, { returnState: false });
+    // 기록판 줄의 닉네임도 바로 (예전엔 다음 저장 때까지 옛 이름, 사용자 2026-11-13). 실패해도 다음 저장 때 맞춰짐
+    try {
+      const found = await $global.getCollectionItems(RANK_COLLECTION, { filters: [{ field: 'acc', operator: '==', value: me }], limit: 1 });
+      if (found[0]) await $global.updateCollectionItem(RANK_COLLECTION, { __id: found[0].__id, nick: r.value });
+    } catch { /* 다음 저장 때 */ }
     return { ok: true, nick: r.value };
   }
 
