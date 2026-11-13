@@ -46,8 +46,8 @@ export class Stage3D {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.shadowMap.enabled = true;
-    // 폰: 부드러운 그림자(여러 번 샘플) 대신 일반 그림자, 그림자 지도도 절반
-    this.renderer.shadowMap.type = TOUCH ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    // three r186에서 PCFSoftShadowMap이 없어져 PCFShadowMap으로 바뀌며 경고만 냈음 → 처음부터 PCF (화면은 그대로). 폰은 그림자 지도 절반
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.scene.background = new THREE.Color('#bfe3ff');
     this.scene.fog = new THREE.Fog('#bfe3ff', 45, 120);
 

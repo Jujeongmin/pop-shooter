@@ -104,6 +104,13 @@ function slog(event: string, roomId: string, account: string): void {
   console.log(`[ps] ${new Date().toISOString()} ${event} room=${roomId} account=${a}`);
 }
 
+/** 부른 계정 (플랫폼이 인증). 없으면 던짐 → 'save:undefined' 같은 락·빈 계정 상태로 진행하지 않음 */
+function senderAccount(): string {
+  const a = $sender.account;
+  if (typeof a !== 'string' || !a) throw new Error('no_account');
+  return a;
+}
+
 // ---------------- 광장 장부 ----------------
 
 /** 호출한 클라이언트의 광장 룸 (아니면 null — SDK는 룸 밖에서 '__no_room__'을 줌) */
@@ -495,7 +502,7 @@ export class Server {
     const check = await checkAd(requestId);
     if (check === 'rejected') throw new Error('ad_not_watched');
     if (check === 'pending' && last !== true) return { status: 'pending' };
-    const account = $sender.account;
+    const account = senderAccount();
     return $lock(`save:${account}`, async () => {
       const now = Date.now();
       const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
@@ -513,7 +520,7 @@ export class Server {
 
   /** 출석 보상 받기 (하루 한 번, 서버 날짜 기준, sim/premium claimDaily). 이미 받았으면 ok false + 지금 값 */
   async dailyClaim(): Promise<{ ok: boolean; idx?: number; prem: PremView }> {
-    const account = $sender.account;
+    const account = senderAccount();
     return $lock(`save:${account}`, async () => {
       const now = Date.now();
       const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
@@ -530,7 +537,7 @@ export class Server {
 
   /** 팝젬으로 골드 2배 30분 */
   async gemBoost(): Promise<{ ok: boolean; prem?: PremView }> {
-    const account = $sender.account;
+    const account = senderAccount();
     return $lock(`save:${account}`, async () => {
       const now = Date.now();
       const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
@@ -548,7 +555,7 @@ export class Server {
    * 클라이언트는 성공하면 바로 환생해 저장 → checkSave가 skip을 씀. 이미 하나 있으면 다시 안 팖 (팝젬 이중 차감 방지)
    */
   async skipRebirth(): Promise<{ ok: boolean; reason?: string; prem?: PremView }> {
-    const account = $sender.account;
+    const account = senderAccount();
     return $lock(`save:${account}`, async () => {
       const now = Date.now();
       const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
@@ -567,7 +574,7 @@ export class Server {
 
   /** 팝젬으로 공격력 패스(순서대로)·유료 캐릭터 사기 (sim/premium buyWithGems). 실패 이유 bad·owned·order·gems + 지금 값 */
   async gemBuy(id: unknown): Promise<{ ok: boolean; reason?: string; prem: PremView }> {
-    const account = $sender.account;
+    const account = senderAccount();
     return $lock(`save:${account}`, async () => {
       const now = Date.now();
       const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
@@ -636,7 +643,7 @@ export class Server {
 
   /** 기록판: 상위 RANK_TOP (키 > 0) + 내 순위. 계정 id는 돌려주지 않음 (내 줄은 me 표시) */
   async rankTop(): Promise<RankBoard> {
-    const me = $sender.account;
+    const me = senderAccount();
     const toRow = (it: Record<string, unknown>): RankRow => ({
       nick: typeof it.nick === 'string' && it.nick ? it.nick : null,
       rb: Number(it.rb) || 0,
@@ -665,16 +672,19 @@ export class Server {
    */
   async hubFind(world: unknown): Promise<{ ok: true; roomId: string; max: number } | { ok: false; reason: string }> {
     if (!isHubWorld(world)) return { ok: false, reason: 'bad_world' };
-    const me = $sender.account;
+    const me = senderAccount();
     return $lock(bookLock(world), async () => {
       const now = Date.now();
       const book = await readBook(world);
       pruneBook(book, now);
       // 유령 정리: 실제 접속으로 적혀 있는데 SDK 룸에도 없는 계정 (서버가 퇴장 알림을 놓친 경우)
-      for (const [id, accs] of Object.entries(book)) {
-        const inRoom = new Set(await $global.getRoomUserAccounts(id));
+      // 룸마다 한 번씩 묻되 한꺼번에 (락 안이라 룸 수만큼 차례로 기다리면 입장이 줄줄이 밀림)
+      const rooms = Object.entries(book);
+      const lists = await Promise.all(rooms.map(([id]) => $global.getRoomUserAccounts(id)));
+      rooms.forEach(([, accs], i) => {
+        const inRoom = new Set(lists[i]);
         for (const [acc, e] of Object.entries(accs)) if (e.a !== undefined && !inRoom.has(acc)) delete accs[acc];
-      }
+      });
       pruneBook(book, now);
       let pick: string | null = null;
       for (const [id, accs] of Object.entries(book)) if (accs[me]) pick = id;
@@ -706,7 +716,7 @@ export class Server {
     const { patch, bad } = hubPatch(info, HUB_FIELDS);
     if (bad) return { ok: false, reason: `bad_${bad}`, max: HUB_MAX_PLAYERS, count: 0 };
     if (!patch.c) return { ok: false, reason: 'bad_c', max: HUB_MAX_PLAYERS, count: 0 };
-    const me = $sender.account;
+    const me = senderAccount();
     // 장부에 실제 접속으로 등록 (나를 뺀 자리 수가 정원이면 거절). 같은 월드의 다른 룸 기록은 지움 (중복 세션·유령 방지)
     let count = 0;
     let fail: 'full' | 'no_reservation' | null = null;
@@ -784,7 +794,7 @@ export class Server {
   async hubBye(): Promise<{ ok: boolean }> {
     const roomId = hubOf();
     if (!roomId) return { ok: false };
-    const me = $sender.account;
+    const me = senderAccount();
     await $room.updateMyState({ x: 2 }, { returnState: false });
     await editBook(hubWorldOf(roomId), (book) => {
       if (!book[roomId]?.[me]) return false;
@@ -798,7 +808,7 @@ export class Server {
 
   /** 저장된 내 닉네임 (없으면 null → 클라이언트가 첫 설정 화면). 지금 규칙에 걸리는 예전 이름은 mustChange */
   async nickGet(): Promise<{ ok: true; nick: string | null; mustChange?: boolean }> {
-    const me = $sender.account;
+    const me = senderAccount();
     const st0 = ((await $global.getMyState()) || {}) as Record<string, unknown>;
     if (nickNeedsChange(st0)) return { ok: true, nick: null, mustChange: true };
     const r = checkNickname(st0.nick);
@@ -828,7 +838,7 @@ export class Server {
   async nickSet(raw: unknown): Promise<{ ok: boolean; nick?: string; reason?: string; retryMs?: number }> {
     const r = checkNickname(raw);
     if (!r.ok) return { ok: false, reason: r.reason };
-    const me = $sender.account;
+    const me = senderAccount();
     const res = await $lock(`nickacc:${me}`, async (): Promise<{ ok: boolean; reason?: string; retryMs?: number }> => {
       const now = Date.now();
       const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
