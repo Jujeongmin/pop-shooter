@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
-import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
 import type { Premium } from '../platform/Premium';
 import { canRebirth, doRebirth, rebirthReq, skipRebirthGems } from '../sim/actions.ts';
@@ -9,7 +8,7 @@ import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
 import { rebirthMult } from '../sim/training.ts';
-import { HUB_SPAWN, WORLD1_FACILITIES } from '../world/facilities';
+import { HUB_SPAWN } from '../world/facilities';
 import { button, el } from './dom';
 import type { FloatText } from './FloatText';
 import { icon } from './icons';
@@ -22,7 +21,7 @@ const _at = new THREE.Vector3();
 const mult = (tokens: number, pass: number): string => `×${formatMult(rebirthMult(tokens) * pass)}`;
 
 /**
- * 환생 제단 (키보드 탈출 방식): 구역에 들어가면 폴짝 + 아래 창. 배율 지금 → 다음(환생마다 ×multGrowth), 받는 팝젬,
+ * 환생 창 (키보드 탈출 방식, 오른쪽 환생 버튼으로 엶 — 광장 제단은 2026-11-13에 없앰). 배율 지금 → 다음(환생마다 ×multGrowth), 받는 팝젬,
  * 초기화·유지 목록, 조건 = 공격력 레벨 진행 막대(환생할수록 필요 레벨이 오름).
  * [환생하기] → 한 번 더 확인 → 화면 하얗게 + 캐릭터 폴짝 + 상태 적용·즉시 저장.
  * 조건이 안 되면 [팝젬 N 바로 환생] (키보드 탈출 Skip Rebirth): 확인 → 서버가 팝젬을 빼고 허락 → 같은 환생.
@@ -32,7 +31,6 @@ export class RebirthPanel {
   private readonly panel: Panel;
   private readonly float: FloatText;
   private readonly callout: ZoneCallout;
-  private readonly zone: ZoneEntry;
   /** 확인 중인 환생: 일반 / 팝젬 건너뛰기 */
   private confirming: false | 'normal' | 'skip' = false;
   private hopT = HOP_SEC;
@@ -46,18 +44,6 @@ export class RebirthPanel {
     this.float = float;
     this.callout = callout;
     this.panel = new Panel(ui, t('reb.title'));
-    const f = WORLD1_FACILITIES.find((x) => x.id === 'altar')!;
-    this.zone = new ZoneEntry(game, callout, f, {
-      color: '#b9a6ff',
-      flash: 'rgba(185, 166, 255, 0.9)',
-      spot: { x: f.x, z: f.z + 0.6 },
-      face: { x: f.x, z: f.z - 2 },
-      cam: { focus: -0.4, lookUp: -1.4 },
-      text: null,
-    });
-    this.zone.onLanded = () => { this.confirming = false; this.msg = ''; this.render(); this.panel.open(); };
-    game.facilityActions.altar = () => this.zone.enter();
-    game.facilityLeave.altar = () => { this.zone.leave(); this.panel.close(); };
     game.onTick((dt) => this.update(dt));
     game.onStateChange(() => { if (this.panel.isOpen && !this.confirming) this.render(); });
   }
@@ -173,7 +159,6 @@ export class RebirthPanel {
   private respawn = false;
 
   private update(dt: number): void {
-    this.zone.update(dt);
     // 환생 폴짝 (점프·착지 클립)
     if (this.hopT >= HOP_SEC) return;
     const g = this.game;
@@ -184,7 +169,6 @@ export class RebirthPanel {
     if (k >= 1) g.pos.y = 0;
     if (k >= 1 && this.respawn) {
       this.respawn = false;
-      // 제단을 떠난 것으로 처리돼 창도 닫힘 (Game.placeAt → facilityLeave.altar)
       g.placeAt(HUB_SPAWN.x, HUB_SPAWN.z, Math.PI);
       g.cam.yaw = 0;
       this.callout.flash('rgba(255, 255, 255, 0.9)');

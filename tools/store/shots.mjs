@@ -91,8 +91,8 @@ const scenes = [
   },
   {
     file: '8', title: '환생하면 훈련이 더 빨라져요', sub: '',
-    run: `const g = window.__game; g.facilityActions.altar({ id: 'altar' }); await new Promise(r=>setTimeout(r,2200));`,
-    after: `window.__game.facilityLeave.altar?.();`,
+    run: `document.querySelector('.ev-reb').dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); await new Promise(r=>setTimeout(r,1200));`,
+    after: `document.querySelector('.sheet:not([hidden]) .sheet-x')?.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));`,
   },
 ];
 

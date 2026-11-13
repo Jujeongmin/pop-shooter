@@ -33,5 +33,6 @@ test('nearestFacility', () => {
   // 스테이지 입구는 월드마다 포털 하나 (연속 도전)
   assert.equal(WORLD1_FACILITIES.filter((x) => x.id === 'portal').length, 1);
   assert.ok(!WORLD1_FACILITIES.some((x) => x.id.startsWith('gate')));
-  for (const id of ['range', 'upgrade', 'guns', 'altar']) assert.ok(WORLD1_FACILITIES.some((x) => x.id === id));
+  for (const id of ['range', 'upgrade', 'guns']) assert.ok(WORLD1_FACILITIES.some((x) => x.id === id));
+  assert.ok(!WORLD1_FACILITIES.some((x) => (x.id as string) === 'altar'));
 });

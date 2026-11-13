@@ -23,7 +23,7 @@ test('after the tutorial: nothing, except rebirth when it is ready', () => {
   const done = { ...newState(0), tutorial: TUTORIAL_DONE, bestStage: 3, mAtk: 2 };
   assert.equal(pickGuide(done), null);
   assert.equal(pickGuide({ ...done, coins: 1e30, trAtk: 10 }), null, 'no shop hints');
-  assert.equal(pickGuide({ ...done, trAtk: rebirthReq(done) }), 'altar');
+  assert.equal(pickGuide({ ...done, trAtk: rebirthReq(done) }), null);
 });
 
 test('no portal hint after world 1 is cleared', () => {

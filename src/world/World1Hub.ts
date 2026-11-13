@@ -9,7 +9,7 @@ import type { Collider } from './movement';
 import { BALANCE } from '../sim/balance.ts';
 import { stageLabel } from '../sim/stages.ts';
 import type { GunModel } from '../sim/guns.ts';
-import { buildAltar, buildFountain, buildGunShop, buildRangeBooths, buildTravel, buildTreadmill, buildUpgrade, buildWardrobe, type FountainProps, type TreadmillProps } from './HubFacilities';
+import { buildFountain, buildGunShop, buildRangeBooths, buildTravel, buildTreadmill, buildUpgrade, buildWardrobe, type FountainProps, type TreadmillProps } from './HubFacilities';
 import { ToyBuilder } from './HubProps';
 import { GUN_SHOP_AT, HUB_BOUNDS, PORTAL_GATE, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
 
@@ -184,7 +184,6 @@ export class World1Hub {
   private buildFacilities(): void {
     const f = (id: string): Facility => this.facilities.find((x) => x.id === id)!;
     this.baseBodies.push(buildUpgrade(this.toys, f('upgrade'), this.colliders), buildGunShop(this.toys, { ...f('guns'), ...GUN_SHOP_AT }, this.colliders, this.guns));
-    buildAltar(this.toys, f('altar'), this.colliders);
     buildWardrobe(this.toys, f('chars'), this.colliders);
     buildTravel(this.toys, f('travel'), this.colliders);
     this.treadmill = buildTreadmill(this.toys, this.colliders);

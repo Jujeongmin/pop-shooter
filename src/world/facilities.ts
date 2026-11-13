@@ -1,6 +1,6 @@
 import { t } from '../i18n/i18n.ts';
 
-export type FacilityId = 'range' | 'treadmill' | 'fountain' | 'upgrade' | 'guns' | 'altar' | 'portal' | 'chars' | 'travel';
+export type FacilityId = 'range' | 'treadmill' | 'fountain' | 'upgrade' | 'guns' | 'portal' | 'chars' | 'travel';
 
 export interface Facility {
   id: FacilityId;
@@ -50,13 +50,13 @@ export const TRAVEL_SPOT = { x: -17, z: -15 };
 /** 총 상점 가판대 기준점 (몸체·진열은 여기서). 들어가는 원은 가판대 앞(+z, 진열대가 보이는 쪽) — 사용자 2026-11-12: 원이 가판대 밑에 깔려 어색함 */
 export const GUN_SHOP_AT = { x: 7, z: -5 };
 
+// 환생 제단은 없앰 (사용자 2026-11-13): 환생은 오른쪽 환생 버튼으로만
 export const WORLD1_FACILITIES: readonly Facility[] = [
   { id: 'range', x: RANGE_SPOT.x, z: RANGE_SPOT.z, radius: 2.4, label: t('fac.range') },
   { id: 'treadmill', x: TREADMILL.x, z: TREADMILL.z, radius: 2.3, label: t('fac.treadmill') },
   { id: 'fountain', x: FOUNTAIN.x, z: FOUNTAIN.z, radius: 1.8, label: t('fac.fountain') },
   { id: 'upgrade', x: 13, z: 4, radius: 2.6, label: t('fac.upgrade') },
   { id: 'guns', x: 8.8, z: -1.4, radius: 2.2, label: t('fac.guns') },
-  { id: 'altar', x: -11, z: 17, radius: 2.6, label: t('fac.altar') },
   { id: 'chars', x: 11, z: 16, radius: 2.4, label: t('fac.chars') },
   { id: 'portal', x: PORTAL_SPOT.x, z: PORTAL_SPOT.z, radius: 2.4, label: t('fac.portal', { w: 1 }) },
   { id: 'travel', x: TRAVEL_SPOT.x, z: TRAVEL_SPOT.z, radius: 2.2, label: t('fac.travel') },
@@ -71,7 +71,6 @@ export const FOOTPRINTS: readonly Footprint[] = [
   { id: 'upgrade', x: 13, z: 2.4, w: 2.4, d: 1.8, h: 3.0, cap: true },
   { id: 'guns', x: 8.8, z: -4.9, w: 3.6, d: 1.8, h: 3.2, cap: true },
   { id: 'chars', x: 11.3, z: 14, w: 4.0, d: 1.8, h: 2.8, cap: true },
-  { id: 'altar', x: -11, z: 15.4, w: 3.9, d: 3.9, h: 3.0, cap: false },
   { id: 'travel', x: -17, z: -16.6, w: 3.6, d: 3.6, h: 2.9, cap: false },
   { id: 'treadmill', x: -18.5, z: 10, w: 4.8, d: 2.8, h: 2.0, cap: false },
   { id: 'fountain', x: -9.5, z: 7.5, w: 2.1, d: 2.1, h: 3.8, cap: false },

@@ -1,10 +1,10 @@
-import { canRebirth, damagePerShot, shotsPerSec } from '../sim/actions.ts';
+import { damagePerShot, shotsPerSec } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { stageHp, stageTime } from '../sim/stages.ts';
 import type { GameState } from '../sim/state.ts';
 
 /** 안내가 가리키는 곳 (시설 id와 같음) */
-export type GuideKind = 'altar' | 'portal' | 'upgrade' | 'range';
+export type GuideKind = 'portal' | 'upgrade' | 'range';
 
 /** 전투 판단에 넣는 탭 속도: 0 (탭으로 더 쏘기 없음, 자동 사격만 — 2026-11-12 1-1을 못 깨는데 포털 안내가 뜨던 것) */
 const GUIDE_TAPS = 0;
@@ -38,5 +38,6 @@ export function pickGuide(s: GameState): GuideKind | null {
     if (s.bestStage < 1) return canBeatNext(s) ? 'portal' : 'range';
     return 'upgrade';
   }
-  return canRebirth(s) ? 'altar' : null;
+  // 환생은 안내하지 않음 (제단 없음, 오른쪽 환생 버튼이 차오르고 반짝여 알림, 사용자 2026-11-13)
+  return null;
 }

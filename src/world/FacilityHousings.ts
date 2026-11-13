@@ -240,9 +240,7 @@ export function buildHousings(d: HubDecor, kind: DecorKind): void {
   for (const dx of TREADMILL_LANES) treadmillFrame(d, k, TREADMILL.x + dx, TREADMILL.z);
   // 동전 분수 몸통
   fountainBody(d, k, FOUNTAIN.x, FOUNTAIN.z - 1.5);
-  // 환생 제단·월드 이동 받침
-  const altar = WORLD1_FACILITIES.find((f) => f.id === 'altar')!;
-  platform(d, k, altar.x, altar.z - 1.6, 1.8, 0.42);
+  // 월드 이동 받침
   const travel = WORLD1_FACILITIES.find((f) => f.id === 'travel')!;
   platform(d, k, travel.x, travel.z - 1.6, 1.65, 0.38);
   // 탈의실

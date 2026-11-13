@@ -89,41 +89,6 @@ export function buildGunShop(b: ToyBuilder, f: Facility, colliders: Collider[], 
   return g;
 }
 
-export function buildAltar(b: ToyBuilder, f: Facility, colliders: Collider[]): void {
-  const g = new THREE.Group();
-  g.position.set(f.x, 0, f.z - 1.6);
-  b.root.add(g);
-  const ah = b.housing(g);
-  b.toy(new THREE.CylinderGeometry(1.7, 1.95, 0.4, 8), '#b9a6ff', 0, 0.2, 0, ah);
-  b.toy(new THREE.CylinderGeometry(1.3, 1.3, 0.08, 40), b.mat('#f3ecff', { emissive: '#b9a6ff' }), 0, 0.44, 0, ah, false);
-  // 떠서 도는 환생 고리: 화살표 두 개가 원을 이룸
-  const ring = new THREE.Group();
-  ring.position.y = 1.9;
-  g.add(ring);
-  const purple = b.mat('#a98bff', { emissive: '#7b5cff' });
-  for (let k = 0; k < 2; k++) {
-    const arc = b.toy(new THREE.TorusGeometry(0.85, 0.14, 12, 36, Math.PI * 0.82), purple, 0, 0, 0, ring);
-    arc.rotation.z = k * Math.PI;
-    const head = b.toy(new THREE.ConeGeometry(0.28, 0.45, 14), purple, 0, 0, 0, ring);
-    const a = k * Math.PI + Math.PI * 0.82;
-    head.position.set(Math.cos(a) * 0.85, Math.sin(a) * 0.85, 0);
-    head.rotation.z = a;
-  }
-  // 반짝이 3개 (빙글빙글)
-  const sparks = [0, 1, 2].map(() => b.toy(new THREE.OctahedronGeometry(0.13), b.mat('#fff09a', { emissive: '#ffd34d' }), 0, 0, 0, g, false));
-  b.animators.push((dt, c) => {
-    ring.rotation.y += dt * 1.1;
-    ring.position.y = 1.9 + Math.sin(c * 1.8) * 0.15;
-    sparks.forEach((s, i) => {
-      const a = c * 1.4 + (i * Math.PI * 2) / 3;
-      s.position.set(Math.cos(a) * 1.25, 1.5 + Math.sin(c * 2 + i) * 0.4, Math.sin(a) * 1.25);
-      s.rotation.y += dt * 4;
-    });
-  });
-  colliders.push({ kind: 'circle', x: f.x, z: f.z - 1.6, r: 1.8 });
-  // 제단 동쪽 (서쪽이면 러닝머신·동전 분수를 보는 카메라를 가림)
-  b.sign('reb', t('fac.altar'), f.x + 2.7, 2.1, f.z - 0.6, { w: 2.3, color: '#b9a6ff', rotY: -0.3 });
-}
 
 export function buildWardrobe(b: ToyBuilder, f: Facility, colliders: Collider[]): void {
   const g = new THREE.Group();
