@@ -293,3 +293,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 .tr-num[data-need="red"] { color: #ff4f5e; }
 .tr-num[data-need="orange"] { color: #f08a12; }
 .tr-num[data-need="green"] { color: #2fae4a; }
+
+/* 창 위쪽 탭·선택 줄: 스크롤해도 붙어 있음. 창 바탕과 같은 색으로 아래 목록을 덮음 */
+.sheet-sticky { position: sticky; top: -10px; z-index: 3; margin: -10px -16px 0; padding: 10px 16px 8px; display: flex; flex-direction: column; gap: 8px;
+  background: linear-gradient(#fff6dc, #fff3d4); box-shadow: 0 6px 8px -6px rgba(43, 58, 103, .25); }
+@media (max-height: 460px) { .sheet-sticky { top: -8px; margin: -8px -12px 0; padding: 8px 12px 6px; gap: 6px; } }

@@ -57,7 +57,10 @@ export class ShopPanel {
       tabs.append(b);
     }
     this.body = el('div', 'shop-body');
-    this.panel.body.append(tabs, this.body);
+    // 탭은 스크롤해도 위에 붙어 있음 (사용자 2026-11-13)
+    const head = el('div', 'sheet-sticky');
+    head.append(tabs);
+    this.panel.body.append(head, this.body);
     prem.onChange(() => { if (this.panel.isOpen) this.render(); });
     game.onStateChange(() => { if (this.panel.isOpen) this.render(); });
   }

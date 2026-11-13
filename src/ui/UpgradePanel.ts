@@ -96,7 +96,10 @@ export class UpgradePanel {
       this.segBtns.set(u, b);
       seg.append(b);
     }
-    this.panel.body.append(tabs, seg, ...this.sections.values());
+    // 탭·수량 선택은 스크롤해도 위에 붙어 있음 (사용자 2026-11-13)
+    const head = el('div', 'sheet-sticky');
+    head.append(tabs, seg);
+    this.panel.body.append(head, ...this.sections.values());
     seg.hidden = this.tab === 'gear' || this.tab === 'mentor';
     this.sections.get('mach')!.append(el('div', 'up-hint', t('tr.hint')));
     for (const k of TRAIN_KINDS) this.machRows.push(this.machRow(k));
