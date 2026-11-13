@@ -34,6 +34,8 @@ function verseOverride(): string | null {
 
 /** 이 빌드에 verse가 있는지 (.env의 VITE_AGENT8_VERSE — Verse8 저장소에서는 플랫폼이 관리) */
 function configuredVerse(): string | null {
+  // 개발 서버 전용 ?offline=1: 서버에 붙지 않음 (기기 저장만) → 콘솔 __dev로 바꾼 값이 서버 검사로 되돌아가지 않음
+  if (import.meta.env.DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).get('offline') === '1') return null;
   return verseOverride() || (import.meta.env.VITE_AGENT8_VERSE as string | undefined)?.trim() || null;
 }
 

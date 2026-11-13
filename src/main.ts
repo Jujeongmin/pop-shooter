@@ -123,6 +123,16 @@ async function boot(): Promise<void> {
   // 첫 접속이면 닉네임 정하기 (서버 연결 뒤, 오프라인 보상 창과 겹치지 않게 조금 뒤)
   if (nickPanel) window.setTimeout(() => void nickPanel.checkOnConnect(), 1500);
   if (import.meta.env.DEV) Object.assign(window, { __hub: lobby });
+  if (import.meta.env.DEV) {
+    // 개발용 단축 (콘솔): __dev.fire(30) = 초당 30발, __dev.atk(1e6) = 공격 훈련치, __dev.gold(1e9) = 골드 (?offline=1과 같이 쓰면 서버가 되돌리지 않음)
+    Object.assign(window, {
+      __dev: {
+        fire: (n: number) => game.setState({ ...game.state, trSpd: Math.max(0, (n - 1) * 100) }, true),
+        atk: (v: number) => game.setState({ ...game.state, trAtk: v }, true),
+        gold: (v: number) => game.setState({ ...game.state, coins: v }, true),
+      },
+    });
+  }
   if (import.meta.env.DEV) Object.assign(window, { __game: game, __training: training, __portal: portal, __battle: battle, __cloud: cloud, __net: net, __audio: audio, __prem: prem, __daily: daily });
 }
 
