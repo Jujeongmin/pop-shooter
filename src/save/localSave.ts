@@ -1,6 +1,6 @@
 import type { CloudSave } from '../platform/CloudSave';
 import { normalizeState } from '../sim/normalize.ts';
-import { newState, type GameState } from '../sim/state.ts';
+import { newState, type CharId, type GameState } from '../sim/state.ts';
 import { chooseSave } from './chooseSave.ts';
 
 /** 기기 사본: 계정마다 따로 (계정 모를 때 = 손님 키). 원본은 서버 계정 저장 */
@@ -18,6 +18,13 @@ function read(key: string): string | null {
 export function loadLocal(account: string | null, now: number): GameState | null {
   const raw = read(keyFor(account));
   return raw ? normalizeState(raw, now) : null;
+}
+
+/** 시작할 때 먼저 받을 캐릭터 짐작: 마지막 계정(없으면 손님)의 기기 사본 캐릭터, 없으면 BUBU. 서버 저장이 다르면 그때 하나 더 받음 */
+export function guessChar(): CharId {
+  const acc = read(LAST_ACCOUNT);
+  const s = loadLocal(acc, Date.now()) ?? loadLocal(null, Date.now());
+  return s?.char ?? 'blue';
 }
 
 /** 예전 호환: 손님 사본 또는 새 판 */

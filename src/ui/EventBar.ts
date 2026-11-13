@@ -47,7 +47,7 @@ export class EventBar {
       this.root.append(b);
       return { root: b, label, dot };
     };
-    const faces = bakeCharIcons(game.assets);
+    const faces = bakeCharIcons();
     this.faces = faces;
     const heroFace = el('img', 'ev-img');
     this.heroImg = heroFace;

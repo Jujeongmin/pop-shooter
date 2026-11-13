@@ -12,8 +12,13 @@ export interface LoadedModel {
 }
 
 export interface Assets {
-  characters: Record<CharId, LoadedModel>;
+  /** 받은 캐릭터만 (나머지는 char()로 받음) */
+  characters: Partial<Record<CharId, LoadedModel>>;
   guns: Record<GunModel, THREE.Object3D>;
+  /** 캐릭터 받기 (이미 받았거나 받는 중이면 같은 약속). 받으면 characters에도 들어감 */
+  char(id: CharId): Promise<LoadedModel>;
+  /** 나머지 캐릭터를 하나씩 뒤에서 받기 (게임 시작 뒤) */
+  loadRest(): void;
 }
 
 const GUN_MODELS: readonly GunModel[] = ['pistol', 'rifle', 'shotgun', 'sniper'];
@@ -26,21 +31,14 @@ async function loadGlb(loader: GLTFLoader, url: string, label: string, onBytes: 
   }
 }
 
-/** 캐릭터 6종 + 총 4종 GLB. onProgress = 0..1 (파일 수 기준 + 받은 바이트 근사) */
-export async function loadAssets(renderer: THREE.WebGLRenderer, onProgress?: (p: number) => void): Promise<Assets> {
+/**
+ * 시작할 때는 총 4종 + first 캐릭터만 받음 (2026-11-13 로딩 줄이기: 예전엔 캐릭터 6종 6.5MB를 다 받아야 시작).
+ * 나머지 캐릭터는 char(id)로 필요할 때 / loadRest()로 시작 뒤 뒤에서. onProgress = 0..1 (파일 수 기준 + 받은 바이트 근사)
+ */
+export async function loadAssets(renderer: THREE.WebGLRenderer, first: readonly CharId[], onProgress?: (p: number) => void): Promise<Assets> {
   const loader = new GLTFLoader();
-  const jobs: { url: string; label: string }[] = [
-    ...CHAR_IDS.map((id) => ({ url: CHARACTERS[id].file, label: `캐릭터 ${CHARACTERS[id].name}` })),
-    ...GUN_MODELS.map((m) => ({ url: WEAPONS[m]!.model.glb!, label: WEAPONS[m]!.name })),
-  ];
-  const progress = new Array<number>(jobs.length).fill(0);
-  const report = (): void => onProgress?.(progress.reduce((a, b) => a + b, 0) / jobs.length);
-  const gltfs = await Promise.all(jobs.map((j, i) => loadGlb(loader, j.url, j.label, (b) => {
-    progress[i] = Math.min(0.95, b / 3_000_000);
-    report();
-  }).then((g) => { progress[i] = 1; report(); return g; })));
   const aniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-  for (const g of gltfs) {
+  const prep = (g: GLTF): void => {
     g.scene.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
@@ -48,14 +46,53 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, onProgress?: (p:
         for (const v of Object.values(m)) if (v instanceof THREE.Texture) v.anisotropy = aniso;
       }
     });
-  }
-  const characters = {} as Record<CharId, LoadedModel>;
-  CHAR_IDS.forEach((id, i) => {
-    const g = gltfs[i]!;
-    if (!g.scene.getObjectByProperty('type', 'SkinnedMesh')) throw new Error(`${jobs[i]!.label}: SkinnedMesh 없음`);
-    characters[id] = { scene: g.scene, clips: g.animations };
-  });
+  };
+  const characters: Partial<Record<CharId, LoadedModel>> = {};
+  const pending = new Map<CharId, Promise<LoadedModel>>();
+  const charJob = (id: CharId, onBytes: (b: number) => void = () => undefined): Promise<LoadedModel> => {
+    let p = pending.get(id);
+    if (p) return p;
+    const label = `캐릭터 ${CHARACTERS[id].name}`;
+    p = loadGlb(loader, CHARACTERS[id].file, label, onBytes).then((g) => {
+      if (!g.scene.getObjectByProperty('type', 'SkinnedMesh')) throw new Error(`${label}: SkinnedMesh 없음`);
+      prep(g);
+      const m = { scene: g.scene, clips: g.animations };
+      characters[id] = m;
+      return m;
+    });
+    // 실패하면 다음에 다시 받게
+    p.catch(() => pending.delete(id));
+    pending.set(id, p);
+    return p;
+  };
+
+  const firstIds = [...new Set(first)];
+  const n = firstIds.length + GUN_MODELS.length;
+  const progress = new Array<number>(n).fill(0);
+  const report = (): void => onProgress?.(progress.reduce((a, b) => a + b, 0) / n);
+  const track = <T>(i: number, p: (onBytes: (b: number) => void) => Promise<T>): Promise<T> =>
+    p((b) => { progress[i] = Math.min(0.95, b / 1_200_000); report(); }).then((v) => { progress[i] = 1; report(); return v; });
+  const [, gunGltfs] = await Promise.all([
+    Promise.all(firstIds.map((id, i) => track(i, (on) => charJob(id, on)))),
+    Promise.all(GUN_MODELS.map((m, i) => track(firstIds.length + i, (on) => loadGlb(loader, WEAPONS[m]!.model.glb!, WEAPONS[m]!.name, on)))),
+  ]);
   const guns = {} as Record<GunModel, THREE.Object3D>;
-  GUN_MODELS.forEach((m, i) => { guns[m] = gltfs[CHAR_IDS.length + i]!.scene; });
-  return { characters, guns };
+  GUN_MODELS.forEach((m, i) => { prep(gunGltfs[i]!); guns[m] = gunGltfs[i]!.scene; });
+
+  let resting = false;
+  return {
+    characters,
+    guns,
+    char: (id) => charJob(id),
+    loadRest(): void {
+      if (resting) return;
+      resting = true;
+      // 하나씩 (게임 중 대역폭·디코드를 한꺼번에 쓰지 않게)
+      void (async () => {
+        for (const id of CHAR_IDS) {
+          try { await charJob(id); } catch { /* 필요할 때 다시 받음 */ }
+        }
+      })();
+    },
+  };
 }

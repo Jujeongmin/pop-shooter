@@ -219,6 +219,7 @@ export class LobbyPeers {
     item.aura.setPower(peer.power);
     this.ctx.parent.add(item.aura.root);
     this.items.set(peer.account, item);
+    this.whenLoaded(item);
     this.list.push(item);
     this.setPlate(item);
   }
@@ -235,6 +236,7 @@ export class LobbyPeers {
       item.avatar = this.makeAvatar(char, peer.gun, peer.gear);
       item.char = char;
       item.gun = peer.gun;
+      this.whenLoaded(item);
     } else {
       if (peer.gun !== item.gun) {
         item.avatar.setGun(GUNS[peer.gun] ?? GUNS[0]!);
@@ -393,6 +395,20 @@ export class LobbyPeers {
       if (this.disposed || this.items.get(item.peer.account) !== item || item.labelText !== key) return;
       this.setPlate(item, true);
     });
+  }
+
+  /**
+   * 그 캐릭터를 아직 안 받아 다른 캐릭터로 대신 그렸으면 받은 뒤 다시 만듦 (시작 때 내 캐릭터만 받음, 2026-11-13).
+   * 그사이 나갔거나 캐릭터를 또 바꿨으면 그쪽이 처리
+   */
+  private whenLoaded(item: Item): void {
+    if (item.avatar.char === item.char) return;
+    const want = item.char;
+    void this.ctx.assets.char(want).then(() => {
+      if (this.disposed || this.items.get(item.peer.account) !== item || item.char !== want || item.avatar.char === want) return;
+      this.releaseAvatar(item.avatar);
+      item.avatar = this.makeAvatar(want, item.gun, item.peer.gear);
+    }).catch(() => undefined);
   }
 
   private makeAvatar(char: CharId, gun: number, gear: number): Avatar {

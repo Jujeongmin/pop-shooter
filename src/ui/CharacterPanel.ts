@@ -59,8 +59,11 @@ export class CharacterPanel {
   private updateDisplay(dt: number): void {
     const g = this.game;
     const key = `${g.state.char}:${g.state.gun}`;
-    if (key !== this.displayKey) {
-      this.displayKey = key;
+    // 그 캐릭터를 아직 안 받았으면 받는 동안 예전 모습 그대로 (처음이면 받은 캐릭터로)
+    const ready = !!g.assets.characters[g.state.char];
+    if (!ready) void g.assets.char(g.state.char).catch(() => undefined);
+    if (key !== this.displayKey && (ready || !this.display)) {
+      if (ready) this.displayKey = key;
       this.display?.root.removeFromParent();
       this.display?.dispose();
       this.display = new Avatar(g.assets, g.state.char, GUNS[g.state.gun]!);
@@ -77,7 +80,7 @@ export class CharacterPanel {
 
   private render(): void {
     const s = this.game.state;
-    this.thumbs ??= bakeCharIcons(this.game.assets);
+    this.thumbs ??= bakeCharIcons();
     // 보유 효과 합계 (사용자 2026-11-12: 가진 캐릭터마다 피해 보너스가 더해짐, 장착은 외형만)
     const total = el('div', 'up-hint', t('char.owned', { m: Number(ownedCharMult(s).toFixed(2)) }));
     const grid = el('div', 'char-grid');

@@ -294,7 +294,7 @@ export class UpgradePanel {
     for (const r of this.mentorRows) {
       const m = MENTORS[r.i]!;
       const joined = s.bestStage >= m.needStage;
-      if (!r.face.src) r.face.src = bakeCharIcons(this.game.assets)[MENTOR_CHAR[m.id] ?? 'yellow'];
+      if (!r.face.src) r.face.src = bakeCharIcons()[MENTOR_CHAR[m.id] ?? 'yellow'];
       r.root.classList.toggle('locked', !joined);
       r.status.replaceChildren(joined ? icon('check') : el('span', '', t('mentor.need', { st: stageLabel(m.needStage) })));
     }

@@ -110,6 +110,8 @@ export class Game {
     this.avatar = new Avatar(assets, state.char, GUNS[state.gun]!);
     stage.scene.add(this.avatar.root);
     this.avatar.setGear(gearTiers(state));
+    // 내 캐릭터를 못 받아 다른 캐릭터로 시작했으면 받은 뒤 바꿔 입음
+    if (this.avatar.char !== state.char) this.rebuildAvatar(state.char, state.gun);
     stage.scene.add(this.aura.root);
     this.aura.setPower(autoDps(state));
     stage.onFrame((dt) => this.frame(dt));
@@ -138,6 +140,11 @@ export class Game {
   }
 
   private rebuildAvatar(c: CharId, gun: number): void {
+    // 그 캐릭터를 아직 안 받았으면 받은 뒤에 (그사이 또 바꿨으면 그쪽이 다시 부름)
+    if (!this.assets.characters[c]) {
+      void this.assets.char(c).then(() => { if (this.state.char === c && this.avatar.char !== c) this.rebuildAvatar(c, this.state.gun); }).catch(() => undefined);
+      return;
+    }
     this.avatar.root.removeFromParent();
     this.avatar.dispose();
     this.avatar = new Avatar(this.assets, c, GUNS[gun]!);

@@ -7,14 +7,20 @@ import { CHAR_IDS, type CharId } from '../sim/state.ts';
 const S = 192;
 
 /**
- * 캐릭터 창 초상: 6명을 대기 자세로 정면에서 한 번씩 그려 PNG 주소로.
- * 복제 스켈레톤(boneTexture)·믹서는 그린 뒤 해제, 오프스크린 렌더러는 dispose + forceContextLoss.
+ * 캐릭터 초상 그림 주소 (캐릭터 창·멘토 탭·이벤트 버튼 공용). 미리 구운 public/ui/chars/<id>.webp
+ * (2026-11-13: 예전엔 시작할 때 캐릭터 6종 GLB로 그렸음 → 6종을 다 받아야 시작할 수 있었음)
  */
-let cache: Record<CharId, string> | null = null;
+const urls = Object.fromEntries(CHAR_IDS.map((id) => [id, `${import.meta.env.BASE_URL}ui/chars/${id}.webp`])) as Record<CharId, string>;
 
-export function bakeCharIcons(assets: Assets): Record<CharId, string> {
-  // 캐릭터 창·멘토 탭이 같이 씀: 한 번만 그림
-  if (cache) return cache;
+export function bakeCharIcons(): Record<CharId, string> {
+  return urls;
+}
+
+/**
+ * 초상 굽기 (tools/store/charicons.mjs 전용, 게임에서는 안 씀): 6명을 대기 자세로 정면에서 한 번씩 그려 PNG 주소로.
+ * 캐릭터 6종이 모두 받아져 있어야 함. 복제 스켈레톤(boneTexture)·믹서는 그린 뒤 해제, 오프스크린 렌더러는 dispose + forceContextLoss.
+ */
+export function renderCharIcons(assets: Assets): Record<CharId, string> {
   const canvas = document.createElement('canvas');
   const r = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
   r.setSize(S, S, false);
@@ -33,6 +39,7 @@ export function bakeCharIcons(assets: Assets): Record<CharId, string> {
   const center = new THREE.Vector3();
   for (const id of CHAR_IDS) {
     const src = assets.characters[id];
+    if (!src) throw new Error(`캐릭터 ${id}를 아직 안 받음`);
     const model = SkeletonUtils.clone(src.scene);
     const mixer = new THREE.AnimationMixer(model);
     const idle = src.clips.find((c) => c.name === CHARACTER.clips.idle);
@@ -56,6 +63,5 @@ export function bakeCharIcons(assets: Assets): Record<CharId, string> {
   }
   r.dispose();
   r.forceContextLoss();
-  cache = out;
   return out;
 }

@@ -39,6 +39,13 @@ export type GearTiers = Record<TrainKind, number>;
 /** 아바타 기준(발 = 0, 앞 = +z) 장비 자리 (m). 화면에서 맞춤 */
 const PIGGY_AT = new THREE.Vector3(0, 0.5, -0.18);
 
+/** want를 받았으면 want, 아니면 받은 캐릭터 중 하나 (BUBU 먼저) */
+export function loadedChar(assets: Assets, want: CharId): CharId {
+  if (assets.characters[want]) return want;
+  if (assets.characters.blue) return 'blue';
+  return (Object.keys(assets.characters) as CharId[])[0] ?? want;
+}
+
 /** 팝배틀 PlayerAvatar 감싸기: 캐릭터 복제 + 월드 색 총 + 간단한 자세 입력 */
 export class Avatar {
   readonly root: THREE.Object3D;
@@ -55,9 +62,14 @@ export class Avatar {
     atk: { tier: 0, objs: [] }, spd: { tier: 0, objs: [] }, coin: { tier: 0, objs: [] },
   };
 
-  constructor(assets: Assets, char: CharId, gun: GunDef) {
+  /** 실제로 만든 캐릭터 (그 캐릭터를 아직 안 받았으면 받은 캐릭터로 대신 — 받은 뒤 부르는 쪽이 다시 만듦) */
+  readonly char: CharId;
+
+  constructor(assets: Assets, want: CharId, gun: GunDef) {
     this.assets = assets;
-    const src = assets.characters[char];
+    const char = loadedChar(assets, want);
+    this.char = char;
+    const src = assets.characters[char]!;
     this.gunObj = this.assets.guns[gun.model].clone(true);
     this.avatar = new PlayerAvatar(SkeletonUtils.clone(src.scene), src.clips, this.gunObj, WEAPONS[gun.model]!.mount, char);
     this.tintGun(gun);
