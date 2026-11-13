@@ -113,7 +113,8 @@ async function boot(): Promise<void> {
   void prem.refresh();
   rebirthPanel.prem = prem;
   const shop = new ShopPanel(game, ui, prem);
-  game.menuActions.shop = () => shop.open();
+  // 팝젬 칸 [+] → 상점 팝젬 탭
+  game.menuActions.shop = () => shop.open('gems');
   // 출석 창 + 오른쪽 이벤트 버튼 (선물·골드 2배·패스·팝젬·새 캐릭터)
   const daily = new DailyPanel(game, ui, prem);
   new EventBar(game, ui, prem, shop, daily, rebirthPanel);

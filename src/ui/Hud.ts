@@ -40,6 +40,11 @@ export class Hud {
     };
     this.coins = pill('coin');
     this.gems = pill('gem');
+    // 팝젬 칸 안 [+] = 팝젬 충전 (상점 팝젬 탭). 오른쪽 위 상점 버튼 대신 (사용자 2026-11-13)
+    const plus = el('button', 'pill-plus ui-on', '+');
+    plus.type = 'button';
+    plus.addEventListener('pointerup', (e) => { e.preventDefault(); e.stopPropagation(); actions.menu('shop'); });
+    this.gems.parentElement!.append(plus);
     this.mult = pill('reb');
     const menu = el('div', 'hud-menu');
     // 골드 2배 남은 시간 (켜져 있을 때만)
@@ -47,9 +52,7 @@ export class Hud {
     this.boostEl.append(icon('coin'), el('span', 'val', ''));
     this.boostEl.hidden = true;
     top.appendChild(this.boostEl);
-    const shop = button(t('hud.shop'), () => actions.menu('shop'), 'btn small shop-btn');
-    shop.prepend(icon('gem'));
-    menu.append(shop, button(t('hud.settings'), () => actions.menu('settings'), 'btn small'));
+    menu.append(button(t('hud.settings'), () => actions.menu('settings'), 'btn small'));
     top.appendChild(menu);
 
     const stats = el('div', 'hud-stats');
