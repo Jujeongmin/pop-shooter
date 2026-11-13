@@ -160,15 +160,58 @@ function runUntil(c: Ctx, maxT: number, onClear: (stage: number, c: Ctx) => void
 
 const hms = (sec: number): string => (Number.isFinite(sec) ? `${Math.floor(sec / 3600)}h${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')}m` : '  ----');
 
+/**
+ * --fit 1: 월드 2~8의 스테이지 체력 오름폭(stage.hpGrowth)을 월드 대장 클리어 목표 시각에 맞춰 이분 탐색.
+ * 월드를 하나씩: 앞 월드 끝 상태에서 이어서 돌리므로 전체를 다시 돌리지 않음. 결과 줄을 balance.ts에 옮겨 적음.
+ * 목표(시간): --targets 0.7,3,7,13,22,35,55,90 (월드 1은 맞추지 않음)
+ */
+if (opt('fit', 0) === 1) {
+  const ti = args.indexOf('--targets');
+  const targets = (ti >= 0 ? args[ti + 1]! : '0.7,3,7,13,22,35,55,90').split(',').map((h) => Number(h) * 3600);
+  const growth = BALANCE.stage.hpGrowth as unknown as number[];
+  const per = BALANCE.stage.perWorld;
+  const copy = (c: Ctx): Ctx => ({ ...c, kindSec: { ...c.kindSec } });
+  /** from 상태에서 stage를 깰 때까지 (limit 시각까지). 못 깨면 null */
+  const runTo = (from: Ctx, stage: number, limit: number): Ctx | null => {
+    const c = copy(from);
+    // runUntil은 maxT까지 도는 루프 → 한 걸음(1초)씩 불러 그 스테이지를 깬 순간 멈춤 (더 돌리면 다음 월드까지 깨 버림)
+    while (c.t < limit && c.s.bestStage < stage) runUntil(c, c.t + 1, () => undefined);
+    return c.s.bestStage >= stage ? c : null;
+  };
+  let base: Ctx = { s: newState(0), t: 0, lastProgress: 0, lastFarm: 0, kindSec: { atk: 0, spd: 0, coin: 0 }, battleSec: 0 };
+  base = runTo(base, per, 20 * 3600)!;
+  console.log(`world 1 boss at ${hms(base.t)} (not fitted)`);
+  for (let w = 2; w <= BALANCE.stage.worlds; w++) {
+    const target = targets[w - 1]!;
+    let lo = Math.log10(1.02);
+    let hi = Math.log10(200);
+    let best: Ctx | null = null;
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2;
+      growth[w - 1] = 10 ** mid;
+      const r = runTo(base, w * per, target);
+      // 목표 시각 안에 깼으면 더 어렵게, 못 깼으면 더 쉽게
+      if (r) { lo = mid; best = r; } else hi = mid;
+    }
+    growth[w - 1] = Number((10 ** lo).toPrecision(3));
+    best = runTo(base, w * per, target * 3);
+    if (!best) { console.log(`world ${w}: no fit`); break; }
+    base = best;
+    console.log(`world ${w} growth ${growth[w - 1]} boss at ${hms(base.t)} reb ${base.s.rebirths} gun ${base.s.gun} gear ${base.s.gear.toString(2).length}`);
+  }
+  console.log(`hpGrowth: [${growth.join(', ')}],`);
+  process.exit(0);
+}
+
 const ctx: Ctx = { s: newState(0), t: 0, lastProgress: 0, lastFarm: 0, kindSec: { atk: 0, spd: 0, coin: 0 }, battleSec: 0 };
 const at = new Map<number, { t: number; info: string }>();
 runUntil(ctx, MAX_T, (st, c) => at.set(st, {
   t: c.t,
-  info: `reb ${c.s.rebirths} atk ${c.s.trAtk.toExponential(1)} spd ${c.s.trSpd.toFixed(0)}% coin ${c.s.trCoin.toExponential(1)}% m ${c.s.mAtk}/${c.s.mSpd}/${c.s.mCoin} gun ${c.s.gun}`,
+  info: `reb ${c.s.rebirths} atk ${c.s.trAtk.toExponential(1)} spd ${c.s.trSpd.toFixed(0)}% coin ${c.s.trCoin.toExponential(1)}% m ${c.s.mAtk}/${c.s.mSpd}/${c.s.mCoin} gun ${c.s.gun} gear ${c.s.gear.toString(2).length} wealth ${(c.s.coins + machineCost(0, c.s.mAtk) + machineCost(0, c.s.mSpd) + machineCost(0, c.s.mCoin)).toExponential(1)}`,
 }));
 console.log(`taps=${TAPS} farm=${FARM_SEC}s  time: atk ${hms(ctx.kindSec.atk)} spd ${hms(ctx.kindSec.spd)} coin ${hms(ctx.kindSec.coin)} battle ${hms(ctx.battleSec)}`);
 if (ECON) console.log(`econ checks ${econ.checks} clamps ${econ.clamps} rejects ${econ.rejects} ${JSON.stringify(econ.reasons)}`);
-for (const st of [1, 2, 3, 5, 10, 20, 30, 40, 50, 60, 70, 80]) {
+for (const st of [1, 2, 3, 5, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]) {
   const r = at.get(st);
   console.log(`${stageLabel(st).padEnd(5)} ${hms(r?.t ?? Infinity).padStart(7)}  ${r?.info ?? ''}`);
 }

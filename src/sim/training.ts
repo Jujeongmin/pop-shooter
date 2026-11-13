@@ -27,6 +27,22 @@ export const GEAR: readonly GearDef[] = [
   { id: 'gloves3', kind: 'atk', tier: 3, needStage: 10 },
   { id: 'goggles3', kind: 'spd', tier: 3, needStage: 10 },
   { id: 'piggy3', kind: 'coin', tier: 3, needStage: 10 },
+  // 4~8단계 (2026-11-13: 장비가 너무 싸고 적음 → 월드마다 한 단계씩, 값은 그 월드 총 값 수준)
+  { id: 'gloves4', kind: 'atk', tier: 4, needStage: 20 },
+  { id: 'goggles4', kind: 'spd', tier: 4, needStage: 20 },
+  { id: 'piggy4', kind: 'coin', tier: 4, needStage: 20 },
+  { id: 'gloves5', kind: 'atk', tier: 5, needStage: 30 },
+  { id: 'goggles5', kind: 'spd', tier: 5, needStage: 30 },
+  { id: 'piggy5', kind: 'coin', tier: 5, needStage: 30 },
+  { id: 'gloves6', kind: 'atk', tier: 6, needStage: 40 },
+  { id: 'goggles6', kind: 'spd', tier: 6, needStage: 40 },
+  { id: 'piggy6', kind: 'coin', tier: 6, needStage: 40 },
+  { id: 'gloves7', kind: 'atk', tier: 7, needStage: 50 },
+  { id: 'goggles7', kind: 'spd', tier: 7, needStage: 50 },
+  { id: 'piggy7', kind: 'coin', tier: 7, needStage: 50 },
+  { id: 'gloves8', kind: 'atk', tier: 8, needStage: 60 },
+  { id: 'goggles8', kind: 'spd', tier: 8, needStage: 60 },
+  { id: 'piggy8', kind: 'coin', tier: 8, needStage: 60 },
 ];
 
 /** 멘토: 이 스테이지를 처음 깨면 영입 */
@@ -58,7 +74,7 @@ export function gearUnlocked(s: GameState, i: number): boolean {
 
 export function gearPrice(i: number): number {
   const g = GEAR[i];
-  return g ? T().gearBase * T().gearGrowth ** (g.tier - 1) : Infinity;
+  return g ? (T().gearPrice[g.tier - 1] ?? Infinity) : Infinity;
 }
 
 export function mentorCount(bestStage: number): number {
@@ -131,8 +147,18 @@ export function atkTrainMult(s: GameState): number {
   return 1 + s.trAtk;
 }
 
+/**
+ * 연사 배율 (초당 발사): spdSoft(12)발까지는 훈련한 그대로, 넘으면 훈련치가 e배 될 때마다 +12발만 (로그).
+ * 2026-11-13: 상한을 없앤 뒤 연사도 환생·장비·기구 배율을 그대로 받아 초당 12만 발까지 갔고(공격 훈련도 그만큼 빨라져)
+ * 월드 3~8이 20분에 끝남 → 넘는 구간은 수십~수백 발에 머물게. 이음매에서 값·기울기 모두 이어짐
+ */
+export function softSpd(raw: number): number {
+  const cap = T().spdSoft;
+  return raw <= cap ? raw : cap * (1 + Math.log(raw / cap));
+}
+
 export function spdTrainMult(s: GameState): number {
-  return 1 + s.trSpd / 100;
+  return softSpd(1 + s.trSpd / 100);
 }
 
 export function coinTrainMult(s: GameState): number {

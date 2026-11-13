@@ -27,7 +27,13 @@ test('each station trains only its own stat, without a cap', () => {
 test('fire-rate training has no cap (shots per second keep growing)', () => {
   const s = train(newState(0), 'spd', 1e6, 1);
   assert.ok(shotsPerSec(s) > 12);
-  assert.equal(shotsPerSec(s), 1 + s.trSpd / 100);
+  // 12발까지는 훈련 그대로, 넘으면 로그로만 (훈련치가 e배 될 때마다 +12발)
+  const low = { ...newState(0), trSpd: 500 };
+  assert.equal(shotsPerSec(low), 6);
+  const raw = 1 + s.trSpd / 100;
+  assert.ok(Math.abs(shotsPerSec(s) - 12 * (1 + Math.log(raw / 12))) < 1e-9);
+  assert.ok(shotsPerSec(train(s, 'spd', 1e6, 1)) > shotsPerSec(s), 'still grows');
+  assert.ok(shotsPerSec({ ...newState(0), trSpd: 1e18 }) < 1000, 'stays in the hundreds');
 });
 
 test('better station, machines, gear, mentors and rebirths train faster', () => {

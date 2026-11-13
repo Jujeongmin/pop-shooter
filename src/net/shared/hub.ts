@@ -116,7 +116,7 @@ export interface HubInfo {
 }
 
 /** 장비 비트 상한 (장비 16개까지) */
-export const HUB_GEAR_MAX = 0xffff;
+export const HUB_GEAR_MAX = 0xffffff;
 
 /** 광장 룸 사용자 상태 (서버가 저장, SDK가 같은 룸에 푸시) */
 export interface HubUserState extends Partial<HubInfo> {

@@ -9,12 +9,18 @@ import type { TrainKind } from '../sim/training.ts';
  */
 
 const INK = '#2b3a67';
-const TIER_METAL: Record<number, { color: string; metal: number; rough: number }> = {
+const TIER_METAL: Record<number, { color: string; metal: number; rough: number; glow?: string }> = {
   2: { color: '#dfe5f2', metal: 0.55, rough: 0.28 },
   3: { color: '#ffcf3a', metal: 0.6, rough: 0.25 },
+  // 4~8 (2026-11-13): 보석 색, 6단계부터 스스로 살짝 빛남
+  4: { color: '#3fd98a', metal: 0.5, rough: 0.22 },
+  5: { color: '#3f8cff', metal: 0.5, rough: 0.2 },
+  6: { color: '#a86bff', metal: 0.5, rough: 0.2, glow: '#a86bff' },
+  7: { color: '#ff3f5f', metal: 0.5, rough: 0.18, glow: '#ff3f5f' },
+  8: { color: '#fff4fb', metal: 0.35, rough: 0.12, glow: '#ff8ae6' },
 };
 const BASE_COLOR: Record<TrainKind, string> = { atk: '#ff5f6d', spd: '#4f9dff', coin: '#ff9ec4' };
-const LENS: Record<number, string> = { 1: '#9fe3ff', 2: '#c9b6ff', 3: '#fff09a' };
+const LENS: Record<number, string> = { 1: '#9fe3ff', 2: '#c9b6ff', 3: '#fff09a', 4: '#b6ffd9', 5: '#bfe0ff', 6: '#e6ccff', 7: '#ffc2cc', 8: '#9ff3ff' };
 
 // shared: 게임 내내 씀
 const mats = new Map<string, THREE.MeshStandardMaterial>();
@@ -30,7 +36,7 @@ function mat(color: string, metal = 0.05, rough = 0.45, emissive?: string): THRE
 
 function tierMat(kind: TrainKind, tier: number): THREE.MeshStandardMaterial {
   const t = TIER_METAL[tier];
-  return t ? mat(t.color, t.metal, t.rough) : mat(BASE_COLOR[kind]);
+  return t ? mat(t.color, t.metal, t.rough, t.glow) : mat(BASE_COLOR[kind]);
 }
 
 let geos: Record<string, THREE.BufferGeometry> | null = null;
@@ -85,12 +91,17 @@ export function makeGoggles(tier: number): THREE.Group {
   return grp;
 }
 
+/** 저금통 몸 크기 (반지름 m): 3단계까지는 눈에 띄게, 그 뒤는 조금씩 (8단계 0.166) */
+export function piggySize(tier: number): number {
+  return 0.11 + Math.min(tier, 3) * 0.012 + Math.max(0, tier - 3) * 0.004;
+}
+
 /** 돼지 저금통 가방 (등에 멤, 앞 = +z: 돼지 얼굴은 바깥(−z)을 봄) */
 export function makePiggy(tier: number): THREE.Group {
   const grp = new THREE.Group();
   const body = tierMat('coin', tier);
   const ink = mat(INK);
-  const s = 0.11 + tier * 0.012;
+  const s = piggySize(tier);
   grp.add(part(g().pig, body, 0, 0, 0, s));
   grp.add(part(g().snout, body, 0, -0.01, -s * 1.12, s));
   for (const x of [-0.35, 0.35]) {

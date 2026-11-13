@@ -9,11 +9,21 @@ export function isBoss(s: number): boolean {
   return s % BALANCE.stage.perWorld === 0;
 }
 
-/** 보스 체력 = 1-1 체력 × hpGrowth^(번호−1) × 월드 배수 (대장 ×bossMult). 숫자는 시뮬레이터로 맞춤 */
+/**
+ * 보스 체력 = 1-1 체력에서 스테이지마다 그 월드의 hpGrowth를 곱해 이어 감 (대장만 ×bossMult, 다음 스테이지는 대장 배수 없이 이어짐).
+ * 숫자는 시뮬레이터로 맞춤
+ */
 export function stageHp(s: number): number {
   if (!(s >= 1)) return 0;
   const st = BALANCE.stage;
-  return st.firstHp * st.hpGrowth ** (s - 1) * (BALANCE.worldHpMult[worldOf(s) - 1] ?? 1) * (isBoss(s) ? st.bossMult : 1);
+  const g = st.hpGrowth;
+  const w = worldOf(s);
+  let hp = st.firstHp;
+  // 앞 월드들: 월드 1은 9걸음(1-1 → 1-10), 그 뒤 월드는 10걸음씩
+  for (let k = 1; k < w; k++) hp *= (g[k - 1] ?? 1) ** (k === 1 ? st.perWorld - 1 : st.perWorld);
+  const inWorld = s - (w - 1) * st.perWorld;
+  hp *= (g[w - 1] ?? 1) ** (w === 1 ? inWorld - 1 : inWorld);
+  return hp * (isBoss(s) ? st.bossMult : 1);
 }
 
 export function stageTime(s: number): number {

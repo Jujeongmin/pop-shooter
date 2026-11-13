@@ -6,7 +6,7 @@ import type { GunDef } from '../sim/guns.ts';
 import type { CharId } from '../sim/state.ts';
 import { PlayerAvatar, type AvatarFrame } from './PlayerAvatar';
 import type { TrainKind } from '../sim/training.ts';
-import { makeGlove, makeGoggles, makePiggy } from './GearVisual';
+import { makeGlove, makeGoggles, makePiggy, piggySize } from './GearVisual';
 import { applyCheer, cheerBones } from './cheerPose';
 
 export interface AvatarPose {
@@ -203,7 +203,7 @@ export class Avatar {
       if (Math.abs(b.xs[i]!) < 0.06 && Math.abs(b.ys[i]! - PIGGY_AT.y) < 0.06 && b.zs[i]! < back) back = b.zs[i]!;
     }
     if (back === Infinity) return PIGGY_AT;
-    const half = (0.11 + tier * 0.012) * 1.15;
+    const half = piggySize(tier) * 1.15;
     return new THREE.Vector3(0, PIGGY_AT.y, back - half * 0.7);
   }
 

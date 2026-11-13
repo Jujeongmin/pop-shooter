@@ -261,6 +261,12 @@
 /* 장비 단계 = 캐릭터에 보이는 색과 같게: 2 은색, 3 금색 (그림 아이콘에 필터) */
 .ico.tier2 { filter: grayscale(1) brightness(1.25) contrast(1.05); }
 .ico.tier3 { filter: grayscale(1) sepia(1) saturate(3.2) hue-rotate(5deg) brightness(1.12); }
+/* 4 에메랄드 · 5 사파이어 · 6 자수정 · 7 루비 · 8 무지개 (GearVisual TIER_METAL과 같은 색) */
+.ico.tier4 { filter: grayscale(1) sepia(1) saturate(4) hue-rotate(85deg) brightness(1.1); }
+.ico.tier5 { filter: grayscale(1) sepia(1) saturate(4.5) hue-rotate(170deg) brightness(1.05); }
+.ico.tier6 { filter: grayscale(1) sepia(1) saturate(4) hue-rotate(220deg) brightness(1.08); }
+.ico.tier7 { filter: grayscale(1) sepia(1) saturate(6) hue-rotate(-40deg) brightness(1.02); }
+.ico.tier8 { filter: saturate(1.6) brightness(1.15) drop-shadow(0 0 3px #ff8ae6) drop-shadow(0 0 3px #7fe0ff); }
 .ico.m1 { filter: hue-rotate(160deg); }
 .ico.m2 { filter: hue-rotate(260deg); }
 .ico.m3 { filter: hue-rotate(320deg) saturate(1.5); }

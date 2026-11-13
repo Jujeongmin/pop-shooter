@@ -2,7 +2,7 @@ import { t } from '../i18n/i18n';
 import { autoDps, damagePerShot, rebirthReq, shotsPerSec } from '../sim/actions.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import type { GameState } from '../sim/state.ts';
-import { rebirthMult, TRAIN_KINDS, trainValue, type TrainKind } from '../sim/training.ts';
+import { rebirthMult, spdTrainMult, TRAIN_KINDS, trainValue, type TrainKind } from '../sim/training.ts';
 import { trainNeeds } from '../sim/trainNeed.ts';
 import { FIRE_VIS_MAX } from '../fx/fireGroup';
 import { button, el, setText } from './dom';
@@ -117,7 +117,7 @@ export class Hud {
         b.fill.classList.toggle('full', v >= goal);
       } else if (k === 'spd') {
         // 연사는 상한 없음: 막대 = 다음 '한 번에 한 발 더'(초당 12·24·36…발)까지
-        const sps = 1 + v / 100;
+        const sps = spdTrainMult(s);
         const lo = sps < FIRE_VIS_MAX ? 1 : Math.floor(sps / FIRE_VIS_MAX) * FIRE_VIS_MAX;
         const hi = sps < FIRE_VIS_MAX ? FIRE_VIS_MAX : lo + FIRE_VIS_MAX;
         b.fill.style.transform = `scaleX(${Math.min(1, (sps - lo) / (hi - lo))})`;
@@ -125,7 +125,8 @@ export class Hud {
       }
       // 연사·골드는 지금 배율로 (처음 '+0%'가 '0% 오름'으로 읽혀서, 사용자 2026-11-12)
       setText(b.sign, k === 'atk' ? '+' : '×');
-      setText(b.v, k === 'atk' ? formatNum(v) : multText(1 + v / 100));
+      // 연사는 실제 초당 발사 배율 (12발 넘으면 로그로 줄어든 값)
+      setText(b.v, k === 'atk' ? formatNum(v) : multText(k === 'spd' ? spdTrainMult(s) : 1 + v / 100));
     }
   }
 
