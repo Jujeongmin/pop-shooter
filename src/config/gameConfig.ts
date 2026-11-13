@@ -6,8 +6,10 @@ const base = import.meta.env.BASE_URL;
 
 // 총 모델: 기본은 가벼운 Blender 최적화본 _lod1 (tools/blender/optimize_glb.py --tris 2500 --tex 512 --tex-orm 256 --tex-normal 512, 입력 = _lod0).
 // 광장에 총이 10자루 넘게 보여(진열대·NPC·다른 사람) 7000 삼각형 _lod0이 광장 삼각형의 1/3 (2026-11-12). 카메라가 멀어 겉모습 차이 없음.
-// 개발 서버 비교용: ?guns=lod0
-const gunVariant = import.meta.env.DEV && new URLSearchParams(location.search).get('guns') === 'lod0' ? '_lod0' : '_lod1';
+// _lod1w = _lod1의 노멀맵 PNG만 WebP로 바꾼 것 (tools/store/webp_glb.mjs, 형상 그대로, 2026-11-13 로딩 줄이기: 4종 1.52MB → 0.68MB).
+// 개발 서버 비교용: ?guns=lod0 / ?guns=lod1 (WebP 전)
+const gunParam = import.meta.env.DEV ? new URLSearchParams(location.search).get('guns') : null;
+const gunVariant = gunParam === 'lod0' ? '_lod0' : gunParam === 'lod1' ? '_lod1' : '_lod1w';
 const rifleVariant = gunVariant;
 
 
