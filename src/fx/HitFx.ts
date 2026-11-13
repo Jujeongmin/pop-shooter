@@ -17,7 +17,8 @@ function glowTexture(): THREE.CanvasTexture {
   return t;
 }
 
-const POOL = 6;
+/** 동시에 보이는 탄 줄기·맞은 자리 수 (한 번에 최대 3줄기 × 초당 12번, 2026-11-13: 6 → 12) */
+const POOL = 12;
 
 /**
  * 발사·명중 효과: 총구 섬광(둥근 빛) + 탄 궤적(짧은 빛줄기) + 명중 팡(빛 + 링).

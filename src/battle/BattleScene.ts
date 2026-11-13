@@ -18,6 +18,7 @@ import type { ResultCard } from '../ui/ResultCard';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { PORTAL_SPOT } from '../world/facilities';
 import { ToyBoss } from './ToyBoss';
+import { FireGroup, MULTI_DRAW_MAX } from '../fx/fireGroup';
 import { themeOf } from '../world/worldThemes';
 
 /** 전투 무대 위치 (광장은 숨김) */
@@ -74,6 +75,10 @@ export class BattleScene {
   private endT = -1;
   /** 이번 스테이지 전체 시간, 던진 수, 맞은 수 */
   private stageT = 1;
+  /** 초당 12번 넘는 연사 묶기, 이번 스테이지 총알 하나 피해 */
+  private readonly group = new FireGroup();
+  private readonly groupOut: number[] = [];
+  private perBullet = 0;
   /** 방금 깬 스테이지 최대 체력: 다음 보스가 나오기 전까지 체력바를 0 / 이 값으로 (한 방에 깨도 깎인 게 보이게) */
   private clearedMax = 0;
   private launched = 0;
@@ -194,6 +199,7 @@ export class BattleScene {
     audio.setMusic('battle');
     this.applyTheme(world);
     this.run = startRun(g.state, world);
+    this.group.reset();
     // 시작 연출 동안은 쉬는 시간으로 둠 (자동 발사·탭 막힘)
     this.run.gap = INTRO_SEC;
     this.introT = 0;
@@ -232,15 +238,19 @@ export class BattleScene {
     window.setTimeout(() => { if (this.run) this.callout.hide(); }, 900);
   }
 
-  private shoot(dmg: number, tapped: boolean): void {
+  /** 한 번 쏨 = n발 (초당 12번 넘는 연사는 한 번에 여러 발, 그림은 최대 MULTI_DRAW_MAX줄기), dmg = 그 n발 피해 합 */
+  private shoot(dmg: number, tapped: boolean, n = 1): void {
     const boss = this.boss;
     if (!boss) return;
     this.game.avatar.getMuzzle(_muzzle);
-    boss.chest(_aim);
-    _aim.x += (Math.random() - 0.5) * boss.height * 0.3;
-    _aim.y += (Math.random() - 0.5) * boss.height * 0.3;
-    _aim.z += 0.4;
-    this.fx.shot(_muzzle, _aim);
+    const spread = n > 1 ? 0.45 : 0.3;
+    for (let i = Math.min(n, MULTI_DRAW_MAX); i > 0; i--) {
+      boss.chest(_aim);
+      _aim.x += (Math.random() - 0.5) * boss.height * spread;
+      _aim.y += (Math.random() - 0.5) * boss.height * spread;
+      _aim.z += 0.4;
+      this.fx.shot(_muzzle, _aim);
+    }
     audio.play(FIRE_SOUND[GUNS[this.game.state.gun]!.model]);
     audio.play('bossHit');
     boss.hit();
@@ -313,10 +323,17 @@ export class BattleScene {
     const before = run.battle.hp;
     const { shots, cleared } = stepRun(run, dt);
     if (shots > 0) {
-      const per = (before - (cleared !== null ? 0 : run.battle.hp)) / shots;
-      for (let i = 0; i < shots; i++) this.shoot(per, false);
+      this.perBullet = (before - (cleared !== null ? 0 : run.battle.hp)) / shots;
+      this.group.add(shots);
     }
-    if (cleared !== null) this.onCleared(cleared);
+    // 화면 발사: 초당 12번까지, 넘는 총알은 한 번에 같이 (fx/fireGroup)
+    for (const n of this.group.step(dt, run.battle.sps, this.groupOut, false)) this.shoot(this.perBullet * n, false, n);
+    if (cleared !== null) {
+      // 깨는 순간 남은 총알을 한 번에 (피해 숫자가 보스와 함께 사라지지 않게)
+      const n = this.group.drain();
+      if (n > 0) this.shoot(this.perBullet * n, false, n);
+      this.onCleared(cleared);
+    }
     if (run.done === 'fail') {
       this.endT = 0;
       this.landed = HITS;

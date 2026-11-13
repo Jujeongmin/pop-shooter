@@ -1,6 +1,5 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BALANCE } from '../../src/sim/balance.ts';
 import { newState } from '../../src/sim/state.ts';
 import { normalizeState } from '../../src/sim/normalize.ts';
 
@@ -25,12 +24,12 @@ test('normalize keeps valid save', () => {
   assert.equal(normalizeState({ v: 2, lastSeen: 400 }, 1000).lastSeen, 400);
 });
 
-test('normalize fixes chars, pass and caps fire-rate training', () => {
+test('normalize fixes chars, pass; fire-rate training is not capped', () => {
   const r = normalizeState({ v: 2, chars: ['red', 'red'], char: 'red', passMult: 3, runBest: 9, bestStage: 4, trSpd: 99999 }, 5);
   assert.deepEqual(r.chars, ['blue', 'red']);
   assert.equal(r.passMult, 1);
   assert.equal(r.runBest, 4);
-  assert.equal(r.trSpd, BALANCE.train.spdMax);
+  assert.equal(r.trSpd, 99999);
 });
 
 test('v1 save migrates: keeps record, guns, gear, chars, gems; resets gold, training, machines, rebirths', () => {

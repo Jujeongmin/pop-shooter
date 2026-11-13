@@ -15,7 +15,7 @@ import { GUNS, gunPrice } from '../../src/sim/guns.ts';
 import { newState, type GameState } from '../../src/sim/state.ts';
 import { stageHp, stageLabel, stageTime } from '../../src/sim/stages.ts';
 import { checkSave } from '../../src/sim/econ.ts';
-import { buyGear, buyMachine, GEAR, gearPrice, machineCost, machineLv, spdMaxed, train, TRAIN_KINDS, type TrainKind } from '../../src/sim/training.ts';
+import { buyGear, buyMachine, GEAR, gearPrice, machineCost, machineLv, train, TRAIN_KINDS, type TrainKind } from '../../src/sim/training.ts';
 
 const args = process.argv.slice(2);
 const opt = (name: string, def: number): number => {
@@ -72,7 +72,6 @@ function pickKind(s: GameState, world: number): TrainKind {
   let best: TrainKind = 'atk';
   let bestV = -1;
   for (const k of TRAIN_KINDS) {
-    if (k === 'spd' && spdMaxed(s)) continue;
     const v = gain(k);
     if (v > bestV) { bestV = v; best = k; }
   }
@@ -90,7 +89,7 @@ function buyBest(s: GameState): GameState | null {
   };
   const g = GUNS[s.gun + 1];
   if (g && buyNextGun(rich)) consider(gunPrice(g.index), BALANCE.gun.dmgStep - 1, buyNextGun);
-  const w: Record<TrainKind, number> = { atk: 1, spd: spdMaxed(s) ? 0 : 0.6, coin: 0.5 };
+  const w: Record<TrainKind, number> = { atk: 1, spd: 0.6, coin: 0.5 };
   for (const k of TRAIN_KINDS) consider(machineCost(machineLv(s, k)), (BALANCE.train.machineStep - 1) * w[k], (x) => buyMachine(x, k, 1));
   GEAR.forEach((gd, i) => { if (buyGear(rich, i)) consider(gearPrice(i), (BALANCE.train.gearMult - 1) * w[gd.kind], (x) => buyGear(x, i)); });
   const b = best as { cost: number; apply: (x: GameState) => GameState | null } | null;

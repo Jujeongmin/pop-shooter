@@ -4,7 +4,7 @@ import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
 import { BALANCE } from '../sim/balance.ts';
-import { gainPerShot, spdMaxed, train, type TrainKind } from '../sim/training.ts';
+import { gainPerShot, train, type TrainKind } from '../sim/training.ts';
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { pct } from '../ui/UpgradePanel';
@@ -85,7 +85,6 @@ export class Stations {
     st.acc = 0;
     st.zone.enter();
     // 탭으로 빨라지기 없음 (사용자 2026-11-12)
-    if (st.kind === 'spd' && spdMaxed(this.game.state)) this.float.show(t('range.spdMax'), _at.set(TREADMILL.x, 2.6, TREADMILL.z - 1), 'big');
   }
 
   private stop(st: Station): void {
@@ -122,7 +121,6 @@ export class Stations {
     const gain = gainPerShot(g.state, st.kind, world) * st.pending;
     g.setState(train(g.state, st.kind, st.pending, world));
     st.pending = 0;
-    if (st.kind === 'spd' && spdMaxed(g.state)) return;
     // 내 머리 위에 능력치 아이콘 + 오른 수치 (사용자 2026-11-13: 기구 쪽이 아니라 내 머리 위)
     this.float.show(`+${pct(gain)}%`, _at.set(g.pos.x, g.avatar.headTop() + 0.35, g.pos.z), st.kind === 'coin' ? 'coin stat' : 'big stat', st.kind === 'coin' ? 'coin' : 'rapid');
   }

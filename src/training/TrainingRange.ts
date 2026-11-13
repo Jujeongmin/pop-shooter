@@ -10,6 +10,7 @@ import { gainPerShot, train } from '../sim/training.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
 import { ZoneEntry } from '../core/ZoneEntry';
+import { FireGroup, MULTI_DRAW_MAX } from '../fx/fireGroup';
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES } from '../world/facilities';
@@ -30,7 +31,9 @@ export class TrainingRange {
   private readonly game: Game;
   private readonly fx: HitFx;
   private readonly float: FloatText;
-  private shotAcc = 0;
+  /** 초당 12번 넘는 연사 묶기 */
+  private readonly group = new FireGroup();
+  private readonly groupOut: number[] = [];
   /** 아직 반영 안 한 훈련 발 수 (flush 때 train) */
   private pendingShots = 0;
   private flushT = 0;
@@ -70,7 +73,7 @@ export class TrainingRange {
     if (this.active) return;
     this.active = true;
     // 탭으로 빨라지기 없음 (사용자 2026-11-12): 자동 발사만
-    this.shotAcc = 0;
+    this.group.reset();
     this.zone.enter();
   }
 
@@ -84,17 +87,21 @@ export class TrainingRange {
     this.zone.leave();
   }
 
-  private fire(tapped: boolean): void {
+  /** 한 번 쏨 = n발 (초당 12번을 넘는 연사는 한 번에 여러 발, 그림은 최대 MULTI_DRAW_MAX줄기) */
+  private fire(tapped: boolean, n = 1): void {
     if (!this.active) return;
     const g = this.game;
-    this.pendingShots++;
+    this.pendingShots += n;
     this.targetIdx = (this.targetIdx + 1) % g.hub.targets.length;
     const target = g.hub.targets[this.targetIdx]!;
     this.wobble[this.targetIdx] = 1;
     this.kick = 0.06;
     g.avatar.getMuzzle(_muzzle);
-    _aim.set(target.position.x + (Math.random() - 0.5) * 0.5, 1.6 + (Math.random() - 0.5) * 0.5, target.position.z + 0.12);
-    this.fx.shot(_muzzle, _aim);
+    const spread = n > 1 ? 0.9 : 0.5;
+    for (let i = Math.min(n, MULTI_DRAW_MAX); i > 0; i--) {
+      _aim.set(target.position.x + (Math.random() - 0.5) * spread, 1.6 + (Math.random() - 0.5) * spread, target.position.z + 0.12);
+      this.fx.shot(_muzzle, _aim);
+    }
     audio.play(FIRE_SOUND[GUNS[g.state.gun]!.model]);
     if (tapped) this.float.show(t('float.pop'), _aim, 'pop');
   }
@@ -134,10 +141,8 @@ export class TrainingRange {
     const tg = g.hub.targets[this.targetIdx]!;
     g.pose.aimAt = _aimAt.set(tg.position.x, 1.6, tg.position.z);
     g.yaw = Math.atan2(tg.position.x - g.pos.x, tg.position.z - g.pos.z);
-    this.shotAcc += shotsPerSec(g.state) * dt;
-    while (this.shotAcc >= 1) {
-      this.shotAcc -= 1;
-      this.fire(false);
+    for (const n of this.group.step(dt, shotsPerSec(g.state), this.groupOut, true)) {
+      this.fire(false, n);
     }
     this.kick = Math.max(0, this.kick - dt * 0.6);
     g.pose.kick = this.kick;

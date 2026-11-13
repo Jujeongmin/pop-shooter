@@ -26,7 +26,7 @@ export function damagePerShot(s: GameState): number {
   return atkTrainMult(s) * gunMult(s.gun) * s.passMult * ownedCharMult(s);
 }
 
-/** 초당 발사 = 1 × (1 + 연사 훈련%) (12발까지) */
+/** 초당 발사 = 1 × (1 + 연사 훈련%), 상한 없음 (초당 12번 넘으면 화면은 한 번에 여러 발) */
 export function shotsPerSec(s: GameState): number {
   return spdTrainMult(s);
 }

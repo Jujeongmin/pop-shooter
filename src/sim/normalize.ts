@@ -48,7 +48,7 @@ export function normalizeState(raw: unknown, now: number): GameState {
     chars: charList,
     tutorial: int(r.tutorial, 0, 99),
     trAtk: v1 ? 0 : num(r.trAtk, 0, 1e300),
-    trSpd: v1 ? 0 : num(r.trSpd, 0, BALANCE.train.spdMax),
+    trSpd: v1 ? 0 : num(r.trSpd, 0, Number.MAX_SAFE_INTEGER),
     trCoin: v1 ? 0 : num(r.trCoin, 0, 1e300),
     mAtk: v1 ? 0 : int(r.mAtk, 0, 1e5),
     mSpd: v1 ? 0 : int(r.mSpd, 0, 1e5),

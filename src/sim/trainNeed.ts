@@ -2,7 +2,7 @@ import { autoDps, highestWorld, trainRate } from './actions.ts';
 import { BALANCE } from './balance.ts';
 import { stageHp, stageTime } from './stages.ts';
 import type { GameState } from './state.ts';
-import { spdMaxed, train } from './training.ts';
+import { train } from './training.ts';
 
 /** 훈련 막대 색 (사용자 2026-11-12): 빨강 = 지금 이걸 훈련, 주황 = 다음으로 도움, 초록 = 충분 */
 export type Need = 'red' | 'orange' | 'green';
@@ -16,12 +16,11 @@ export function nextClearable(s: GameState): boolean {
 
 /** 그 훈련장에서 1초 훈련하면 오르는 자동 DPS */
 function dpsPerSec(s: GameState, k: 'atk' | 'spd'): number {
-  if (k === 'spd' && spdMaxed(s)) return 0;
   return autoDps(train(s, k, trainRate(s, k), highestWorld(s))) - autoDps(s);
 }
 
 /**
- * 공격·연사 훈련 막대 색. 다음 스테이지를 못 깨면: DPS가 더 빨리 오르는 쪽 빨강, 다른 쪽 주황 (연사가 끝까지 올랐으면 초록).
+ * 공격·연사 훈련 막대 색. 다음 스테이지를 못 깨면: DPS가 더 빨리 오르는 쪽 빨강, 다른 쪽 주황.
  * 깰 수 있으면 둘 다 초록 (포털로 가면 됨).
  */
 export function trainNeeds(s: GameState): { atk: Need; spd: Need } {

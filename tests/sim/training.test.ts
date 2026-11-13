@@ -4,7 +4,7 @@ import { BALANCE } from '../../src/sim/balance.ts';
 import { newState } from '../../src/sim/state.ts';
 import { damagePerShot, goldMult, shotsPerSec } from '../../src/sim/actions.ts';
 import {
-  buyGear, buyMachine, gainPerShot, GEAR, gearPrice, machineAffordable, machineCost, mentorCount, rebirthMult, spdMaxed, stationMult, train,
+  buyGear, buyMachine, gainPerShot, GEAR, gearPrice, machineAffordable, machineCost, mentorCount, rebirthMult, stationMult, train,
 } from '../../src/sim/training.ts';
 
 test('each station trains only its own stat, without a cap', () => {
@@ -24,11 +24,10 @@ test('each station trains only its own stat, without a cap', () => {
   assert.equal(train(s, 'atk', NaN, 1), s);
 });
 
-test('fire-rate training stops at 12 shots per second', () => {
-  const s = train(newState(0), 'spd', 1e9, 1);
-  assert.ok(spdMaxed(s));
-  assert.equal(s.trSpd, BALANCE.train.spdMax);
-  assert.equal(shotsPerSec(s), 12);
+test('fire-rate training has no cap (shots per second keep growing)', () => {
+  const s = train(newState(0), 'spd', 1e6, 1);
+  assert.ok(shotsPerSec(s) > 12);
+  assert.equal(shotsPerSec(s), 1 + s.trSpd / 100);
 });
 
 test('better station, machines, gear, mentors and rebirths train faster', () => {
@@ -71,7 +70,7 @@ test('trainRate: attack follows fire rate, fire-rate and gold stations run at a 
   const s = newState(0);
   const fast = train(s, 'spd', 1e9, 1);
   assert.equal(trainRate(s, 'atk'), shotsPerSec(s));
-  assert.equal(trainRate(fast, 'atk'), 12);
+  assert.equal(trainRate(fast, 'atk'), shotsPerSec(fast));
   assert.equal(trainRate(s, 'spd'), BALANCE.train.actionsPerSec);
   assert.equal(trainRate(fast, 'coin'), BALANCE.train.actionsPerSec);
 });

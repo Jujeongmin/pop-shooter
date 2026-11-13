@@ -39,7 +39,7 @@ export const BALANCE = {
   /**
    * 훈련 (training.ts). gain = 한 발에 오르는 양 (공격 = 점수, 연사·코인 = %),
    * 훈련장 등급(월드) ×station, 기구 레벨마다 ×machineStep, 장비 하나마다 ×gearMult, 멘토 한 명마다 ×mentorMult, 환생 배율.
-   * 초당 발사 = 1 × (1 + 연사%/100), spdMax%(= 초당 12발)까지.
+   * 초당 발사 = 1 × (1 + 연사%/100), 상한 없음 (2026-11-13: 초당 12번을 넘으면 화면에서는 한 번에 여러 발, fx/fireGroup).
    */
   train: {
     gain: { atk: 1, spd: 0.25, coin: 0.5 },
@@ -51,7 +51,6 @@ export const BALANCE = {
     gearBase: 800, gearGrowth: 40,
     gearMult: 1.6,
     mentorMult: 1.3,
-    spdMax: 1100,
     /** 러닝머신(연사)·동전 분수(골드 보너스)의 기본 동작 수/초 (내 연사와 무관, 탭으로 더함). 사격장(공격)은 초당 발사 수 (사용자 2026-11-12) */
     actionsPerSec: 2,
   },

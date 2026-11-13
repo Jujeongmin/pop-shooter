@@ -128,7 +128,7 @@ export function atkTrainMult(s: GameState): number {
 }
 
 export function spdTrainMult(s: GameState): number {
-  return 1 + Math.min(s.trSpd, T().spdMax) / 100;
+  return 1 + s.trSpd / 100;
 }
 
 export function coinTrainMult(s: GameState): number {
@@ -137,16 +137,11 @@ export function coinTrainMult(s: GameState): number {
 
 const FIELD = { atk: 'trAtk', spd: 'trSpd', coin: 'trCoin' } as const;
 
-/** k 훈련장(world)에서 shots발 훈련 (소수 가능: 오프라인·숨김 정산). 연사는 spdMax%까지 */
+/** k 훈련장(world)에서 shots발 훈련 (소수 가능: 오프라인·숨김 정산). 상한 없음 */
 export function train(s: GameState, k: TrainKind, shots: number, world: number): GameState {
   if (!(shots > 0) || !Number.isFinite(shots)) return s;
   const v = trainValue(s, k) + gainPerShot(s, k, world) * shots;
-  return { ...s, [FIELD[k]]: k === 'spd' ? Math.min(T().spdMax, v) : v };
-}
-
-/** 연사 훈련이 끝까지 찼는지 (더 쏴도 안 오름) */
-export function spdMaxed(s: GameState): boolean {
-  return s.trSpd >= T().spdMax;
+  return { ...s, [FIELD[k]]: v };
 }
 
 export function buyMachine(s: GameState, k: TrainKind, n: number): GameState | null {
