@@ -34,6 +34,11 @@ export class NicknamePanel {
   nick: string | null = loadNickname();
   /** 닉네임이 바뀌면 (설정 창 버튼 글자 등) */
   onChange: ((nick: string) => void) | null = null;
+  /**
+   * 닉네임 확인이 끝남 (이미 있음·방금 정함·서버 없음). 그전에는 다른 자동 창(오늘의 선물)을 띄우지 않음:
+   * 선물 창이 먼저 뜨고 닉네임 창이 그 위에 겹쳐 뜨던 것 (사용자 2026-11-13)
+   */
+  settled = false;
 
   constructor(parent: HTMLElement, net: NetClient, api: LobbyApi) {
     this.net = net;
@@ -72,7 +77,10 @@ export class NicknamePanel {
         return;
       }
       this.open(r.mustChange ? 'nick.err.blocked' : null, true);
-    } catch { /* 서버 없음: 이름표는 '플레이어'로 */ }
+    } catch {
+      // 서버 없음: 이름표는 '플레이어'로
+      this.settled = true;
+    }
   }
 
   open(errKey: StrKey | null = null, required = false): void {
@@ -93,6 +101,7 @@ export class NicknamePanel {
   }
 
   private setNick(nick: string): void {
+    this.settled = true;
     this.nick = nick;
     saveNickname(nick);
     this.onChange?.(nick);

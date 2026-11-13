@@ -215,13 +215,14 @@ async function boot(): Promise<void> {
   // 팝젬 칸 [+] → 상점 팝젬 탭
   game.menuActions.shop = () => shop.open('gems');
   // 출석 창 + 오른쪽 이벤트 버튼 (선물·골드 2배·패스·팝젬·새 캐릭터)
-  const daily = new DailyPanel(game, ui, prem);
+  const daily = new DailyPanel(game, ui, prem, () => !nickPanel || nickPanel.settled);
   new EventBar(game, ui, prem, shop, daily, rebirthPanel);
   if (!showOfflineReward(game, ui, save.now, prem)) game.saver.saveNow();
   // 광장 멀티 (서버에 연결됐을 때만, 실패해도 혼자 게임은 그대로)
   const lobby = startLobby(game, net, cloud, training);
-  // 첫 접속이면 닉네임 정하기 (서버 연결 뒤, 오프라인 보상 창과 겹치지 않게 조금 뒤)
-  if (nickPanel) window.setTimeout(() => void nickPanel.checkOnConnect(), 1500);
+  // 첫 접속이면 닉네임 정하기: 화면이 뜨자마자 바로 확인 (게임 화면은 뒤에서 계속 그려짐). 오늘의 선물은 닉네임을 정한 뒤에 뜸
+  // (예전엔 1.5초 뒤에 확인해서 선물 창이 먼저 떴음, 사용자 2026-11-13)
+  if (nickPanel) void nickPanel.checkOnConnect();
   if (import.meta.env.DEV) Object.assign(window, { __hub: lobby });
   if (import.meta.env.DEV) {
     // 개발용 단축 (콘솔): __dev.fire(30) = 초당 30발, __dev.atk(1e6) = 공격 훈련치, __dev.gold(1e9) = 골드 (?offline=1과 같이 쓰면 서버가 되돌리지 않음)

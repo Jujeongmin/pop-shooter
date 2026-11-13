@@ -17,13 +17,14 @@ export class DailyPanel {
   private wrap: HTMLDivElement | null = null;
   private autoShown = false;
 
-  constructor(game: Game, ui: HTMLElement, prem: Premium) {
+  /** canAuto = 자동으로 띄워도 되는지 (닉네임을 정한 뒤에만: 첫 접속은 닉네임 창이 먼저) */
+  constructor(game: Game, ui: HTMLElement, prem: Premium, canAuto: () => boolean = () => true) {
     this.game = game;
     this.ui = ui;
     this.prem = prem;
-    // 하루 첫 접속: 서버 값을 받은 뒤, 가리는 창이 없을 때 한 번
+    // 하루 첫 접속: 서버 값을 받은 뒤, 닉네임이 정해졌고 가리는 창이 없을 때 한 번
     game.onTick(() => {
-      if (this.autoShown || !this.prem.known || !this.prem.daily.ready) return;
+      if (this.autoShown || !this.prem.known || !this.prem.daily.ready || !canAuto()) return;
       if (ui.querySelector('.result-wrap:not([hidden])') || ui.querySelector('.sheet:not([hidden])')) return;
       this.autoShown = true;
       window.setTimeout(() => this.open(), 1200);
