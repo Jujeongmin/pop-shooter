@@ -12,3 +12,14 @@ test('training colors: red/orange while the next stage is out of reach, green wh
   assert.ok(nextClearable(strong));
   assert.deepEqual(trainNeeds(strong), { atk: 'green', spd: 'green' });
 });
+
+test('treadmill trains fire rate until it is maxed, then Attack at the range speed', async () => {
+  const { treadmillTraining, trainRate } = await import('../../src/sim/actions.ts');
+  const { BALANCE } = await import('../../src/sim/balance.ts');
+  const s = newState(0);
+  assert.deepEqual(treadmillTraining(s, 4), { kind: 'spd', n: 4 });
+  const maxed = { ...newState(0), trSpd: BALANCE.train.spdMax };
+  const r = treadmillTraining(maxed, 4);
+  assert.equal(r.kind, 'atk');
+  assert.equal(r.n, (4 * trainRate(maxed, 'atk')) / trainRate(maxed, 'spd'));
+});

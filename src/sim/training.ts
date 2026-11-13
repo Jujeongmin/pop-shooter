@@ -164,3 +164,4 @@ export function buyGear(s: GameState, i: number): GameState | null {
   if (hasGear(s, i) || !gearUnlocked(s, i) || !(price <= s.coins)) return null;
   return { ...s, coins: s.coins - price, gear: s.gear | (1 << i) };
 }
+

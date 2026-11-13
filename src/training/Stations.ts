@@ -5,6 +5,8 @@ import { ZoneEntry } from '../core/ZoneEntry';
 import { t } from '../i18n/i18n';
 import { BALANCE } from '../sim/balance.ts';
 import { gainPerShot, spdMaxed, train, type TrainKind } from '../sim/training.ts';
+import { treadmillTraining } from '../sim/actions.ts';
+import { formatNum } from '../sim/format.ts';
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { pct } from '../ui/UpgradePanel';
@@ -61,7 +63,8 @@ export class Stations {
         spot,
         face,
         landY,
-        text: { title, big: t('st.tap') },
+        // 연사가 끝까지 오른 러닝머신은 공격 훈련 (착지 문구로 알림)
+        text: () => ({ title, big: kind === 'spd' && spdMaxed(game.state) ? t('range.spdMax') : t('st.tap') }),
       });
       const st: Station = { kind, zone, active: false, acc: 0, pending: 0, flushT: 0, recent: 0 };
       game.facilityActions[id] = () => this.start(st);
@@ -85,7 +88,6 @@ export class Stations {
     st.acc = 0;
     st.zone.enter();
     // 탭으로 빨라지기 없음 (사용자 2026-11-12)
-    if (st.kind === 'spd' && spdMaxed(this.game.state)) this.float.show(t('range.spdMax'), _at.set(TREADMILL.x, 2.6, TREADMILL.z - 1), 'big');
   }
 
   private stop(st: Station): void {
@@ -115,16 +117,23 @@ export class Stations {
     });
   }
 
+  /** 이 기구에서 걸음·동전 n번이 올리는 훈련 (러닝머신은 연사가 끝까지 오르면 공격 훈련) */
+  private what(st: Station, n: number): { kind: TrainKind; n: number } {
+    return st.kind === 'spd' ? treadmillTraining(this.game.state, n) : { kind: st.kind, n };
+  }
+
   private flush(st: Station): void {
     if (st.pending <= 0) return;
     const g = this.game;
     const world = g.world;
-    const gain = gainPerShot(g.state, st.kind, world) * st.pending;
-    g.setState(train(g.state, st.kind, st.pending, world));
+    const tr = this.what(st, st.pending);
+    const gain = gainPerShot(g.state, tr.kind, world) * tr.n;
+    g.setState(train(g.state, tr.kind, tr.n, world));
     st.pending = 0;
-    if (st.kind === 'spd' && spdMaxed(g.state)) return;
     // 내 머리 위에 능력치 아이콘 + 오른 수치 (사용자 2026-11-13: 기구 쪽이 아니라 내 머리 위)
-    this.float.show(`+${pct(gain)}%`, _at.set(g.pos.x, g.avatar.headTop() + 0.35, g.pos.z), st.kind === 'coin' ? 'coin stat' : 'big stat', st.kind === 'coin' ? 'coin' : 'rapid');
+    _at.set(g.pos.x, g.avatar.headTop() + 0.35, g.pos.z);
+    if (tr.kind === 'atk') this.float.show(`+${formatNum(gain)}`, _at, 'big stat', 'bullet');
+    else this.float.show(`+${pct(gain)}%`, _at, tr.kind === 'coin' ? 'coin stat' : 'big stat', tr.kind === 'coin' ? 'coin' : 'rapid');
   }
 
   private update(dt: number): void {
@@ -172,9 +181,10 @@ export class Stations {
     if (n <= 0) return;
     const g = this.game;
     const world = g.world;
-    const gain = gainPerShot(g.state, st.kind, world) * n;
-    g.setState(train(g.state, st.kind, n, world), true);
+    const tr = this.what(st, n);
+    const gain = gainPerShot(g.state, tr.kind, world) * tr.n;
+    g.setState(train(g.state, tr.kind, tr.n, world), true);
     const at = st.kind === 'spd' ? TREADMILL : FOUNTAIN;
-    this.float.show(t('float.away', { n: `${pct(gain)}%` }), _at.set(at.x, 2.8, at.z - 0.6), 'coin big');
+    this.float.show(t('float.away', { n: tr.kind === 'atk' ? formatNum(gain) : `${pct(gain)}%` }), _at.set(at.x, 2.8, at.z - 0.6), 'coin big');
   };
 }
