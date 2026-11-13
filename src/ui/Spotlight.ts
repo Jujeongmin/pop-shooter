@@ -71,7 +71,7 @@ export class Spotlight {
       [x + w, y, Math.max(0, W - x - w), h],
     ];
     rects.forEach(([l, tp, bw, bh], i) => Object.assign(this.blocks[i]!.style, { left: `${l}px`, top: `${tp}px`, width: `${bw}px`, height: `${bh}px` }));
-    // 손가락 (그림은 아래를 가리킴): 손끝이 버튼 가운데 조금 아래를 누르게 — 버튼 아래에 두면 다음 줄 버튼을 가리켜 보였음
-    Object.assign(this.hand.style, { left: `${x + w * 0.3 - 22}px`, top: `${y + h * 0.82 - 50}px` });
+    // 손가락 (그림은 아래를 가리킴): 버튼 위에서 손끝이 버튼 윗변을 누르는 모양 (버튼 글자를 가리지 않게, 사용자 2026-11-13)
+    Object.assign(this.hand.style, { left: `${x + w * 0.5 - 24}px`, top: `${y - 40}px` });
   }
 }

@@ -39,7 +39,7 @@ test('canAttempt', () => {
 
 test('damage and coins', () => {
   const s = { ...newState(0), passMult: 4 };
-  assert.equal(damagePerShot(s), 4);
+  assert.equal(damagePerShot(s), 4 * BALANCE.atkScale);
   assert.equal(autoDps(s), damagePerShot(s) * shotsPerSec(s));
   assert.equal(maxDps(s), damagePerShot(s) * (shotsPerSec(s) + BALANCE.tap.maxPerSec));
   assert.equal(goldMult(s, 0), 1);

@@ -5,7 +5,7 @@ import { GUNS } from '../sim/guns.ts';
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import type { HitFx } from '../fx/HitFx';
-import { shotsPerSec } from '../sim/actions.ts';
+import { atkShown, shotsPerSec } from '../sim/actions.ts';
 import { gainPerShot, train } from '../sim/training.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatNum } from '../sim/format.ts';
@@ -115,7 +115,7 @@ export class TrainingRange {
     this.pendingShots = 0;
     // 내 머리 위에 공격력 아이콘 + 오른 수치 (사용자 2026-11-13)
     _aim.set(g.pos.x, g.avatar.headTop() + 0.35, g.pos.z);
-    this.float.show(`+${formatNum(gain)}`, _aim, 'big stat', 'bullet');
+    this.float.show(`+${formatNum(atkShown(gain))}`, _aim, 'big stat', 'bullet');
   }
 
   private update(dt: number): void {

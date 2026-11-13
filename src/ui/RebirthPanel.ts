@@ -3,7 +3,7 @@ import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { t } from '../i18n/i18n';
 import type { Premium } from '../platform/Premium';
-import { canRebirth, doRebirth, rebirthReq, skipRebirthGems } from '../sim/actions.ts';
+import { atkShown, canRebirth, doRebirth, rebirthReq, skipRebirthGems } from '../sim/actions.ts';
 import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
@@ -72,14 +72,14 @@ export class RebirthPanel {
     // 조건: 공격 훈련 진행 막대 (지금 / 필요), 위에 환생 횟수
     const price = el('div', 'reb-price');
     const pv = el('span', 'reb-price-v');
-    pv.append(icon('bullet'), el('span', '', `${formatNum(Math.min(s.trAtk, need))} / ${formatNum(need)}`));
+    pv.append(icon('bullet'), el('span', '', `${formatNum(atkShown(Math.min(s.trAtk, need)))} / ${formatNum(atkShown(need))}`));
     price.append(el('span', 'reb-price-l', t('reb.need', { n: s.rebirths })), pv);
     const bar = el('div', 'reb-bar');
     const fill = el('div', 'reb-fill');
     fill.style.transform = `scaleX(${Math.min(1, s.trAtk / need)})`;
     bar.append(fill);
     price.append(bar);
-    const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: formatNum(need - s.trAtk) }));
+    const tip = el('div', 'reb-tip', can ? t('reb.tip') : t('reb.short', { n: formatNum(atkShown(need - s.trAtk)) }));
     b.append(card, ...(BALANCE.gems.perRebirth > 0 ? [gems] : []), lists, price, tip);
     const skipGems = skipRebirthGems(s);
     if (this.confirming === 'skip' && !can) {

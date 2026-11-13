@@ -18,7 +18,7 @@ const KEY = 'pop-shooter.guide';
 /** 위쪽 안내 글 줄 (사용자 2026-11-13: 안 뜨는 게 낫다 → 끔). 바닥 화살표·목표 위 표시만 남김. 다시 켜려면 true */
 const SHOW_TEXT = false;
 
-const TEXT: Record<GuideKind, StrKey> = { portal: 'g.portal', upgrade: 'g.upgrade', range: 'g.range' };
+const TEXT: Record<GuideKind, StrKey> = { portal: 'g.portal', upgrade: 'g.upgrade', range: 'g.range', treadmill: 'g.treadmill' };
 
 export function guideEnabled(): boolean {
   try { return localStorage.getItem(KEY) !== 'off'; } catch { return true; }

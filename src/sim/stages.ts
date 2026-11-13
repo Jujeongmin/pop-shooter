@@ -23,7 +23,7 @@ export function stageHp(s: number): number {
   for (let k = 1; k < w; k++) hp *= (g[k - 1] ?? 1) ** (k === 1 ? st.perWorld - 1 : st.perWorld);
   const inWorld = s - (w - 1) * st.perWorld;
   hp *= (g[w - 1] ?? 1) ** (w === 1 ? inWorld - 1 : inWorld);
-  return hp * (isBoss(s) ? st.bossMult : 1);
+  return hp * (isBoss(s) ? st.bossMult : 1) * BALANCE.atkScale;
 }
 
 export function stageTime(s: number): number {

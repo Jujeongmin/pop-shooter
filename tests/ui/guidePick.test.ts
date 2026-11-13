@@ -1,19 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canBeatNext, pickGuide, TUTORIAL_DONE } from '../../src/ui/guidePick.ts';
-import { rebirthReq } from '../../src/sim/actions.ts';
+import { canBeatNext, pickGuide, portalDps, TUT_ATK, TUT_SPD, TUTORIAL_DONE } from '../../src/ui/guidePick.ts';
+import { autoDps, rebirthReq } from '../../src/sim/actions.ts';
 import { newState } from '../../src/sim/state.ts';
 
-test('tutorial: range first, then portal when 1-1 is beatable', () => {
+test('tutorial: attack at the range, then fire rate on the treadmill, then portal at DPS = 1-1 HP', () => {
   const s = newState(0);
   assert.equal(pickGuide(s), 'range');
-  const strong = { ...s, trAtk: 1000 };
-  assert.ok(canBeatNext(strong));
-  assert.equal(pickGuide(strong), 'portal');
-  // 겨우 깰 만큼(공격 훈련 8)은 아직 사격장, 2배(17)부터 포털
-  assert.ok(canBeatNext({ ...s, trAtk: 8 }));
-  assert.equal(pickGuide({ ...s, trAtk: 8 }), 'range');
-  assert.equal(pickGuide({ ...s, trAtk: 17 }), 'portal');
+  const atk = { ...s, trAtk: TUT_ATK };
+  assert.equal(pickGuide(atk), 'treadmill');
+  const both = { ...atk, trSpd: TUT_SPD };
+  // 둘 다 했지만 DPS가 모자라면 다시 사격장
+  assert.ok(autoDps(both) < portalDps());
+  assert.equal(pickGuide(both), 'range');
+  const ready = { ...both, trAtk: 1000 };
+  assert.ok(autoDps(ready) >= portalDps());
+  assert.equal(pickGuide(ready), 'portal');
+  // 공격이 아무리 높아도 연사 훈련을 안 했으면 러닝머신 먼저
+  assert.equal(pickGuide({ ...s, trAtk: 1000 }), 'treadmill');
+  assert.ok(canBeatNext({ ...s, trAtk: 1000 }));
 });
 
 test('tutorial: after the first clear, upgrade until something is bought', () => {

@@ -37,7 +37,7 @@ test('auto shots follow shots per sec', () => {
   let shots = 0;
   for (let i = 0; i < 10; i++) shots += stepBattle(b, 0.1);
   assert.equal(shots, 1);
-  assert.equal(b.hp, stageHp(9) - 1);
+  assert.equal(b.hp, stageHp(9) - b.dmg);
 });
 
 test('tap adds a shot and can finish', () => {

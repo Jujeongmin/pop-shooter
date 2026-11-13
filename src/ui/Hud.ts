@@ -1,5 +1,5 @@
 import { t } from '../i18n/i18n';
-import { autoDps, damagePerShot, rebirthReq, shotsPerSec } from '../sim/actions.ts';
+import { atkShown, autoDps, damagePerShot, rebirthReq, shotsPerSec } from '../sim/actions.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import type { GameState } from '../sim/state.ts';
 import { rebirthMult, spdTrainMult, TRAIN_KINDS, trainValue, type TrainKind } from '../sim/training.ts';
@@ -126,7 +126,7 @@ export class Hud {
       // 연사·골드는 지금 배율로 (처음 '+0%'가 '0% 오름'으로 읽혀서, 사용자 2026-11-12)
       setText(b.sign, k === 'atk' ? '+' : '×');
       // 연사는 실제 초당 발사 배율 (12발 넘으면 로그로 줄어든 값)
-      setText(b.v, k === 'atk' ? formatNum(v) : multText(k === 'spd' ? spdTrainMult(s) : 1 + v / 100));
+      setText(b.v, k === 'atk' ? formatNum(atkShown(v)) : multText(k === 'spd' ? spdTrainMult(s) : 1 + v / 100));
     }
   }
 

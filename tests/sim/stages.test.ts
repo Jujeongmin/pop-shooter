@@ -11,7 +11,7 @@ test('stages', () => {
   assert.ok(isBoss(30) && !isBoss(31));
   assert.equal(stageTime(10), BALANCE.stage.timeBoss);
   assert.equal(stageTime(9), BALANCE.stage.timeNormal);
-  assert.equal(stageHp(1), BALANCE.stage.firstHp);
+  assert.equal(stageHp(1), BALANCE.stage.firstHp * BALANCE.atkScale);
 });
 
 test('hp grows inside a world and from world start to world start (a new world may start below the last boss)', () => {

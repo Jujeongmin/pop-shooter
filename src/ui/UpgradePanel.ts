@@ -3,6 +3,7 @@ import { audio } from '../audio/audio';
 import type { Game } from '../core/Game';
 import { ZoneEntry } from '../core/ZoneEntry';
 import { t, type StrKey } from '../i18n/i18n';
+import { atkShown } from '../sim/actions.ts';
 import { formatNum } from '../sim/format.ts';
 import type { GameState } from '../sim/state.ts';
 import { BALANCE } from '../sim/balance.ts';
@@ -254,7 +255,7 @@ export class UpgradePanel {
       const after: GameState = r.kind === 'atk' ? { ...s, mAtk: lv + show } : r.kind === 'spd' ? { ...s, mSpd: lv + show } : { ...s, mCoin: lv + show };
       const w = this.game.world;
       const unit = r.kind === 'atk' ? '' : '%';
-      const gv = (x: GameState): string => (r.kind === 'atk' ? formatNum(gainPerShot(x, r.kind, w)) : pct(gainPerShot(x, r.kind, w)));
+      const gv = (x: GameState): string => (r.kind === 'atk' ? formatNum(atkShown(gainPerShot(x, r.kind, w))) : pct(gainPerShot(x, r.kind, w)));
       setText(r.lv, t('up.lv', { n: lv }));
       r.val.replaceChildren(
         el('span', '', t(`mach.desc.${r.kind}` as StrKey, { s: t(`tr.${r.kind}`), g: `${gv(s)}${unit}` })),

@@ -23,7 +23,12 @@ export function ownedCharMult(s: GameState): number {
 
 /** 한 발 피해 = (1 + 공격 훈련 점수) × 총 × 캐릭터 보유 효과 × 패스 */
 export function damagePerShot(s: GameState): number {
-  return atkTrainMult(s) * gunMult(s.gun) * s.passMult * ownedCharMult(s);
+  return atkTrainMult(s) * gunMult(s.gun) * s.passMult * ownedCharMult(s) * BALANCE.atkScale;
+}
+
+/** 공격 훈련치·환생 요구치를 화면에 보일 때 (atkScale배, 저장값은 그대로) */
+export function atkShown(v: number): number {
+  return v * BALANCE.atkScale;
 }
 
 /** 초당 발사 = 1 × (1 + 연사 훈련%), 상한 없음 (초당 12번 넘으면 화면은 한 번에 여러 발) */

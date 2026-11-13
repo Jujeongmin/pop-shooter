@@ -262,6 +262,7 @@ const STRINGS = {
   'char.unlockWorld': { en: 'Clear {s}', ko: '{s} 클리어', ja: '{s}クリア', 'zh-TW': '通關{s}', 'zh-CN': '通关{s}' },
   'char.shop': { en: 'Shop', ko: '상점', ja: 'ショップ', 'zh-TW': '商店', 'zh-CN': '商店' },
   'g.range': { en: 'Shoot at the Training Range to grow your Attack', ko: '훈련장에서 쏘면 공격력이 올라요', ja: '訓練場で撃つと攻撃力が上がる', 'zh-TW': '在訓練場射擊提升攻擊力', 'zh-CN': '在训练场射击提升攻击力' },
+  'g.treadmill': { en: 'Run on the Treadmill to fire faster', ko: '러닝머신에서 달리면 초당 발사가 올라요', ja: 'ランニングマシンで走ると連射が上がる', 'zh-TW': '在跑步機上跑步提升射速', 'zh-CN': '在跑步机上跑步提升射速' },
   'g.upgrade': { en: 'You got gold! Buy a training machine at Upgrades', ko: '골드를 얻었어요! 업그레이드에서 훈련 기구를 사요', ja: 'ゴールドをゲット! アップグレードで訓練器具を買おう', 'zh-TW': '獲得金幣! 到升級購買訓練器材', 'zh-CN': '获得金币! 到升级购买训练器材' },
   'g.portal': { en: 'Strong enough for {s}! Enter the portal: battles are automatic, just watch', ko: '{s} 클리어 가능! 포털에 들어가면 자동으로 싸워요, 가만히 있으면 돼요', ja: '{s}をクリアできる! ポータルに入ると自動で戦うよ、見てるだけでOK', 'zh-TW': '可以通關{s}! 進入傳送門會自動戰鬥，看著就好', 'zh-CN': '可以通关{s}! 进入传送门会自动战斗，看着就好' },
   'g.altar': { en: 'Rebirth is ready! Go to the Rebirth Altar', ko: '환생할 수 있어요! 환생 제단으로 가요', ja: '転生できる! 転生の祭壇へ', 'zh-TW': '可以轉生了! 去轉生祭壇', 'zh-CN': '可以转生了! 去转生祭坛' },
