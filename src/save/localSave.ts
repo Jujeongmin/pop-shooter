@@ -20,11 +20,11 @@ export function loadLocal(account: string | null, now: number): GameState | null
   return raw ? normalizeState(raw, now) : null;
 }
 
-/** 시작할 때 먼저 받을 캐릭터 짐작: 마지막 계정(없으면 손님)의 기기 사본 캐릭터, 없으면 BUBU. 서버 저장이 다르면 그때 하나 더 받음 */
-export function guessChar(): CharId {
+/** 시작할 때 먼저 받을 캐릭터·총 짐작: 마지막 계정(없으면 손님)의 기기 사본, 없으면 BUBU·시작 권총. 서버 저장이 다르면 그때 더 받음 */
+export function guessStart(): { char: CharId; gun: number } {
   const acc = read(LAST_ACCOUNT);
   const s = loadLocal(acc, Date.now()) ?? loadLocal(null, Date.now());
-  return s?.char ?? 'blue';
+  return { char: s?.char ?? 'blue', gun: s?.gun ?? 0 };
 }
 
 /** 예전 호환: 손님 사본 또는 새 판 */

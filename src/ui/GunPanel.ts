@@ -55,8 +55,15 @@ export class GunPanel {
     game.onTick((dt) => this.zone.update(dt));
     game.onStateChange(() => { if (this.panel.isOpen) this.render(); });
     // 진열은 가판대 기준점 (들어가는 원은 가판대 앞이라 f와 다름 — 원을 옮길 때 진열이 따라 나가 공중에 떠 있던 것)
-    this.buildDisplay(GUN_SHOP_AT.x, GUN_SHOP_AT.z);
+    // 진열·썸네일은 총 4종을 다 받은 뒤 (시작할 때는 내 총만 받음)
+    void game.assets.allGuns().then(() => {
+      this.gunsReady = true;
+      this.buildDisplay(GUN_SHOP_AT.x, GUN_SHOP_AT.z);
+      if (this.panel.isOpen) this.render();
+    }).catch(() => undefined);
   }
+
+  private gunsReady = false;
 
   /** 가판대 위에 월드 1 총 4자루를 옆으로 눕혀 진열 */
   private buildDisplay(fx: number, fz: number): void {
@@ -92,9 +99,10 @@ export class GunPanel {
       body.append(el('div', 'shop-world', t('shop.world', { w })));
       for (const g of GUNS.filter((x) => x.world === w)) {
         const row = el('div', 'gun-row');
-        this.thumbs ??= bakeGunIcons(this.game.assets, GUNS);
+        if (this.gunsReady) this.thumbs ??= bakeGunIcons(this.game.assets, GUNS);
         const gi = el('img', 'gun-thumb');
-        gi.src = this.thumbs[g.index]!;
+        // 총을 아직 다 못 받았으면 그림 칸만 비워 둠 (받으면 다시 그림)
+        if (this.thumbs) gi.src = this.thumbs[g.index]!; else gi.style.visibility = 'hidden';
         gi.alt = '';
         gi.draggable = false;
         const mid = el('div', '');

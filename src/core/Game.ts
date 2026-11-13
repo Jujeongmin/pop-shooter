@@ -103,7 +103,7 @@ export class Game {
     this.cam = new FollowCamera(stage.camera);
     // 시작 광장 = 열린 가장 높은 월드 (위치는 저장 안 함)
     const w0 = highestWorld(state);
-    this.hub = new World1Hub(kit, assets.guns, w0);
+    this.hub = new World1Hub(kit, assets, w0);
     this.applySky(w0);
     stage.scene.add(this.hub.root);
     this.hub.setBest(state.bestStage);

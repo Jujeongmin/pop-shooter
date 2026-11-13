@@ -3,14 +3,15 @@ import './storageFallback';
 import './style.css';
 import './ui/ui.css';
 import './ui/skin.css';
-import { loadAssets } from './assets/loadAssets';
+import { GUN_MODELS, loadAssets } from './assets/loadAssets';
+import { GUNS, type GunModel } from './sim/guns.ts';
 import { CHAR_IDS, type CharId } from './sim/state.ts';
 import { Game } from './core/Game';
 import { Stage3D } from './core/Stage3D';
 import { MENTOR_CHAR, MentorNpcs } from './world/MentorNpcs';
 import { Stations } from './training/Stations';
 import { HitFx } from './fx/HitFx';
-import { clearLocalSaves, guessChar, pickSave } from './save/localSave';
+import { clearLocalSaves, guessStart, pickSave } from './save/localSave';
 import { CloudSave } from './platform/CloudSave';
 import { NetClient, withTimeout } from './net/NetClient';
 import { startLobby } from './net/lobby';
@@ -88,9 +89,12 @@ async function boot(): Promise<void> {
   void savePick.then(() => mark('save'), () => undefined);
   const stage = new Stage3D(document.getElementById('view') as HTMLCanvasElement);
   // 캐릭터는 내 캐릭터(기기 사본으로 짐작)만 먼저, 나머지는 시작 뒤 뒤에서 (2026-11-13 로딩 줄이기). 개발용 ?allchars=1 = 6종 다
-  const firstChars: CharId[] = import.meta.env.DEV && new URLSearchParams(location.search).has('allchars') ? [...CHAR_IDS] : [guessChar()];
+  const all = import.meta.env.DEV && new URLSearchParams(location.search).has('allchars');
+  const guess = guessStart();
+  const gunModelOf = (i: number): GunModel => (GUNS[i] ?? GUNS[0]!).model;
+  const first = all ? { chars: [...CHAR_IDS], guns: [...GUN_MODELS] } : { chars: [guess.char] as CharId[], guns: [gunModelOf(guess.gun)] };
   const [assets, kit] = await Promise.all([
-    loadAssets(stage.renderer, firstChars, (p) => loading.set(p * 0.9), savePick.then((sv) => sv.state.char, () => null)),
+    loadAssets(stage.renderer, first, (p) => loading.set(p * 0.9), savePick.then((sv) => ({ char: sv.state.char, gun: gunModelOf(sv.state.gun) }), () => null)),
     loadBricks(),
   ]);
   mark('assets');
@@ -124,6 +128,7 @@ async function boot(): Promise<void> {
   });
   // 서버 저장 캐릭터가 짐작과 다르면 그것도 받음 (못 받으면 받은 캐릭터로 시작, 받은 뒤 바꿔 입음)
   if (!assets.characters[save.state.char]) await assets.char(save.state.char).catch(() => undefined);
+  if (!assets.guns[gunModelOf(save.state.gun)]) await assets.gun(gunModelOf(save.state.gun)).catch(() => undefined);
   // 서버 저장을 실제로 읽었을 때만 서버에 씀 (읽기 실패한 채 쓰면 새 판·옛 사본으로 서버 저장을 덮음)
   // 서버에 연결됐는데 저장을 못 읽은 판은 계정 사본에도 쓰지 않음(손님 키로): 다음 접속 때 '더 새 사본'으로 서버 진행을 덮지 않게
   const saveAccount = save.cloudOk || !cloud.online ? save.account : null;

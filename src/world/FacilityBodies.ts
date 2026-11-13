@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import type { GunSource } from '../assets/loadAssets';
 import type { GunModel } from '../sim/guns.ts';
+import { gunSlot } from './gunSlot';
 import type { Facility } from './facilities';
 import type { ToyBuilder } from './HubProps';
 import type { DecorKind } from './worldThemes';
@@ -26,20 +28,16 @@ function upgradeFace(b: ToyBuilder, g: THREE.Group, zf: number, y: number, gearC
 }
 
 /** 상점 공통: 벽 총 4개 + 계산대 위 받침에서 도는 총 (g 기준) */
-function gunDisplay(b: ToyBuilder, g: THREE.Group, guns: Record<GunModel, THREE.Object3D> | null, wallZ: number, counterY: number): void {
+function gunDisplay(b: ToyBuilder, g: THREE.Group, guns: GunSource | null, wallZ: number, counterY: number): void {
   if (!guns) return;
   const models: GunModel[] = ['pistol', 'rifle', 'shotgun', 'sniper'];
   models.forEach((m, i) => {
-    const gun = guns[m].clone(true);
-    const box = new THREE.Box3().setFromObject(gun);
-    gun.scale.multiplyScalar(0.85 / Math.max(0.01, box.max.x - box.min.x, box.max.z - box.min.z));
+    const gun = gunSlot(guns, m, 0.85);
     gun.position.set(-1.05 + (i % 2) * 2.1, 1.85 - Math.floor(i / 2) * 0.72, wallZ);
     gun.rotation.set(0, Math.PI / 2, 0);
     g.add(gun);
   });
-  const spin = guns.rifle.clone(true);
-  const box = new THREE.Box3().setFromObject(spin);
-  spin.scale.multiplyScalar(1.05 / Math.max(0.01, box.max.x - box.min.x, box.max.z - box.min.z));
+  const spin = gunSlot(guns, 'rifle', 1.05);
   spin.position.set(0, counterY + 0.45, 0.25);
   g.add(spin);
   b.toy(new THREE.CylinderGeometry(0.26, 0.3, 0.16, 18), '#ffd34d', 0, counterY + 0.12, 0.25, g);
@@ -234,7 +232,7 @@ const SHOP: Record<Kind, (b: ToyBuilder, g: THREE.Group) => { wallZ: number; cou
 };
 
 /** 월드 테마 상점·업그레이드 본체를 b에 만듦 (원래 본체와 같은 자리) */
-export function buildThemedBodies(b: ToyBuilder, kind: Kind, upgrade: Facility, guns: Facility, models: Record<GunModel, THREE.Object3D> | null): void {
+export function buildThemedBodies(b: ToyBuilder, kind: Kind, upgrade: Facility, guns: Facility, models: GunSource | null): void {
   const ug = new THREE.Group();
   ug.position.set(upgrade.x, 0, upgrade.z - 1.6);
   b.root.add(ug);

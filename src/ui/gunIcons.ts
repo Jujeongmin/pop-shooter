@@ -7,7 +7,8 @@ const H = 160;
 
 /** 총 GLB 복제 + 월드 색 입힘 (Avatar.makeGun과 같은 방식). 복제 material은 돌려주는 쪽이 dispose */
 export function tintedGun(assets: Assets, gun: GunDef): { obj: THREE.Object3D; mats: THREE.Material[] } {
-  const obj = assets.guns[gun.model].clone(true);
+  // 부르는 쪽이 그 총을 받은 뒤에 부름 (GunPanel: assets.allGuns() 뒤)
+  const obj = assets.guns[gun.model]!.clone(true);
   const tint = new THREE.Color(gun.tint);
   const mats: THREE.Material[] = [];
   obj.traverse((o) => {

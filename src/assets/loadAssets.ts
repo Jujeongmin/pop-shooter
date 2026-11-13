@@ -11,17 +11,28 @@ export interface LoadedModel {
   clips: THREE.AnimationClip[];
 }
 
-export interface Assets {
+/** 총 모델을 나중에 받아도 되는 쪽(진열대)이 쓰는 창구 */
+export interface GunSource {
+  /** 그 총을 이미 받았으면 바로, 아니면 받은 뒤 cb (원본을 넘김: 복제해서 쓸 것) */
+  whenGun(m: GunModel, cb: (model: THREE.Object3D) => void): void;
+}
+
+export interface Assets extends GunSource {
   /** 받은 캐릭터만 (나머지는 char()로 받음) */
   characters: Partial<Record<CharId, LoadedModel>>;
-  guns: Record<GunModel, THREE.Object3D>;
+  /** 받은 총만 (나머지는 gun()으로 받음) */
+  guns: Partial<Record<GunModel, THREE.Object3D>>;
   /** 캐릭터 받기 (이미 받았거나 받는 중이면 같은 약속). 받으면 characters에도 들어감 */
   char(id: CharId): Promise<LoadedModel>;
-  /** 나머지 캐릭터를 하나씩 뒤에서 받기 (게임 시작 뒤) */
+  /** 총 받기 (같은 방식). 받으면 guns에도 들어감 */
+  gun(m: GunModel): Promise<THREE.Object3D>;
+  /** 총 4종을 다 받으면 */
+  allGuns(): Promise<void>;
+  /** 나머지 총·캐릭터를 하나씩 뒤에서 받기 (게임 시작 뒤) */
   loadRest(): void;
 }
 
-const GUN_MODELS: readonly GunModel[] = ['pistol', 'rifle', 'shotgun', 'sniper'];
+export const GUN_MODELS: readonly GunModel[] = ['pistol', 'rifle', 'shotgun', 'sniper'];
 
 async function loadGlb(loader: GLTFLoader, url: string, label: string, onBytes: (loaded: number) => void): Promise<GLTF> {
   try {
@@ -32,15 +43,15 @@ async function loadGlb(loader: GLTFLoader, url: string, label: string, onBytes: 
 }
 
 /**
- * 시작할 때는 총 4종 + first 캐릭터만 받음 (2026-11-13 로딩 줄이기: 예전엔 캐릭터 6종 6.5MB를 다 받아야 시작).
- * 나머지 캐릭터는 char(id)로 필요할 때 / loadRest()로 시작 뒤 뒤에서. onProgress = 0..1 (파일 수 기준 + 받은 바이트 근사)
+ * 시작할 때는 first의 캐릭터·총만 받음 (2026-11-13 첫 방문 로딩: Verse8 배포 서버가 느려(초당 약 100KB) 받는 양이 곧 로딩 시간.
+ * 예전엔 캐릭터 6종 + 총 4종 약 8MB를 다 받아야 시작). 나머지는 char(id)·gun(m)으로 필요할 때 / loadRest()로 시작 뒤 뒤에서.
+ * mine = 서버 저장을 읽으면 알게 되는 내 캐릭터·총: 알게 되는 즉시 같이 받기 시작. onProgress = 0..1
  */
 export async function loadAssets(
   renderer: THREE.WebGLRenderer,
-  first: readonly CharId[],
+  first: { chars: readonly CharId[]; guns: readonly GunModel[] },
   onProgress?: (p: number) => void,
-  /** 서버 저장을 읽으면 알게 되는 내 캐릭터: 알게 되는 즉시 같이 받기 시작 (짐작과 다를 때 총·짐작 캐릭터를 다 받은 뒤에야 받던 것) */
-  mine?: Promise<CharId | null>,
+  mine?: Promise<{ char: CharId; gun: GunModel } | null>,
 ): Promise<Assets> {
   const loader = new GLTFLoader();
   const aniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
@@ -54,9 +65,9 @@ export async function loadAssets(
     });
   };
   const characters: Partial<Record<CharId, LoadedModel>> = {};
-  const pending = new Map<CharId, Promise<LoadedModel>>();
+  const charPending = new Map<CharId, Promise<LoadedModel>>();
   const charJob = (id: CharId, onBytes: (b: number) => void = () => undefined): Promise<LoadedModel> => {
-    let p = pending.get(id);
+    let p = charPending.get(id);
     if (p) return p;
     const label = `캐릭터 ${CHARACTERS[id].name}`;
     p = loadGlb(loader, CHARACTERS[id].file, label, onBytes).then((g) => {
@@ -67,35 +78,62 @@ export async function loadAssets(
       return m;
     });
     // 실패하면 다음에 다시 받게
-    p.catch(() => pending.delete(id));
-    pending.set(id, p);
+    p.catch(() => charPending.delete(id));
+    charPending.set(id, p);
+    return p;
+  };
+  const guns: Partial<Record<GunModel, THREE.Object3D>> = {};
+  const gunPending = new Map<GunModel, Promise<THREE.Object3D>>();
+  const gunJob = (m: GunModel, onBytes: (b: number) => void = () => undefined): Promise<THREE.Object3D> => {
+    let p = gunPending.get(m);
+    if (p) return p;
+    p = loadGlb(loader, WEAPONS[m]!.model.glb!, WEAPONS[m]!.name, onBytes).then((g) => {
+      prep(g);
+      guns[m] = g.scene;
+      return g.scene;
+    });
+    p.catch(() => gunPending.delete(m));
+    gunPending.set(m, p);
     return p;
   };
 
-  void mine?.then((id) => { if (id) charJob(id).catch(() => undefined); }).catch(() => undefined);
-  const firstIds = [...new Set(first)];
-  const n = firstIds.length + GUN_MODELS.length;
+  void mine?.then((me) => {
+    if (!me) return;
+    charJob(me.char).catch(() => undefined);
+    gunJob(me.gun).catch(() => undefined);
+  }).catch(() => undefined);
+  const firstChars = [...new Set(first.chars)];
+  const firstGuns = [...new Set(first.guns)];
+  const n = firstChars.length + firstGuns.length;
   const progress = new Array<number>(n).fill(0);
   const report = (): void => onProgress?.(progress.reduce((a, b) => a + b, 0) / n);
-  const track = <T>(i: number, p: (onBytes: (b: number) => void) => Promise<T>): Promise<T> =>
-    p((b) => { progress[i] = Math.min(0.95, b / 1_200_000); report(); }).then((v) => { progress[i] = 1; report(); return v; });
-  const [, gunGltfs] = await Promise.all([
-    Promise.all(firstIds.map((id, i) => track(i, (on) => charJob(id, on)))),
-    Promise.all(GUN_MODELS.map((m, i) => track(firstIds.length + i, (on) => loadGlb(loader, WEAPONS[m]!.model.glb!, WEAPONS[m]!.name, on)))),
+  const track = <T>(i: number, size: number, p: (onBytes: (b: number) => void) => Promise<T>): Promise<T> =>
+    p((b) => { progress[i] = Math.min(0.95, b / size); report(); }).then((v) => { progress[i] = 1; report(); return v; });
+  await Promise.all([
+    ...firstChars.map((id, i) => track(i, 600_000, (on) => charJob(id, on))),
+    ...firstGuns.map((m, i) => track(firstChars.length + i, 180_000, (on) => gunJob(m, on))),
   ]);
-  const guns = {} as Record<GunModel, THREE.Object3D>;
-  GUN_MODELS.forEach((m, i) => { prep(gunGltfs[i]!); guns[m] = gunGltfs[i]!.scene; });
 
   let resting = false;
   return {
     characters,
     guns,
     char: (id) => charJob(id),
+    gun: (m) => gunJob(m),
+    whenGun(m, cb): void {
+      const have = guns[m];
+      if (have) cb(have);
+      else void gunJob(m).then(cb, () => undefined);
+    },
+    allGuns: () => Promise.all(GUN_MODELS.map((m) => gunJob(m))).then(() => undefined),
     loadRest(): void {
       if (resting) return;
       resting = true;
-      // 하나씩 (게임 중 대역폭·디코드를 한꺼번에 쓰지 않게)
+      // 하나씩 (게임 중 대역폭·디코드를 한꺼번에 쓰지 않게). 총 먼저: 작고, 총 상점 진열대에 바로 보임
       void (async () => {
+        for (const m of GUN_MODELS) {
+          try { await gunJob(m); } catch { /* 필요할 때 다시 받음 */ }
+        }
         for (const id of CHAR_IDS) {
           try { await charJob(id); } catch { /* 필요할 때 다시 받음 */ }
         }

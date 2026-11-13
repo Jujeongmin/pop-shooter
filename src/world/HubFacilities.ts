@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { t } from '../i18n/i18n';
+import type { GunSource } from '../assets/loadAssets';
 import type { GunModel } from '../sim/guns.ts';
+import { gunSlot } from './gunSlot';
 import type { Facility } from './facilities';
 import { FOUNTAIN, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, TREADMILL, TREADMILL_LANES } from './facilities';
 import type { ToyBuilder } from './HubProps';
@@ -47,7 +49,7 @@ export function buildUpgrade(b: ToyBuilder, f: Facility, colliders: Collider[]):
 }
 
 /** 반환 = 본체 묶음 (월드별 본체로 바꿀 때 숨김, 간판은 따로) */
-export function buildGunShop(b: ToyBuilder, f: Facility, colliders: Collider[], guns: Record<GunModel, THREE.Object3D> | null): THREE.Group {
+export function buildGunShop(b: ToyBuilder, f: Facility, colliders: Collider[], guns: GunSource | null): THREE.Group {
   const cx = f.x + 1.8;
   const g = new THREE.Group();
   g.position.set(cx, 0, f.z);
@@ -67,18 +69,13 @@ export function buildGunShop(b: ToyBuilder, f: Facility, colliders: Collider[], 
   if (guns) {
     const models: GunModel[] = ['pistol', 'rifle', 'shotgun', 'sniper'];
     models.forEach((m, i) => {
-      const gun = guns[m].clone(true);
-      const box = new THREE.Box3().setFromObject(gun);
-      const len = Math.max(0.01, box.max.x - box.min.x, box.max.z - box.min.z);
-      gun.scale.multiplyScalar(0.9 / len);
+      const gun = gunSlot(guns, m, 0.9);
       gun.position.set(-1.1 + (i % 2) * 2.2, 1.85 - Math.floor(i / 2) * 0.75, -0.5);
       gun.rotation.set(0, Math.PI / 2, 0);
       g.add(gun);
     });
     // 계산대 위에서 도는 총 (지금 가진 총이 아니라 라이플 진열)
-    const spin = guns.rifle.clone(true);
-    const box = new THREE.Box3().setFromObject(spin);
-    spin.scale.multiplyScalar(1.1 / Math.max(0.01, box.max.x - box.min.x, box.max.z - box.min.z));
+    const spin = gunSlot(guns, 'rifle', 1.1);
     spin.position.set(0, 1.5, 0.25);
     g.add(spin);
     b.toy(new THREE.CylinderGeometry(0.28, 0.32, 0.18, 18), '#ffd34d', 0, 1.2, 0.25, g);

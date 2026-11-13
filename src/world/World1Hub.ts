@@ -8,7 +8,7 @@ import { disposeLabel, makeLabel } from './labels';
 import type { Collider } from './movement';
 import { BALANCE } from '../sim/balance.ts';
 import { stageLabel } from '../sim/stages.ts';
-import type { GunModel } from '../sim/guns.ts';
+import type { GunSource } from '../assets/loadAssets';
 import { buildFountain, buildGunShop, buildRangeBooths, buildTravel, buildTreadmill, buildUpgrade, buildWardrobe, type FountainProps, type TreadmillProps } from './HubFacilities';
 import { ToyBuilder } from './HubProps';
 import { GUN_SHOP_AT, HUB_BOUNDS, PORTAL_GATE, RANGE_LANES, RANGE_SPOT, RANGE_TARGET, WORLD1_FACILITIES, type Facility } from './facilities';
@@ -38,7 +38,7 @@ export class World1Hub {
   private readonly mats = new Map<string, THREE.MeshStandardMaterial>();
   /** 시설 장난감 도형 (간판·외곽선·움직임) */
   private readonly toys = new ToyBuilder();
-  private readonly guns: Record<GunModel, THREE.Object3D> | null;
+  private readonly guns: GunSource | null;
   private clock = 0;
   /** 러닝머신·동전 분수 (Stations가 움직임) */
   treadmill!: TreadmillProps;
@@ -60,7 +60,7 @@ export class World1Hub {
   private themed: ToyBuilder | null = null;
   private swirlTex: THREE.CanvasTexture | null = null;
 
-  constructor(kit: Record<BrickName, KitModel>, guns: Record<GunModel, THREE.Object3D> | null = null, world = 1) {
+  constructor(kit: Record<BrickName, KitModel>, guns: GunSource | null = null, world = 1) {
     this.guns = guns;
     this.kit = kit;
     this.world = world;

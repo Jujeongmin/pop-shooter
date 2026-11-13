@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { WEAPONS } from '../config/weapons';
 import type { Assets } from '../assets/loadAssets';
-import type { GunDef } from '../sim/guns.ts';
+import type { GunDef, GunModel } from '../sim/guns.ts';
 import type { CharId } from '../sim/state.ts';
 import { PlayerAvatar, type AvatarFrame } from './PlayerAvatar';
 import type { TrainKind } from '../sim/training.ts';
@@ -70,8 +70,10 @@ export class Avatar {
     const char = loadedChar(assets, want);
     this.char = char;
     const src = assets.characters[char]!;
-    this.gunObj = this.assets.guns[gun.model].clone(true);
-    this.avatar = new PlayerAvatar(SkeletonUtils.clone(src.scene), src.clips, this.gunObj, WEAPONS[gun.model]!.mount, char);
+    this.wantGun = gun;
+    const gm = this.heldModel(gun);
+    this.gunObj = this.assets.guns[gm]!.clone(true);
+    this.avatar = new PlayerAvatar(SkeletonUtils.clone(src.scene), src.clips, this.gunObj, WEAPONS[gm]!.mount, char);
     this.tintGun(gun);
     this.root = this.avatar.root;
     this.frame = {
@@ -91,10 +93,26 @@ export class Avatar {
     }
   }
 
+  /** 들려는 총 (아직 안 받은 모델이면 받은 뒤 다시 듦) */
+  private wantGun: GunDef;
+  private disposed = false;
+
+  /**
+   * 지금 들 수 있는 모델: 그 총을 받았으면 그것, 아니면 받은 총 중 하나 (시작할 때 내 총만 받음, 2026-11-13).
+   * 대신 들었으면 받은 뒤 setGun을 다시 부름 (그사이 총을 또 바꿨거나 해제됐으면 안 함)
+   */
+  private heldModel(gun: GunDef): GunModel {
+    if (this.assets.guns[gun.model]) return gun.model;
+    void this.assets.gun(gun.model).then(() => { if (!this.disposed && this.wantGun === gun) this.setGun(gun); }, () => undefined);
+    return (Object.keys(this.assets.guns) as GunModel[])[0]!;
+  }
+
   setGun(gun: GunDef): void {
+    this.wantGun = gun;
+    const gm = this.heldModel(gun);
     const prev = this.gunObj;
-    this.gunObj = this.assets.guns[gun.model].clone(true);
-    this.avatar.setWeapon(this.gunObj, WEAPONS[gun.model]!.mount);
+    this.gunObj = this.assets.guns[gm]!.clone(true);
+    this.avatar.setWeapon(this.gunObj, WEAPONS[gm]!.mount);
     this.tintGun(gun);
     // 예전 총은 다시 들지 않음 (다음 교체도 새 복제본) → 재질 해제
     this.avatar.releaseWeapon(prev);
@@ -263,6 +281,7 @@ export class Avatar {
   }
 
   dispose(): void {
+    this.disposed = true;
     // 총 재질도 PlayerAvatar.materials에 있어 같이 해제됨
     this.avatar.dispose();
   }

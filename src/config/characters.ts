@@ -126,7 +126,9 @@ const def = <Id extends string>(
  * BLACK·WHITE는 기획상 상위 해금 캐릭터 → 해금 시스템은 아직 없음 (조건을 임의로 추가하지 않음)
  */
 export const CHARACTERS: Record<CharacterId, CharacterDef> = {
-  blue: def('blue', 'BUBU', 'character_blue_beanie.glb', [0.22343, 0.14033],
+  // 게임용 6종은 _t1k = 색 텍스처만 2048² JPEG → 1024² WebP (tools/store/webp_glb.mjs --jpeg --max 1024, 형상·뼈·클립 그대로,
+  // 2026-11-13 첫 방문 로딩: 1.1MB → 약 0.55MB). 원본 이름 파일은 그대로 둠
+  blue: def('blue', 'BUBU', 'character_blue_beanie_t1k.glb', [0.22343, 0.14033],
     { maxHp: 100, speed: 1.1, hitSize: 0.85 },
     { height: 0.834, shape: '초소형 스피드형: 가장 작은 키·좁은 어깨·작은 몸통·가는 팔다리' },
     // 장착 보정은 런타임 실측으로 정함 (2026-10-22, docs/ASSET_AUDIT.md "무기 옆구리 자세"): 공통 옆구리 자세 위에서
@@ -139,7 +141,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       sniper: { weaponPositionOffset: [0.03, 0, -0.04], supportGripOffset: [0, 0, -0.06], recoilPullScale: 0.6 },
       // 뿅망치: 기준 자세 그대로 (팔꿈치 약 118°, 손목 약 11°)
     }),
-  white: def('white', 'SHONI', 'character_white.glb', [0.69066, 0.7466],
+  white: def('white', 'SHONI', 'character_white_t1k.glb', [0.69066, 0.7466],
     { maxHp: 120, speed: 1.15, hitSize: 0.9 },
     { height: 0.885, shape: '최상위 기동형: 날씬한 몸통·긴 팔다리' },
     {
@@ -149,7 +151,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       pistol: { reloadPositionOffset: [0, 0.04, 0] },
       // 뿅망치: 보정 없음. 긴 팔·좁은 어깨라 손이 허리 옆에서 팔이 거의 펴진 채(약 156°) 들고 있음 — 위치를 올려도 팔 각도가 거의 안 바뀜 (2026-10-21 화면 확인, 자연스러운 편)
     }),
-  yellow: def('yellow', 'MOCHI', 'character-yellow-adjusted.glb', [0.63869, 0.49443],
+  yellow: def('yellow', 'MOCHI', 'character-yellow-adjusted_t1k.glb', [0.63869, 0.49443],
     { maxHp: 110, speed: 1.0, hitSize: 1.0 },
     { height: 1.0, shape: '밸런스형: 표준 키·체형 (기준)' },
     {
@@ -159,7 +161,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       // 뿅망치: 손 3cm 위 (팔꿈치 약 119°)
       melee: { weaponPositionOffset: [0, 0.03, 0] },
     }),
-  red: def('red', 'ROKO', 'character_6.glb', [0.1994, 0.16424],
+  red: def('red', 'ROKO', 'character_6_t1k.glb', [0.1994, 0.16424],
     { maxHp: 120, speed: 1.05, hitSize: 1.0 },
     { height: 0.98, shape: '전투형: 넓은 어깨·탄탄한 상체·두꺼운 팔·좁은 허리' },
     {
@@ -172,7 +174,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       // 뿅망치: 짧은 팔(위팔+아래팔 약 0.19m)·넓은 어깨 → 손 6cm 위·4cm 뒤 (팔꿈치 155° → 114°)
       melee: { weaponPositionOffset: [0, 0.06, -0.04] },
     }),
-  pink: def('pink', 'POPI', 'character-pink-adjusted.glb', [0.29128, 0.23691],
+  pink: def('pink', 'POPI', 'character-pink-adjusted_t1k.glb', [0.29128, 0.23691],
     { maxHp: 115, speed: 0.95, hitSize: 1.05 },
     { height: 1.015, shape: '생존형: 둥근 몸통·통통한 배, 짧고 두꺼운 팔다리' },
     {
@@ -182,7 +184,7 @@ export const CHARACTERS: Record<CharacterId, CharacterDef> = {
       // 뿅망치: 짧고 두꺼운 팔 → 손 9cm 위·2cm 안쪽·4cm 뒤 (팔꿈치 157° → 130°)
       melee: { weaponPositionOffset: [-0.02, 0.09, -0.04] },
     }),
-  black: def('black', 'BAM', 'character_black.glb', [0.03574, 0.03084],
+  black: def('black', 'BAM', 'character_black_t1k.glb', [0.03574, 0.03084],
     { maxHp: 130, speed: 1.0, hitSize: 1.1 },
     { height: 1.1, shape: '최상위 탱커형: 가장 큰 체형·넓은 몸통·큰 배·두꺼운 팔다리' },
     // 넓은 몸통·짧은 팔: 왼손이 앞으로 덜 나감 → 총을 몸 쪽으로 6cm. 샷건·스나이퍼는 이래도 개머리판 일부가 몸통 안
