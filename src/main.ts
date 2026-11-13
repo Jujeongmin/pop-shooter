@@ -11,7 +11,7 @@ import { Stations } from './training/Stations';
 import { HitFx } from './fx/HitFx';
 import { pickSave } from './save/localSave';
 import { CloudSave } from './platform/CloudSave';
-import { NetClient } from './net/NetClient';
+import { NetClient, withTimeout } from './net/NetClient';
 import { startLobby } from './net/lobby';
 import { LobbyApi } from './net/LobbyApi';
 import { NicknamePanel } from './ui/NicknamePanel';
@@ -41,6 +41,8 @@ import { CharacterPanel } from './ui/CharacterPanel';
 import { showOfflineReward } from './ui/OfflinePanel';
 import { Premium } from './platform/Premium';
 import { ShopPanel } from './ui/ShopPanel';
+import { installRetentionConsole } from './net/retentionConsole';
+import type { RetentionResult } from './net/shared/retention';
 
 async function boot(): Promise<void> {
   const ui = document.getElementById('ui')!;
@@ -58,6 +60,13 @@ async function boot(): Promise<void> {
   // 3D 글자 라벨이 언어 글꼴로 구워지도록 글꼴 먼저
   await fontReady;
   await cloudReady;
+  // retention access log: once per account per UTC day, not awaited
+  if (cloud.online) void net.call('actPing').catch(() => undefined);
+  // console retention(): server checks admin account, returns counts only
+  installRetentionConsole(async (view) => {
+    if (!(await withTimeout(net.connect(), 10000))) throw new Error('connect');
+    return withTimeout(net.call<RetentionResult>('retentionGet', [view], 20000), 25000);
+  });
   const save = await pickSave(cloud);
   // 서버 저장을 실제로 읽었을 때만 서버에 씀 (읽기 실패한 채 쓰면 새 판·옛 사본으로 서버 저장을 덮음)
   // 서버에 연결됐는데 저장을 못 읽은 판은 계정 사본에도 쓰지 않음(손님 키로): 다음 접속 때 '더 새 사본'으로 서버 진행을 덮지 않게
