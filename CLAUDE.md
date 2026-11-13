@@ -6,6 +6,7 @@
 
 - 이 폴더가 Verse8 원본. 원격 `gitlab` = `gitlab.verse8.io/anjshdkdl99/game-shooter`. **`develop`에 푸시하면 자동 배포.** 작업이 끝날 때마다 푸시 (사용자 2026-11-11).
 - 토큰은 `.git/config` 원격 주소에만. 문서·커밋·채팅에 쓰지 않음.
+- 빌드 스크립트 `build`는 `vite build`만 (2026-11-13: Verse8 Publish 환경의 @types/three가 달라 tsc가 'Namespace three.module has no exported member Mesh'로 실패, 로컬 새 설치는 통과). 타입 검사는 `npm run typecheck`로 따로 꼭 돌릴 것 (`npm run check` = 둘 다).
 - 푸시 전: `npm test`, `npm run typecheck`, `npm run build` 후 `dist/index.html`에 `GAME_SIZE_RESPONSE` 있는지, 서버 바꿨으면 `cd server && npx -y @agent8/gameserver-node test`.
 - 지우면 안 되는 것: `.agent8.lock`, `.env`(플랫폼 관리), `committedAt`, `index.html`의 `GAME_SIZE_RESPONSE` 스크립트, `vite.config.ts`의 `base: './'`·`css.postcss: {}`, `src/storageFallback.ts`와 `src/main.ts` 맨 첫 줄 `import './storageFallback'`(localStorage 막힌 iframe에서 SDK가 죽어 검은 화면 나는 것 방지).
 - Verse8 템플릿의 React/Tailwind/PostCSS 파일은 쓰지 않음 (다시 들어오면 지울 것).
