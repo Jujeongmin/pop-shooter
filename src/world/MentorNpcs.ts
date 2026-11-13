@@ -14,6 +14,8 @@ export const MENTOR_CHAR: Record<string, CharId> = { coach: 'yellow', sniper: 'p
 /** 멘토 자리: 업그레이드 기계 동쪽, 울타리 앞에 한 줄 (서쪽 광장을 봄) */
 const SPOTS: readonly { x: number; z: number }[] = [{ x: 19, z: -8 }, { x: 19, z: -4.5 }, { x: 19, z: -1 }, { x: 19, z: 2.5 }];
 const FACE_YAW = -Math.PI / 2;
+/** 이 거리(m)보다 멀면 LOD (Avatar.setDetail) */
+const MENTOR_LOD_DIST = 14;
 const TALK_DIST = 3.2;
 const ZERO = new THREE.Vector3();
 
@@ -117,6 +119,8 @@ export class MentorNpcs {
       let d = want - n.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       n.yaw += d * Math.min(1, dt * 5);
+      // 멀면 가벼운 몸·장비 없음·그림자 없음 (LobbyPeers와 같은 LOD 거리)
+      n.avatar.setDetail(dx * dx + dz * dz < MENTOR_LOD_DIST * MENTOR_LOD_DIST);
       n.avatar.update(dt, { pos: n.pos, yaw: n.yaw, velocity: ZERO, aimAt: null, kick: 0 });
       this.setBubble(n, near);
     }

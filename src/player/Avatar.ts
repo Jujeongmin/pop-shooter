@@ -204,7 +204,7 @@ export class Avatar {
     let mesh: THREE.SkinnedMesh | null = null;
     this.root.traverse((o) => {
       const m = o as THREE.SkinnedMesh;
-      if (m.isSkinnedMesh && (!mesh || m.geometry.attributes.position!.count > mesh.geometry.attributes.position!.count)) mesh = m;
+      if (m.isSkinnedMesh && m.userData.lod !== true && (!mesh || m.geometry.attributes.position!.count > mesh.geometry.attributes.position!.count)) mesh = m;
     });
     const m = mesh as THREE.SkinnedMesh | null;
     if (!m) return null;
@@ -287,11 +287,31 @@ export class Avatar {
    * 바뀔 때만 순회. 장비를 새로 붙일 때(setGear)도 지금 단계를 따름
    */
   private detail = true;
+  /** 멀리 있을 때 쓰는 가벼운 몸 (원본 몸과 같은 뼈대·재질, 형상만 assets.lods 공유) */
+  private lodBody: THREE.SkinnedMesh | null = null;
   setDetail(high: boolean): void {
     if (high === this.detail) return;
     this.detail = high;
     for (const k of ['atk', 'spd', 'coin'] as const) for (const o of this.gear[k].objs) o.visible = high;
     this.root.traverse((o) => { if ((o as THREE.Mesh).isMesh && o.userData.gear !== true) o.castShadow = high; });
+    // 캐릭터 LOD (2026-11-13): 약 7,600 → 2,200 삼각형. LOD 형상을 아직 못 받았으면 원래 몸 그대로
+    const body = this.bodyPoints()?.mesh;
+    const geo = this.assets.lods[this.char];
+    if (!body || !geo) return;
+    if (!high && !this.lodBody) {
+      const m = new THREE.SkinnedMesh(geo, body.material);
+      m.bind(body.skeleton, body.bindMatrix);
+      m.position.copy(body.position);
+      m.quaternion.copy(body.quaternion);
+      m.scale.copy(body.scale);
+      m.frustumCulled = body.frustumCulled;
+      m.castShadow = false;
+      m.userData.lod = true;
+      body.parent!.add(m);
+      this.lodBody = m;
+    }
+    body.visible = high;
+    if (this.lodBody) this.lodBody.visible = !high;
   }
 
   dispose(): void {

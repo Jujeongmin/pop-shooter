@@ -30,6 +30,22 @@ export interface Assets extends GunSource {
   allGuns(): Promise<void>;
   /** 나머지 총·캐릭터를 하나씩 뒤에서 받기 (게임 시작 뒤) */
   loadRest(): void;
+  /** 받은 캐릭터 LOD 형상 (멀리 있을 때 쓰는 가벼운 몸, 뼈 번호는 원본 뼈대 순서로 맞춤). 아직이면 undefined */
+  lods: Partial<Record<CharId, THREE.BufferGeometry>>;
+}
+
+/** 캐릭터 LOD 파일: 게임용 캐릭터 파일 이름의 _t1kq를 _lod로 (tools/blender/char_lod.py → tools/store/quant_glb.mjs) */
+function lodUrl(id: CharId): string {
+  return CHARACTERS[id].file.replace(/_t1kq\.glb$/, '_lod.glb');
+}
+
+function bodyMesh(root: THREE.Object3D): THREE.SkinnedMesh | null {
+  let best: THREE.SkinnedMesh | null = null;
+  root.traverse((o) => {
+    const m = o as THREE.SkinnedMesh;
+    if (m.isSkinnedMesh && (!best || m.geometry.attributes.position!.count > best.geometry.attributes.position!.count)) best = m;
+  });
+  return best;
 }
 
 export const GUN_MODELS: readonly GunModel[] = ['pistol', 'rifle', 'shotgun', 'sniper'];
@@ -114,8 +130,27 @@ export async function loadAssets(
     ...firstGuns.map((m, i) => track(firstChars.length + i, 180_000, (on) => gunJob(m, on))),
   ]);
 
+  // 캐릭터 LOD: 원본을 받은 뒤 받아서, 뼈 번호를 원본 뼈대 순서(뼈 이름으로)로 바꿔 둠. 형상은 모든 아바타가 같이 씀 (dispose 안 함 — shared)
+  const lods: Partial<Record<CharId, THREE.BufferGeometry>> = {};
+  const lodJob = async (id: CharId): Promise<void> => {
+    if (lods[id]) return;
+    const main = bodyMesh((await charJob(id)).scene);
+    if (!main) return;
+    const g = await loader.loadAsync(lodUrl(id));
+    const lod = bodyMesh(g.scene);
+    if (!lod) return;
+    const toMain = lod.skeleton.bones.map((b) => main.skeleton.bones.findIndex((m) => m.name === b.name));
+    if (toMain.some((i) => i < 0)) return;
+    const geo = lod.geometry;
+    const si = geo.attributes.skinIndex!;
+    for (let i = 0; i < si.count; i++) for (let k = 0; k < 4; k++) si.setComponent(i, k, toMain[si.getComponent(i, k)]!);
+    si.needsUpdate = true;
+    lods[id] = geo;
+  };
+
   let resting = false;
   return {
+    lods,
     characters,
     guns,
     char: (id) => charJob(id),
@@ -136,6 +171,10 @@ export async function loadAssets(
         }
         for (const id of CHAR_IDS) {
           try { await charJob(id); } catch { /* 필요할 때 다시 받음 */ }
+        }
+        // 멀리 있는 사람용 가벼운 몸 (약 85KB씩)
+        for (const id of CHAR_IDS) {
+          try { await lodJob(id); } catch { /* 없으면 원래 몸으로 */ }
         }
       })();
     },
