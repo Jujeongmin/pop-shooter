@@ -3,6 +3,7 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { Assets } from '../assets/loadAssets';
 import { CHARACTER } from '../config/gameConfig';
 import { CHAR_IDS, type CharId } from '../sim/state.ts';
+import { packUrl } from './uiPack';
 
 const S = 192;
 
@@ -10,10 +11,9 @@ const S = 192;
  * 캐릭터 초상 그림 주소 (캐릭터 창·멘토 탭·이벤트 버튼 공용). 미리 구운 public/ui/chars/<id>.webp
  * (2026-11-13: 예전엔 시작할 때 캐릭터 6종 GLB로 그렸음 → 6종을 다 받아야 시작할 수 있었음)
  */
-const urls = Object.fromEntries(CHAR_IDS.map((id) => [id, `${import.meta.env.BASE_URL}ui/chars/${id}.webp`])) as Record<CharId, string>;
-
 export function bakeCharIcons(): Record<CharId, string> {
-  return urls;
+  // 미리 받은 묶음(ui/uiPack)에 있으면 그것, 없으면 낱개 파일
+  return Object.fromEntries(CHAR_IDS.map((id) => [id, packUrl(`chars/${id}`) ?? `${import.meta.env.BASE_URL}ui/chars/${id}.webp`])) as Record<CharId, string>;
 }
 
 /**

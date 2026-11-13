@@ -5,7 +5,9 @@ import './ui/ui.css';
 import './ui/skin.css';
 import { GUN_MODELS, loadAssets } from './assets/loadAssets';
 import { DOHYEON_REST_SAMPLE } from './dohyeonRest';
+import { loadUiPack } from './ui/uiPack';
 import { GUNS, type GunModel } from './sim/guns.ts';
+import { BALANCE } from './sim/balance.ts';
 import { CHAR_IDS, type CharId } from './sim/state.ts';
 import { Game } from './core/Game';
 import { Stage3D } from './core/Stage3D';
@@ -97,6 +99,8 @@ async function boot(): Promise<void> {
   const [assets, kit] = await Promise.all([
     loadAssets(stage.renderer, first, (p) => loading.set(p * 0.9), savePick.then((sv) => ({ char: sv.state.char, gun: gunModelOf(sv.state.gun) }), () => null)),
     loadBricks(),
+    // HUD 아이콘·초상 묶음 (요청 한 번): 화면이 뜰 때 아이콘이 이미 있게
+    loadUiPack(),
   ]);
   mark('assets');
   // 3D 글자 라벨이 언어 글꼴로 구워지도록 글꼴 먼저
@@ -204,6 +208,17 @@ async function boot(): Promise<void> {
   window.setTimeout(() => {
     assets.loadRest();
     void document.fonts.load("16px 'Do Hyeon'", DOHYEON_REST_SAMPLE).catch(() => undefined);
+    // 상점·월드 이동 창 그림도 미리 (창을 처음 열 때 몇 초 빈 칸이던 것): 하나씩 차례로
+    void (async () => {
+      const base = import.meta.env.BASE_URL;
+      const list = [
+        ...['gems_s', 'gems_m', 'gems_l', 'pass_x2', 'pass_x4', 'pass_x8', 'pass_x16', 'pass_x32', 'pass_x64', 'char_shoni', 'char_bam'].map((n) => `${base}ui/shop/${n}.webp`),
+        ...Array.from({ length: BALANCE.stage.worlds }, (_, i) => `${base}ui/worlds/world_${i + 1}.webp`),
+      ];
+      for (const src of list) {
+        await new Promise<void>((done) => { const im = new Image(); im.onload = im.onerror = () => done(); im.src = src; });
+      }
+    })();
   }, 1500);
   // 고른 저장을 서버·기기에 맞춤 (오프라인 때 한 진행 올리기, 첫 접속 손님 진행 가져오기).
   // 오프라인 보상 창이 떠 있으면 [받기] 때 저장 (먼저 저장하면 lastSeen이 갱신돼 받기 전에 페이지를 닫으면 보상이 사라짐)

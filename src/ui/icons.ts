@@ -1,3 +1,4 @@
+import { packUrl } from './uiPack';
 /**
  * UI 아이콘 세트 (인라인 SVG, 번들에 포함 → 요청·로딩 없음). 장난감 톤: 굵은 남색 외곽선 + 위쪽 하이라이트.
  * 이모지 대신 쓴다 (기기마다 모양이 달라지고 싸 보임).
@@ -112,6 +113,11 @@ const SVG_ONLY: ReadonlySet<string> = new Set(['globe', 'gift']);
 
 const BASE = `${import.meta.env.BASE_URL}ui/icons/`;
 
+/** 아이콘 그림 주소: 미리 받은 묶음(ui/uiPack)에 있으면 그것, 없으면 낱개 파일 */
+export function iconUrl(name: string): string {
+  return packUrl(`icons/${name}`) ?? `${BASE}${name}.webp`;
+}
+
 /**
  * 아이콘 span (크기는 CSS .ico / 추가 클래스). 그림 = Codex로 만든 장난감풍 아이콘 (원본 art-src/ui-icons, 변환 tools/ui/icons_to_webp.py → public/ui/icons/<이름>.webp, 128px).
  * 그림을 못 받으면 예전 SVG로 대신 그림.
@@ -124,7 +130,7 @@ export function icon(name: IconName, cls = ''): HTMLSpanElement {
     return s;
   }
   const img = document.createElement('img');
-  img.src = `${BASE}${name}.webp`;
+  img.src = iconUrl(name);
   img.alt = '';
   img.draggable = false;
   img.decoding = 'async';

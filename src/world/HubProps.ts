@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { fontFamily } from '../i18n/i18n';
-import type { IconName } from '../ui/icons';
+import { iconUrl, type IconName } from '../ui/icons';
 
 /**
  * 광장 시설 장난감 도형 (2026-11-11 사용자: 구조물을 한눈에 알아보게, 코드 도형으로).
@@ -138,7 +138,7 @@ export class ToyBuilder {
     const g = new THREE.Group();
     g.position.set(x, y, z);
     g.rotation.y = opts.rotY ?? 0;
-    this.toy(this.box(w + 0.16, h + 0.16, 0.16, 0.08), opts.color ?? '#ffffff', 0, 0, -0.05, g);
+    const board = this.toy(this.box(w + 0.16, h + 0.16, 0.16, 0.08), opts.color ?? '#ffffff', 0, 0, -0.05, g);
     if (opts.post !== false) this.toy(new THREE.CylinderGeometry(0.07, 0.09, y, 10), '#c98a5a', 0, -y / 2, -0.12, g);
     const canvas = document.createElement('canvas');
     const px = 128;
@@ -170,13 +170,15 @@ export class ToyBuilder {
     if (icon) {
       const img = new Image();
       img.onload = () => draw(img);
-      img.src = `${import.meta.env.BASE_URL}ui/icons/${icon}.webp`;
+      img.src = iconUrl(icon);
     }
     // 글꼴이 늦게 오면 다시 그림
-    void document.fonts?.ready.then(() => draw(null)).then(() => { if (icon) { const img = new Image(); img.onload = () => draw(img); img.src = `${import.meta.env.BASE_URL}ui/icons/${icon}.webp`; } });
+    void document.fonts?.ready.then(() => draw(null)).then(() => { if (icon) { const img = new Image(); img.onload = () => draw(img); img.src = iconUrl(icon); } });
     const face = new THREE.Mesh(this.own(new THREE.PlaneGeometry(w, h)), this.own(new THREE.MeshBasicMaterial({ map: tex, transparent: true })));
-    face.position.z = 0.04;
-    g.add(face);
+    // 글자 면은 판의 자식으로: 판이 카메라와 캐릭터 사이에 끼어 흐려질 때 글자 면도 같이 숨음 (OcclusionFader가 흐린 도형의
+    // 그림자 없는 자식을 숨김). 예전엔 판만 흐려지고 불투명한 글자 면이 남아 간판 뒤 캐릭터를 완전히 가렸음 (2026-11-13 점검)
+    face.position.z = 0.09;
+    board.add(face);
     this.root.add(g);
     return g;
   }

@@ -16,4 +16,9 @@ test('index.html preload list matches the files the game loads first', () => {
   assert.ok(paths.includes(`assets/models/pop_battle_pistol${variant}.glb`), 'pistol file must be preloaded');
   const font = /href="\.\/(fonts\/[^"]+)"/.exec(html)![1]!;
   assert.ok(fs.existsSync(`public/${font}`), `missing public/${font}`);
+  // UI 그림 묶음: 아이콘·초상이 모두 들어 있어야 (그림을 바꾸고 tools/ui/pack_ui.py를 안 돌리면 여기서 걸림)
+  const pack = fs.readFileSync('public/ui/ui.pack');
+  const head = JSON.parse(pack.subarray(4, 4 + pack.readUInt32LE(0)).toString('utf8')) as Record<string, [number, number]>;
+  for (const f of fs.readdirSync('public/ui/icons')) assert.ok(head[`icons/${f.replace('.webp', '')}`], `ui.pack missing icon ${f}`);
+  for (const f of fs.readdirSync('public/ui/chars')) assert.ok(head[`chars/${f.replace('.webp', '')}`], `ui.pack missing portrait ${f}`);
 });

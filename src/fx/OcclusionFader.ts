@@ -5,14 +5,16 @@ const CHECK_SEC = 0.1;
 /** 가릴 때 투명도, 바뀌는 속도(초당) */
 const FADED = 0.28;
 const SPEED = 6;
-/** 캐릭터 몸에서 선을 쏘는 높이(m) */
-const SAMPLE_Y = [0.5, 1.2] as const;
+/** 캐릭터 몸에서 선을 쏘는 높이(m)와 좌우 벌림(m): 캐릭터 둘레가 창처럼 트이게 (예전엔 가운데 두 줄만 → 옆에 걸친 큰 부품이 그대로 남음) */
+const SAMPLE_Y = [0.4, 1.0, 1.6] as const;
+const SAMPLE_X = [-0.5, 0, 0.5] as const;
 
 interface Faded { mesh: THREE.Mesh; orig: THREE.Material; clone: THREE.Material & { opacity: number }; target: number; outlines: THREE.Object3D[] }
 
 const _from = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _local = new THREE.Vector3();
+const _right = new THREE.Vector3();
 const _inv = new THREE.Matrix4();
 const _box = new THREE.Box3();
 /** 카메라가 도형 상자에서 이만큼(m) 안이면 안에 들어간 것으로 봄 (가까이 붙어 안쪽이 보이는 것도 막음) */
@@ -77,10 +79,12 @@ export class OcclusionFader {
       this.t = 0;
       this.hitSet.clear();
       if (enabled) {
-        // 가슴·무릎 두 높이로 (낮은 카운터는 가슴 선이 윗면 위로 지나가서 놓침)
-        for (const h of SAMPLE_Y) {
+        // 높이 셋 × 좌우 셋 (낮은 카운터는 가슴 선이 윗면 위로 지나가서 놓침). 좌우 = 카메라에서 본 가로 방향
+        _right.set(target.z - cam.position.z, 0, cam.position.x - target.x);
+        if (_right.lengthSq() > 1e-6) _right.normalize(); else _right.set(1, 0, 0);
+        for (const h of SAMPLE_Y) for (const dx of SAMPLE_X) {
           _from.copy(cam.position);
-          _dir.set(target.x, target.y + h, target.z).sub(_from);
+          _dir.set(target.x + _right.x * dx, target.y + h, target.z + _right.z * dx).sub(_from);
           const dist = _dir.length();
           _dir.divideScalar(dist);
           this.ray.set(_from, _dir);
