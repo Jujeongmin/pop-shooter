@@ -103,7 +103,7 @@ export class Hud {
     for (const [k, b] of this.bars) {
       const v = trainValue(s, k);
       // 지금 필요한 훈련 색 (빨강·주황·초록, 골드 줄은 막대 없음)
-      if (k !== 'coin') b.fill.dataset.need = need[k];
+      if (k !== 'coin') { b.fill.dataset.need = need[k]; b.v.dataset.need = need[k]; }
       // 막대가 없는 줄도 칸은 남김 (값 칸이 왼쪽으로 밀려 줄이 안 맞던 것)
       b.fill.parentElement!.style.visibility = k === 'coin' ? 'hidden' : '';
       if (k === 'atk') {

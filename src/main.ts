@@ -116,7 +116,7 @@ async function boot(): Promise<void> {
   game.menuActions.shop = () => shop.open();
   // 출석 창 + 오른쪽 이벤트 버튼 (선물·골드 2배·패스·팝젬·새 캐릭터)
   const daily = new DailyPanel(game, ui, prem);
-  new EventBar(game, ui, prem, shop, daily);
+  new EventBar(game, ui, prem, shop, daily, rebirthPanel);
   if (!showOfflineReward(game, ui, save.now, prem)) game.saver.saveNow();
   // 광장 멀티 (서버에 연결됐을 때만, 실패해도 혼자 게임은 그대로)
   const lobby = startLobby(game, net, cloud, training);

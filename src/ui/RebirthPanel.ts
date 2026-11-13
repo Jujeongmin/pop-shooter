@@ -143,6 +143,14 @@ export class RebirthPanel {
     this.render();
   }
 
+  /** 제단에 가지 않고 바로 열기 (오른쪽 환생 버튼, 사용자 2026-11-13) */
+  openDirect(): void {
+    this.confirming = false;
+    this.msg = '';
+    this.render();
+    this.panel.open();
+  }
+
   private rebirth(skip: boolean): void {
     const g = this.game;
     const next = doRebirth(g.state, skip);
@@ -180,6 +188,13 @@ export class RebirthPanel {
       g.placeAt(HUB_SPAWN.x, HUB_SPAWN.z, Math.PI);
       g.cam.yaw = 0;
       this.callout.flash('rgba(255, 255, 255, 0.9)');
+      // 환생 직후 체감 (사용자 2026-11-13): 가운데 크게 '훈련 ×N', 머리 위 환생 아이콘 + 배율
+      this.panel.close();
+      const m = formatMult(rebirthMult(g.state.tokens));
+      this.callout.show({ title: t('reb.doneTitle'), big: t('reb.doneBig', { m }) });
+      window.setTimeout(() => this.callout.hide(), 2200);
+      _at.set(g.pos.x, g.avatar.headTop() + 0.35, g.pos.z);
+      this.float.show(`×${m}`, _at, 'coin big stat', 'reb');
     }
   }
 }

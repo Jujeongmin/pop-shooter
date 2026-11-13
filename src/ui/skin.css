@@ -281,3 +281,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 /* 훈련 수치 (머리 위, 아이콘 + 수치) */
 .float-text.stat { display: flex; align-items: center; gap: 3px; }
 .float-text.stat .ico { width: 1.3em; height: 1.3em; flex: none; filter: drop-shadow(0 2px 0 var(--ink)); }
+
+/* 오른쪽 환생 버튼: 둘레 원형 막대 = 환생 조건 찬 정도 (--p 0..100), 다 차면 통통 + 빛 */
+.ev-reb .ev-face { background: conic-gradient(#9b7cf5 calc(var(--p, 0) * 1%), #ece6ff 0); position: relative; }
+.ev-reb .ev-face::before { content: ''; position: absolute; inset: 5px; border-radius: 11px; background: linear-gradient(#ffffff, #f1ecff); }
+.ev-reb .ev-face .ico { position: relative; }
+.ev-reb.ready .ev-face { animation: ev-bounce 1.1s ease-in-out infinite; box-shadow: var(--shine), 0 4px 0 var(--ink), 0 0 0 4px #ffd34d, 0 0 18px 6px rgba(255, 211, 77, .75); }
+.ev-reb.ready .ev-label { color: #ffd34d; }
+@media (max-height: 460px) { .ev-reb .ev-face::before { inset: 4px; border-radius: 9px; } }
+/* 왼쪽 위 훈련 수치도 같은 색 (빨강 = 지금 먼저) */
+.tr-num[data-need="red"] { color: #ff4f5e; }
+.tr-num[data-need="orange"] { color: #f08a12; }
+.tr-num[data-need="green"] { color: #2fae4a; }

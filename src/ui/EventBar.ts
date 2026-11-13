@@ -4,6 +4,10 @@ import type { Premium } from '../platform/Premium';
 import { BOOST_AD_MS, nextPassProduct, PASS_ORDER } from '../sim/premium.ts';
 import { bakeCharIcons } from './charIcons';
 import type { DailyPanel } from './DailyPanel';
+import type { RebirthPanel } from './RebirthPanel';
+import { canRebirth, rebirthReq } from '../sim/actions.ts';
+import { formatMult } from '../sim/format.ts';
+import { rebirthMult } from '../sim/training.ts';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 import type { ShopPanel } from './ShopPanel';
@@ -21,12 +25,12 @@ export class EventBar {
   private readonly root: HTMLDivElement;
   private readonly game: Game;
   private readonly prem: Premium;
-  private readonly items: Record<'daily' | 'boost' | 'pass' | 'gems' | 'hero', Item>;
+  private readonly items: Record<'reb' | 'daily' | 'boost' | 'pass' | 'gems' | 'hero', Item>;
   private acc = 1;
   private faces: Record<string, string> = {};
   private heroImg: HTMLImageElement | null = null;
 
-  constructor(game: Game, ui: HTMLElement, prem: Premium, shop: ShopPanel, daily: DailyPanel) {
+  constructor(game: Game, ui: HTMLElement, prem: Premium, shop: ShopPanel, daily: DailyPanel, rebirth: RebirthPanel) {
     this.game = game;
     this.prem = prem;
     this.root = el('div', 'event-bar ui-on');
@@ -50,6 +54,8 @@ export class EventBar {
     heroFace.src = faces.white;
     heroFace.alt = '';
     this.items = {
+      // 환생 (키보드 탈출처럼 늘 보임, 사용자 2026-11-13): 둘레 = 환생 조건(공격 훈련)이 찬 정도, 다 차면 반짝 + 다음 배율. 누르면 바로 환생 창
+      reb: make('reb', 'ev.reb', 'ev-reb', () => rebirth.openDirect()),
       daily: make('gift', 'ev.daily', 'ev-daily', () => daily.open()),
       boost: make('coin', 'ev.boost', 'ev-boost', () => {
         // 광고가 되면 '광고 보시겠어요?' 창 → [광고 보기] 누름 안에서 재생 (바로 틀지 않음, 사용자 2026-11-12). 아니면 상점 무료 탭
@@ -91,6 +97,11 @@ export class EventBar {
     const s = this.game.state;
     const online = this.prem.online;
     const it = this.items;
+    const ready = canRebirth(s);
+    const face = it.reb.root.firstElementChild as HTMLElement;
+    face.style.setProperty('--p', String(Math.round(Math.min(1, s.trAtk / rebirthReq(s)) * 100)));
+    it.reb.root.classList.toggle('ready', ready);
+    setText(it.reb.label, ready ? `×${formatMult(rebirthMult(s.tokens + 1))}` : t('ev.reb'));
     // 전투 중에는 숨김 (광장에서만)
     this.root.hidden = this.game.mode === 'battle';
     it.daily.root.hidden = !online;
