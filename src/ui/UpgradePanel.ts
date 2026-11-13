@@ -24,7 +24,7 @@ type Tab = 'mach' | 'gear' | 'mentor';
 const TABS: readonly Tab[] = ['mach', 'gear', 'mentor'];
 const UNIT_KEY = 'pop-shooter.buyUnit';
 const TAB_KEY = 'pop-shooter.upTab';
-const MACH_ICON: Record<TrainKind, IconName> = { atk: 'target', spd: 'rapid', coin: 'cointarget' };
+const MACH_ICON: Record<TrainKind, IconName> = { atk: 'target', spd: 'rapid', coin: 'coin' };
 export const GEAR_ICON: Record<TrainKind, IconName> = { atk: 'gloves', spd: 'goggles', coin: 'piggy' };
 const _at = new THREE.Vector3();
 
@@ -244,7 +244,7 @@ export class UpgradePanel {
       const gv = (x: GameState): string => (r.kind === 'atk' ? formatNum(gainPerShot(x, r.kind, w)) : pct(gainPerShot(x, r.kind, w)));
       setText(r.lv, t('up.lv', { n: lv }));
       r.val.replaceChildren(
-        el('span', '', t('mach.desc', { s: t(`tr.${r.kind}`), g: `${gv(s)}${unit}` })),
+        el('span', '', t(`mach.desc.${r.kind}` as StrKey, { s: t(`tr.${r.kind}`), g: `${gv(s)}${unit}` })),
         el('br'),
         el('b', '', `→ +${gv(after)}${unit}`),
       );
