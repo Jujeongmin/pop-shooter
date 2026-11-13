@@ -318,3 +318,6 @@
 .travel-row .up-mid { flex: 1; min-width: 0; }
 .travel-row > .mentor-st, .travel-row > .btn { flex: none; margin-left: auto; text-align: right; }
 .travel-lock { justify-content: flex-end; }
+
+/* 로딩 화면 안내 줄 (서버 다시 연결 중) */
+.loading-msg { max-width: min(86vw, 420px); text-align: center; font-size: 15px; color: #2b3a67; background: rgba(255, 255, 255, 0.75); border-radius: 14px; padding: 8px 14px; }

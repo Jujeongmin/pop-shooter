@@ -11,6 +11,7 @@ export class Loading {
   private readonly root: HTMLDivElement;
   private readonly fill: HTMLDivElement;
   private readonly pct: HTMLDivElement;
+  private readonly msg: HTMLDivElement;
   private shown = 0;
 
   constructor(parent: HTMLElement) {
@@ -31,7 +32,9 @@ export class Loading {
     this.fill = el('div', 'loading-fill');
     bar.append(this.fill);
     this.pct = el('div', 'loading-pct', '0%');
-    this.root.append(logo, bar, this.pct);
+    this.msg = el('div', 'loading-msg');
+    this.msg.hidden = true;
+    this.root.append(logo, bar, this.pct, this.msg);
     parent.append(this.root);
   }
 
@@ -40,6 +43,12 @@ export class Loading {
     this.shown = Math.max(this.shown, Math.min(1, p));
     this.fill.style.transform = `scaleX(${this.shown})`;
     this.pct.textContent = `${Math.round(this.shown * 100)}%`;
+  }
+
+  /** 진행 바 아래 안내 한 줄 (서버 다시 연결 중 등), null = 숨김 */
+  note(text: string | null): void {
+    this.msg.hidden = !text;
+    if (text) this.msg.textContent = text;
   }
 
   /** 다 됨: 꽉 채우고 위로 걷힌 뒤 제거 */

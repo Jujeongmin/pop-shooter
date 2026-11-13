@@ -28,7 +28,7 @@ import { loadBricks } from './world/kit';
 import { Loading } from './ui/Loading';
 import { warmGpu } from './core/warmGpu';
 import { Tutorial } from './ui/Tutorial';
-import { applyLang } from './i18n/i18n';
+import { applyLang, t } from './i18n/i18n';
 import { audio } from './audio/audio';
 import { SettingsPanel } from './ui/SettingsPanel';
 import { UpgradePanel } from './ui/UpgradePanel';
@@ -55,8 +55,21 @@ async function boot(): Promise<void> {
   // 서버 연결은 에셋 받는 동안 같이 (안 되면 기기 저장으로, 혼자 모드). 연결은 계정당 하나: 계정 저장·광장이 net을 함께 씀
   const net = new NetClient();
   const cloud = new CloudSave(net);
-  // 연결 → 저장 읽기까지 에셋 받는 동안 같이 (예전엔 에셋을 다 받은 뒤에야 저장을 읽기 시작: 새 컴퓨터 첫 시작이 느렸음)
-  const savePick = cloud.connect().catch(() => false).then(() => pickSave(cloud));
+  // 연결 → 저장 읽기까지 에셋 받는 동안 같이 (예전엔 에셋을 다 받은 뒤에야 저장을 읽기 시작: 새 컴퓨터 첫 시작이 느렸음).
+  // 서버 저장을 읽을 때까지 계속 다시 시도 (2026-11-13: 예전엔 5초 안에 안 되면 알림 없이 기기 저장으로 시작 → 새 컴퓨터는 새 판처럼 보였음).
+  // verse가 없는 빌드(?offline=1 등)만 기기 저장으로 바로
+  const loadSave = async (): Promise<Awaited<ReturnType<typeof pickSave>>> => {
+    if (!net.hasVerse) return pickSave(cloud);
+    for (let attempt = 1; ; attempt++) {
+      if (await cloud.connect().catch(() => false)) {
+        const sv = await pickSave(cloud);
+        if (sv.cloudOk) { loading.note(null); return sv; }
+      }
+      loading.note(t('net.retrying', { n: attempt }));
+      await new Promise((r) => window.setTimeout(r, Math.min(10_000, 2000 * attempt)));
+    }
+  };
+  const savePick = loadSave();
   const stage = new Stage3D(document.getElementById('view') as HTMLCanvasElement);
   // 캐릭터는 내 캐릭터(기기 사본으로 짐작)만 먼저, 나머지는 시작 뒤 뒤에서 (2026-11-13 로딩 줄이기). 개발용 ?allchars=1 = 6종 다
   const firstChars: CharId[] = import.meta.env.DEV && new URLSearchParams(location.search).has('allchars') ? [...CHAR_IDS] : [guessChar()];
@@ -81,7 +94,8 @@ async function boot(): Promise<void> {
         location.reload();
         return r;
       } catch (e) {
-        console.error('[resetPass] 서버에 연결하지 못했어요', e);
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error(msg.includes('Function not found') ? '[resetPass] 서버에 이 함수가 아직 없어요: 서버를 재배포하세요' : `[resetPass] 실패: ${msg}`);
         return null;
       }
     },

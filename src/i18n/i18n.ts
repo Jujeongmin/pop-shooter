@@ -153,6 +153,7 @@ const STRINGS = {
   'settings.music': { en: 'Music', ko: '배경음악', ja: 'BGM', 'zh-TW': '背景音樂', 'zh-CN': '背景音乐' },
   'settings.soundOn': { en: 'Sound: ON', ko: '소리: 켜짐', ja: 'サウンド: ON', 'zh-TW': '聲音:開', 'zh-CN': '声音:开' },
   'settings.soundOff': { en: 'Sound: OFF (muted)', ko: '소리: 꺼짐 (음소거)', ja: 'サウンド: OFF(ミュート)', 'zh-TW': '聲音:關(靜音)', 'zh-CN': '声音:关(静音)' },
+  'net.retrying': { en: 'Connecting to the server… (retry {n})', ko: '서버에 연결하는 중… (다시 시도 {n})', ja: 'サーバーに接続中… (再試行 {n})', 'zh-TW': '正在連線伺服器… (重試 {n})', 'zh-CN': '正在连接服务器… (重试 {n})' },
   'settings.close': { en: 'Close', ko: '닫기', ja: '閉じる', 'zh-TW': '關閉', 'zh-CN': '关闭' },
   'settings.reset': { en: 'Reset account', ko: '계정 초기화', ja: 'アカウント初期化', 'zh-TW': '重置帳號', 'zh-CN': '重置账号' },
   'settings.resetAsk': { en: 'Tap again: all progress resets (purchases kept)', ko: '한 번 더 누르면 진행이 모두 지워져요 (산 것은 유지)', ja: 'もう一度押すと進行がすべて消えます (購入品は残ります)', 'zh-TW': '再按一次將清除所有進度 (購買項目保留)', 'zh-CN': '再按一次将清除所有进度 (购买项目保留)' },
