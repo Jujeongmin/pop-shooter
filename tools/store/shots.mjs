@@ -12,7 +12,7 @@ const b = await launch({ width: W, height: H });
 await b.send('Network.enable');
 await b.send('Network.setBlockedURLs', { urls: ['*verse8.io*', '*verse8.games*'] });
 await b.send('Page.addScriptToEvaluateOnNewDocument', { source: "try{localStorage.setItem('pop-shooter.guide','off');localStorage.setItem('pop-shooter.lang','ko')}catch(e){}" });
-await b.send('Page.navigate', { url: 'http://localhost:5220/?guns=lod0' });
+await b.send('Page.navigate', { url: 'http://localhost:5220/?offline=1&guns=lod0&allchars=1' });
 await new Promise((r) => setTimeout(r, 12000));
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
