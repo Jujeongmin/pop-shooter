@@ -81,9 +81,13 @@ export function gearMult(s: GameState, k: TrainKind): number {
   return m;
 }
 
-/** 환생 배율 (훈련 속도) */
+/**
+ * 환생 배율 (훈련 속도) 표: ×1 → ×1.5 → ×2 → ×3 → ×4 → ×6 → ×8 → ×12 → ×16 … (사용자 2026-11-13: 1.4배씩 곱한 소수점 대신 깔끔한 숫자).
+ * 1.5배와 4/3배를 번갈아 곱함 = 평균 약 1.41배 (예전 1.4배와 거의 같은 성장)
+ */
 export function rebirthMult(tokens: number): number {
-  return BALANCE.rebirth.multGrowth ** tokens;
+  const n = Math.max(0, Math.floor(tokens));
+  return (n % 2 === 1 ? 1.5 : 1) * 2 ** Math.floor(n / 2);
 }
 
 /** 훈련장 등급 배율 (월드 w 광장의 훈련장) */

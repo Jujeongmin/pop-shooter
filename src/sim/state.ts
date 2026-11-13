@@ -16,7 +16,7 @@ export interface GameState {
   /** 이번 회차 최고 클리어 */
   runBest: number;
   rebirths: number;
-  /** 환생 배율 단계 (환생마다 +1, 훈련 속도 ×multGrowth^tokens) */
+  /** 환생 배율 단계 (환생마다 +1, 훈련 속도 = rebirthMult(tokens): ×1.5, ×2, ×3, ×4 …) */
   tokens: number;
   /** 공격력 패스 배율 1 | 2 | 4 … 64 */
   passMult: number;

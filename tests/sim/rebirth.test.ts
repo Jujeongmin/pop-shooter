@@ -21,10 +21,10 @@ test('requirement rises with each rebirth', () => {
 });
 
 test('each rebirth multiplies training speed by the same factor', () => {
-  for (let i = 1; i < 4; i++) assert.ok(Math.abs(rebirthMult(i) / rebirthMult(i - 1) - BALANCE.rebirth.multGrowth) < 1e-9);
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7, 8].map(rebirthMult), [1, 1.5, 2, 3, 4, 6, 8, 12, 16]);
   const s = { ...newState(0), trAtk: 1e30 };
   const r = doRebirth(s)!;
-  assert.ok(Math.abs(gainPerShot(r, 'atk', 1) / gainPerShot(s, 'atk', 1) - BALANCE.rebirth.multGrowth) < 1e-9);
+  assert.ok(Math.abs(gainPerShot(r, 'atk', 1) / gainPerShot(s, 'atk', 1) - rebirthMult(r.tokens) / rebirthMult(s.tokens)) < 1e-9);
 });
 
 test('doRebirth resets only training, keeps gold, guns, machines, gear', () => {

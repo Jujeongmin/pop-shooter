@@ -30,9 +30,9 @@ export const BALANCE = {
   worldHpMult: [1, 120, 12, 0.8, 0.02, 0.0005, 0.0000125, 0.0000003],
   /**
    * 환생: 공격 훈련치가 reqBase × reqGrowth^환생 횟수에 닿으면 가능.
-   * 보상 = 훈련 속도 ×multGrowth (곱으로 쌓임).
+   * 보상 = 훈련 속도 배율 표 ×1.5, ×2, ×3, ×4, ×6, ×8 … (training.ts rebirthMult).
    */
-  rebirth: { reqBase: 3000, reqGrowth: 3.5, multGrowth: 1.4 },
+  rebirth: { reqBase: 3000, reqGrowth: 3.5 },
   /** 캐릭터 피해 배율: 해금 순서대로 점점 좋게 */
   charMult: { blue: 1, yellow: 1.5, red: 2, pink: 3, white: 5, black: 8 },
   offline: { capSec: 7200, goldRate: 0.25 },
