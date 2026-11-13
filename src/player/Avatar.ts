@@ -37,7 +37,6 @@ const _s = new THREE.Vector3();
 
 export type GearTiers = Record<TrainKind, number>;
 /** 아바타 기준(발 = 0, 앞 = +z) 장비 자리 (m). 화면에서 맞춤 */
-const GOGGLE_AT = new THREE.Vector3(0, 0.9, 0.26);
 const PIGGY_AT = new THREE.Vector3(0, 0.5, -0.18);
 
 /** 팝배틀 PlayerAvatar 감싸기: 캐릭터 복제 + 월드 색 총 + 간단한 자세 입력 */
@@ -150,11 +149,60 @@ export class Avatar {
       if (k === 'atk') {
         for (const bone of ['Hand_R', 'Hand_L']) cur.objs.push(this.attach(makeGlove(cur.tier), bone, null));
       } else if (k === 'spd') {
-        cur.objs.push(this.attach(makeGoggles(cur.tier), 'Chest', GOGGLE_AT));
+        // 고글 = 모자 앞 위쪽에 얹음: 그 자리 모자 정점을 실제로 움직이는 뼈에 붙임 (머리 뼈가 없고 모자는 Spine에 스킨됨 → 예전 Chest는 뛸 때 따로 놂, 사용자 2026-11-13)
+        const hat = this.hatSpot();
+        if (hat) {
+          const o = this.attach(makeGoggles(cur.tier), hat.bone, hat.at);
+          // 모자 곡면을 따라 위쪽이 살짝 뒤로 눕게
+          o.rotateX(-0.45);
+          cur.objs.push(o);
+        }
       } else {
         cur.objs.push(this.attach(makePiggy(cur.tier), 'Chest', PIGGY_AT));
       }
     }
+  }
+
+  /** 모자 앞 위쪽 자리(아바타 기준)와 그 정점을 가장 크게 움직이는 뼈 (아바타마다 한 번 계산) */
+  private hatCache: { bone: string; at: THREE.Vector3 } | null | undefined;
+  private hatSpot(): { bone: string; at: THREE.Vector3 } | null {
+    if (this.hatCache !== undefined) return this.hatCache;
+    this.hatCache = null;
+    let mesh: THREE.SkinnedMesh | null = null;
+    this.root.traverse((o) => {
+      const m = o as THREE.SkinnedMesh;
+      if (m.isSkinnedMesh && (!mesh || m.geometry.attributes.position!.count > mesh.geometry.attributes.position!.count)) mesh = m;
+    });
+    const m = mesh as THREE.SkinnedMesh | null;
+    if (!m) return null;
+    this.root.updateMatrixWorld(true);
+    m.skeleton.update();
+    const pos = m.geometry.attributes.position!;
+    const n = pos.count;
+    const xs = new Float32Array(n), ys = new Float32Array(n), zs = new Float32Array(n);
+    let top = -Infinity;
+    for (let i = 0; i < n; i++) {
+      _w.fromBufferAttribute(pos, i);
+      m.applyBoneTransform(i, _w);
+      m.localToWorld(_w);
+      this.root.worldToLocal(_w);
+      xs[i] = _w.x; ys[i] = _w.y; zs[i] = _w.z;
+      if (_w.y > top) top = _w.y;
+    }
+    // 머리 꼭대기에서 0.09~0.17m 아래, 가운데(|x| < 0.05) 중 가장 앞쪽 정점
+    let best = -1;
+    for (let i = 0; i < n; i++) {
+      if (ys[i]! > top - 0.09 || ys[i]! < top - 0.17 || Math.abs(xs[i]!) > 0.05) continue;
+      if (best < 0 || zs[i]! > zs[best]!) best = i;
+    }
+    if (best < 0) return null;
+    const idx = m.geometry.attributes.skinIndex!, wgt = m.geometry.attributes.skinWeight!;
+    let bi = 0, bw = -1;
+    for (let k = 0; k < 4; k++) if (wgt.getComponent(best, k) > bw) { bw = wgt.getComponent(best, k); bi = idx.getComponent(best, k); }
+    const bone = m.skeleton.bones[bi];
+    if (!bone) return null;
+    this.hatCache = { bone: bone.name, at: new THREE.Vector3(0, ys[best]!, zs[best]! + 0.015) };
+    return this.hatCache;
   }
 
   /** 본에 붙이기: at = 아바타 기준 자리(null이면 본 원점), 방향은 아바타 정면, 월드 크기 1 유지 */

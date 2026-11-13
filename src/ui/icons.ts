@@ -105,7 +105,7 @@ const SVG: Record<string, string> = {
     <path d="M22 22l20 20M42 22L22 42" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>`,
 };
 
-export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'heart' | 'lock' | 'close' | 'target' | 'rapid' | 'cointarget' | 'gloves' | 'goggles' | 'piggy' | 'medal' | 'globe' | 'gift';
+export type IconName = 'coin' | 'gem' | 'reb' | 'hand' | 'timer' | 'bolt' | 'bullet' | 'check' | 'cross' | 'heart' | 'lock' | 'close' | 'target' | 'rapid' | 'cointarget' | 'gloves' | 'goggles' | 'piggy' | 'medal' | 'globe' | 'gift' | 'gun';
 
 /** 그림 파일 없이 SVG로만 그리는 아이콘 (없는 파일 요청 안 함) */
 const SVG_ONLY: ReadonlySet<string> = new Set(['globe', 'gift']);

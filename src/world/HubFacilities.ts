@@ -85,7 +85,7 @@ export function buildGunShop(b: ToyBuilder, f: Facility, colliders: Collider[], 
     b.animators.push((dt, c) => { spin.rotation.y += dt * 1.2; spin.position.y = 1.5 + Math.sin(c * 2) * 0.06; });
   }
   colliders.push({ kind: 'box', x: cx, z: f.z, hx: 1.65, hz: 0.85 });
-  b.sign('bullet', t('fac.guns'), cx, 3.45, f.z + 1.05, { w: 2.2, color: '#7cc4ff', post: false });
+  b.sign('gun', t('fac.guns'), cx, 3.45, f.z + 1.05, { w: 2.2, color: '#7cc4ff', post: false });
   return g;
 }
 

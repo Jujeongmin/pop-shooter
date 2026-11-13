@@ -114,12 +114,12 @@ export class ShopPanel {
   private gemButton(id: string): HTMLElement {
     const price = GEM_ITEMS[id]!.gems;
     if (this.prem.online && this.game.state.gems < price) {
-      const c = button(t('shop.charge'), () => { this.tab = 'gems'; this.msg = ''; this.render(); }, 'btn buy charge');
-      c.prepend(icon('gem'));
-      const wrap = el('div', 'gem-need');
-      wrap.append(el('div', 'gem-price', plain(price)), c);
-      wrap.querySelector('.gem-price')!.prepend(icon('gem'));
-      return wrap;
+      // 모자랄 때: 버튼 하나에 가격(위) + '팝젬 충전'(아래) — 가격과 충전 버튼이 따로 놀던 것 (사용자 2026-11-13)
+      const c = button('', () => { this.tab = 'gems'; this.msg = ''; this.render(); }, 'btn buy charge');
+      const top = el('span', 'charge-price');
+      top.append(icon('gem'), el('span', '', plain(price)));
+      c.replaceChildren(top, el('span', 'charge-sub', t('shop.charge')));
+      return c;
     }
     const b = button(plain(price), () => void this.gemBuy(id, b), 'btn buy');
     b.prepend(icon('gem'));
