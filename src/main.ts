@@ -49,6 +49,15 @@ async function boot(): Promise<void> {
   // 시작 구간 시간 (콘솔 한 줄 '[boot] …', 페이지 열린 뒤 ms): 로딩이 길 때 어디서 걸리는지 배포본에서 바로 보려고 (2026-11-13)
   const marks: Array<[string, number]> = [['script', Math.round(performance.now())]];
   const mark = (name: string): void => { marks.push([name, Math.round(performance.now())]); };
+  window.addEventListener('load', () => mark('winload'), { once: true });
+  // 바깥 페이지(Verse8)에서 물으면 시간만 답함: iframe 안 콘솔은 밖에서 안 보여서 (개인 정보 없음, 숫자만)
+  window.addEventListener('message', (e) => {
+    if ((e.data as { type?: unknown } | null)?.type !== 'POP_BOOT?') return;
+    const res = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+    const slow = res.filter((r) => r.responseEnd - r.startTime > 300 || r.encodedBodySize > 150_000)
+      .map((r) => [r.name.split('/').pop()!.split('?')[0]!.slice(0, 40), Math.round(r.startTime), Math.round(r.responseEnd), Math.round(r.encodedBodySize / 1024), Math.round(r.transferSize / 1024)]);
+    window.parent.postMessage({ type: 'POP_BOOT', marks, slow, count: res.length }, '*');
+  });
   const ui = document.getElementById('ui')!;
   const loading = new Loading(ui);
   // 첫 입력(클릭·터치·키)에서 소리를 켬. 광장 음악은 그때부터
@@ -64,8 +73,11 @@ async function boot(): Promise<void> {
   const loadSave = async (): Promise<Awaited<ReturnType<typeof pickSave>>> => {
     if (!net.hasVerse) return pickSave(cloud);
     for (let attempt = 1; ; attempt++) {
-      if (await cloud.connect().catch(() => false)) {
+      const up = await cloud.connect().catch(() => false);
+      mark(up ? `conn${attempt}` : `connFail${attempt}`);
+      if (up) {
         const sv = await pickSave(cloud);
+        mark(sv.cloudOk ? `load${attempt}` : `loadFail${attempt}`);
         if (sv.cloudOk) { loading.note(null); return sv; }
       }
       loading.note(t('net.retrying', { n: attempt }));
