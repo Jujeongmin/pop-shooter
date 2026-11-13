@@ -39,7 +39,12 @@ export function gunMult(i: number): number {
   return BALANCE.gun.dmgStep ** i;
 }
 
-/** 0번(시작 권총) 무료, i번 = priceBase × priceGrowth^(i−1) */
+/** priceLate 표가 시작하는 총 번호 (월드 3 첫 총) */
+const LATE_FROM = 2 * BALANCE.gun.perWorld;
+
+/** 0번(시작 권총) 무료, 1~7번 = priceBase × priceGrowth^(i−1), 8번부터(월드 3~) = priceLate 표 */
 export function gunPrice(i: number): number {
-  return i <= 0 ? 0 : BALANCE.gun.priceBase * BALANCE.gun.priceGrowth ** (i - 1);
+  if (i <= 0) return 0;
+  const late: number | undefined = BALANCE.gun.priceLate[i - LATE_FROM];
+  return late ?? BALANCE.gun.priceBase * BALANCE.gun.priceGrowth ** (i - 1);
 }

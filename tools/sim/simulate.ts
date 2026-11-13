@@ -211,7 +211,7 @@ runUntil(ctx, MAX_T, (st, c) => at.set(st, {
 }));
 console.log(`taps=${TAPS} farm=${FARM_SEC}s  time: atk ${hms(ctx.kindSec.atk)} spd ${hms(ctx.kindSec.spd)} coin ${hms(ctx.kindSec.coin)} battle ${hms(ctx.battleSec)}`);
 if (ECON) console.log(`econ checks ${econ.checks} clamps ${econ.clamps} rejects ${econ.rejects} ${JSON.stringify(econ.reasons)}`);
-for (const st of [1, 2, 3, 5, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]) {
+for (const st of opt("all", 0) ? Array.from({ length: 80 }, (_, i) => i + 1) : [1, 2, 3, 5, 10, 12, 15, 18, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]) {
   const r = at.get(st);
   console.log(`${stageLabel(st).padEnd(5)} ${hms(r?.t ?? Infinity).padStart(7)}  ${r?.info ?? ''}`);
 }
