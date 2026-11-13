@@ -94,7 +94,8 @@ export class EventBar {
 
   private refresh(): void {
     const s = this.game.state;
-    const online = this.prem.online;
+    // 개발 서버(로컬)는 서버 없이도 버튼이 보이게 (모양 확인용, 사용자 2026-11-13). 배포 빌드는 서버 없으면 결제·광고 버튼 숨김
+    const online = this.prem.online || import.meta.env.DEV;
     const it = this.items;
     const ready = canRebirth(s);
     const face = it.reb.root.firstElementChild as HTMLElement;
