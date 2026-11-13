@@ -2,7 +2,7 @@ import { BALANCE, STAGE_COUNT } from './balance.ts';
 import { gunMult, gunPrice, GUNS } from './guns.ts';
 import { firstClearCoins, isBoss, replayCoins, worldOf } from './stages.ts';
 import type { CharId, GameState } from './state.ts';
-import { atkTrainMult, coinTrainMult, spdMaxed, spdTrainMult, type TrainKind } from './training.ts';
+import { atkTrainMult, coinTrainMult, spdTrainMult } from './training.ts';
 
 /** 월드 대장 첫 클리어로 열리는 캐릭터 (월드 1~3) */
 const BOSS_UNLOCKS: readonly CharId[] = ['yellow', 'red', 'pink'];
@@ -130,13 +130,4 @@ export function doRebirth(s: GameState, skip = false): GameState | null {
     rebirths: s.rebirths + 1,
     gems: s.gems + BALANCE.gems.perRebirth,
   };
-}
-
-/**
- * 러닝머신 걸음 n번이 실제로 올리는 훈련 (사용자 2026-11-13): 연사가 끝까지 올랐으면 공격 훈련으로 바뀜.
- * 그때 걸음 하나 = 사격장 발사 (초당 발사 수 ÷ 초당 걸음 수)발 → 사격장과 같은 속도 (서버 저장 검사의 공격 훈련 한도 안).
- */
-export function treadmillTraining(s: GameState, steps: number): { kind: TrainKind; n: number } {
-  if (!spdMaxed(s)) return { kind: 'spd', n: steps };
-  return { kind: 'atk', n: (steps * trainRate(s, 'atk')) / trainRate(s, 'spd') };
 }

@@ -73,7 +73,7 @@ const STRINGS = {
   'range.atk': { en: 'Attack training!', ko: '공격 훈련 중!', ja: '攻撃トレーニング!', 'zh-TW': '攻擊訓練中!', 'zh-CN': '攻击训练中!' },
   'range.spd': { en: 'Fire-rate training!', ko: '연사 훈련 중!', ja: '連射トレーニング!', 'zh-TW': '連射訓練中!', 'zh-CN': '连射训练中!' },
   'range.coin': { en: 'Gold bonus training!', ko: '골드 보너스 훈련 중!', ja: 'ゴールドボーナス訓練!', 'zh-TW': '金幣加成訓練中!', 'zh-CN': '金币加成训练中!' },
-  'range.spdMax': { en: 'Fire rate maxed! Now the treadmill trains Attack', ko: '연사 최대! 이제 러닝머신에서 공격력이 올라요', ja: '連射MAX! ランニングマシンで攻撃力が上がるよ', 'zh-TW': '連射已滿! 跑步機改為提升攻擊力', 'zh-CN': '连射已满! 跑步机改为提升攻击力' },
+  'range.spdMax': { en: 'Fire rate is maxed!', ko: '연사가 최대예요!', ja: '連射は最大!', 'zh-TW': '連射已達上限!', 'zh-CN': '连射已达上限!' },
   'fac.upgrade': { en: 'Upgrades', ko: '업그레이드', ja: 'アップグレード', 'zh-TW': '升級', 'zh-CN': '升级' },
   'fac.guns': { en: 'Gun Shop', ko: '총 상점', ja: '銃ショップ', 'zh-TW': '槍械商店', 'zh-CN': '枪械商店' },
   'fac.altar': { en: 'Rebirth Altar', ko: '환생 제단', ja: '転生の祭壇', 'zh-TW': '轉生祭壇', 'zh-CN': '转生祭坛' },
