@@ -11,6 +11,8 @@ const SNAP_HOP = 0.9;
 /** 착지 클립(landHold 0.3초)이 끝날 때까지 이동 잠금 */
 const LAND_LOCK = 0.35;
 
+/** 착지 문구를 보여 주는 시간(초) */
+const TEXT_SEC = 2.5;
 export interface ZoneEntryOptions {
   /** 바닥 링 색 */
   color: string;
@@ -36,6 +38,8 @@ export interface ZoneEntryOptions {
 export class ZoneEntry {
   private readonly game: Game;
   private readonly callout: ZoneCallout;
+  /** 착지 문구 남은 시간 (0 이하면 숨김 처리 끝) */
+  private textT = 0;
   private readonly ring: ZoneRing;
   private readonly opt: ZoneEntryOptions;
   private spot: { x: number; z: number };
@@ -92,11 +96,16 @@ export class ZoneEntry {
 
   /** 문구만 바꾸기 (예: 도전 결과 뒤) */
   setText(t: CalloutText): void {
-    if (this.inside && !this.snapping) this.callout.show(t);
+    if (this.inside && !this.snapping) { this.callout.show(t); this.textT = TEXT_SEC; }
   }
 
   update(dt: number): void {
     this.ring.update(dt);
+    // 착지 문구는 잠깐만 (사용자 2026-11-13: 훈련 수치가 머리 위로 올라가며 계속 떠 있는 문구와 겹침)
+    if (this.textT > 0) {
+      this.textT -= dt;
+      if (this.textT <= 0 && this.inside && this.snapT < 0) this.callout.hide();
+    }
     if (this.snapT < 0) return;
     const g = this.game;
     this.snapT += dt;
@@ -117,7 +126,7 @@ export class ZoneEntry {
     g.cam.shake(0.08);
     this.callout.flash(this.opt.flash);
     const t = this.opt.text;
-    if (t) this.callout.show(typeof t === 'function' ? t() : t);
+    if (t) { this.callout.show(typeof t === 'function' ? t() : t); this.textT = TEXT_SEC; }
     this.onLanded?.();
   }
 

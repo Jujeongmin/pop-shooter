@@ -106,8 +106,9 @@ export class TrainingRange {
     const gain = gainPerShot(g.state, 'atk', world) * this.pendingShots;
     g.setState(train(g.state, 'atk', this.pendingShots, world));
     this.pendingShots = 0;
-    _aim.set(RANGE_SPOT.x, 2.4, RANGE_SPOT.z - 3);
-    this.float.show(`+${formatNum(gain)}`, _aim, 'big');
+    // 내 머리 위에 공격력 아이콘 + 오른 수치 (사용자 2026-11-13)
+    _aim.set(g.pos.x, g.avatar.headTop() + 0.35, g.pos.z);
+    this.float.show(`+${formatNum(gain)}`, _aim, 'big stat', 'bullet');
   }
 
   private update(dt: number): void {

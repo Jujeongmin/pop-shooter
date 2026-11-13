@@ -123,8 +123,8 @@ export class Stations {
     g.setState(train(g.state, st.kind, st.pending, world));
     st.pending = 0;
     if (st.kind === 'spd' && spdMaxed(g.state)) return;
-    const at = st.kind === 'spd' ? TREADMILL : FOUNTAIN;
-    this.float.show(`+${pct(gain)}%`, _at.set(at.x, 2.5, at.z - 0.6), st.kind === 'coin' ? 'coin' : 'big');
+    // 내 머리 위에 능력치 아이콘 + 오른 수치 (사용자 2026-11-13: 기구 쪽이 아니라 내 머리 위)
+    this.float.show(`+${pct(gain)}%`, _at.set(g.pos.x, g.avatar.headTop() + 0.35, g.pos.z), st.kind === 'coin' ? 'coin stat' : 'big stat', st.kind === 'coin' ? 'coin' : 'rapid');
   }
 
   private update(dt: number): void {

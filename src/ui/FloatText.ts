@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { el } from './dom';
+import { icon, type IconName } from './icons';
 
 const _v = new THREE.Vector3();
 const POOL = 12;
@@ -25,12 +26,14 @@ export class FloatText {
     }
   }
 
-  show(text: string, at: THREE.Vector3, cls = ''): void {
+  /** ico = 글자 앞 능력치 아이콘 (훈련 수치, 사용자 2026-11-13) */
+  show(text: string, at: THREE.Vector3, cls = '', ico?: IconName): void {
     const it = this.items[this.next]!;
     this.next = (this.next + 1) % POOL;
     it.t = 0;
     it.pos.copy(at);
-    it.node.textContent = text;
+    if (ico) it.node.replaceChildren(icon(ico), el('span', '', text));
+    else it.node.textContent = text;
     it.node.className = `float-text ${cls}`;
     it.node.hidden = false;
   }

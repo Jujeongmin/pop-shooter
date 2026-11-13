@@ -275,3 +275,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
   .bhud-me .ico { width: 24px; height: 24px; }
   .bhud-mebar { height: 14px; border-width: 2px; }
 }
+
+/* 훈련 수치 (머리 위, 아이콘 + 수치) */
+.float-text.stat { display: flex; align-items: center; gap: 3px; }
+.float-text.stat .ico { width: 1.3em; height: 1.3em; flex: none; filter: drop-shadow(0 2px 0 var(--ink)); }
