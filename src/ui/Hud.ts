@@ -41,7 +41,9 @@ export class Hud {
     this.coins = pill('coin');
     this.gems = pill('gem');
     // 팝젬 칸 안 [+] = 팝젬 충전 (상점 팝젬 탭). 오른쪽 위 상점 버튼 대신 (사용자 2026-11-13)
-    const plus = el('button', 'pill-plus ui-on', '+');
+    // '+' 글자는 글꼴에서 위로 떠 보여서 CSS 막대 두 개로 그림 (사용자 2026-11-13)
+    const plus = el('button', 'pill-plus ui-on');
+    plus.setAttribute('aria-label', '+');
     plus.type = 'button';
     plus.addEventListener('pointerup', (e) => { e.preventDefault(); e.stopPropagation(); actions.menu('shop'); });
     this.gems.parentElement!.append(plus);

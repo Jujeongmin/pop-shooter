@@ -306,3 +306,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
   color: #fff; font: inherit; font-size: 18px; line-height: 1; padding: 0; display: grid; place-items: center; cursor: pointer; pointer-events: auto;
   -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; box-shadow: 0 2px 0 var(--ink); touch-action: manipulation; }
 .pill .pill-plus:active { transform: translateY(2px); box-shadow: none; }
+.pill .pill-plus { position: relative; font-size: 0; }
+.pill .pill-plus::before, .pill .pill-plus::after { content: ''; position: absolute; left: 50%; top: 50%; width: 12px; height: 4px; border-radius: 2px; background: #fff;
+  transform: translate(-50%, -50%); }
+.pill .pill-plus::after { width: 4px; height: 12px; }
