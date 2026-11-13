@@ -100,7 +100,7 @@ export class TrainingRange {
     const spread = n > 1 ? 0.9 : 0.5;
     for (let i = Math.min(n, MULTI_DRAW_MAX); i > 0; i--) {
       _aim.set(target.position.x + (Math.random() - 0.5) * spread, 1.6 + (Math.random() - 0.5) * spread, target.position.z + 0.12);
-      this.fx.shot(_muzzle, _aim);
+      this.fx.shot(_muzzle, _aim, GUNS[g.state.gun]!.bullet);
     }
     audio.play(FIRE_SOUND[GUNS[g.state.gun]!.model]);
     if (tapped) this.float.show(t('float.pop'), _aim, 'pop');

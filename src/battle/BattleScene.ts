@@ -249,7 +249,7 @@ export class BattleScene {
       _aim.x += (Math.random() - 0.5) * boss.height * spread;
       _aim.y += (Math.random() - 0.5) * boss.height * spread;
       _aim.z += 0.4;
-      this.fx.shot(_muzzle, _aim);
+      this.fx.shot(_muzzle, _aim, GUNS[this.game.state.gun]!.bullet);
     }
     audio.play(FIRE_SOUND[GUNS[this.game.state.gun]!.model]);
     audio.play('bossHit');

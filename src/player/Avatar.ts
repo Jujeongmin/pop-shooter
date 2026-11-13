@@ -158,16 +158,17 @@ export class Avatar {
           cur.objs.push(o);
         }
       } else {
-        cur.objs.push(this.attach(makePiggy(cur.tier), 'Chest', PIGGY_AT));
+        // 저금통 = 캐릭터마다 실제 등 표면(가방·후드 포함)에 30%만 묻히게 (고정 자리는 노랑·빨강·분홍·검정에서 가방 속에 묻힘, 사용자 2026-11-13)
+        cur.objs.push(this.attach(makePiggy(cur.tier), 'Chest', this.piggySpot(cur.tier)));
       }
     }
   }
 
-  /** 모자 앞 위쪽 자리(아바타 기준)와 그 정점을 가장 크게 움직이는 뼈 (아바타마다 한 번 계산) */
-  private hatCache: { bone: string; at: THREE.Vector3 } | null | undefined;
-  private hatSpot(): { bone: string; at: THREE.Vector3 } | null {
-    if (this.hatCache !== undefined) return this.hatCache;
-    this.hatCache = null;
+  /** 몸 메시 정점의 현재 자세 위치 (아바타 기준, 한 번 계산해 둠: 고글·저금통 자리 찾기용) */
+  private body: { mesh: THREE.SkinnedMesh; xs: Float32Array; ys: Float32Array; zs: Float32Array; top: number } | null | undefined;
+  private bodyPoints(): NonNullable<Avatar['body']> | null {
+    if (this.body !== undefined) return this.body;
+    this.body = null;
     let mesh: THREE.SkinnedMesh | null = null;
     this.root.traverse((o) => {
       const m = o as THREE.SkinnedMesh;
@@ -189,9 +190,34 @@ export class Avatar {
       xs[i] = _w.x; ys[i] = _w.y; zs[i] = _w.z;
       if (_w.y > top) top = _w.y;
     }
+    this.body = { mesh: m, xs, ys, zs, top };
+    return this.body;
+  }
+
+  /** 저금통 자리: 등 가운데(높이 PIGGY_AT.y)의 가장 뒤쪽 표면에서 몸통 깊이의 30%만 묻힘 */
+  private piggySpot(tier: number): THREE.Vector3 {
+    const b = this.bodyPoints();
+    if (!b) return PIGGY_AT;
+    let back = Infinity;
+    for (let i = 0; i < b.xs.length; i++) {
+      if (Math.abs(b.xs[i]!) < 0.06 && Math.abs(b.ys[i]! - PIGGY_AT.y) < 0.06 && b.zs[i]! < back) back = b.zs[i]!;
+    }
+    if (back === Infinity) return PIGGY_AT;
+    const half = (0.11 + tier * 0.012) * 1.15;
+    return new THREE.Vector3(0, PIGGY_AT.y, back - half * 0.7);
+  }
+
+  /** 모자 앞 위쪽 자리(아바타 기준)와 그 정점을 가장 크게 움직이는 뼈 (아바타마다 한 번 계산) */
+  private hatCache: { bone: string; at: THREE.Vector3 } | null | undefined;
+  private hatSpot(): { bone: string; at: THREE.Vector3 } | null {
+    if (this.hatCache !== undefined) return this.hatCache;
+    this.hatCache = null;
+    const b = this.bodyPoints();
+    if (!b) return null;
+    const { mesh: m, xs, ys, zs, top } = b;
     // 머리 꼭대기에서 0.09~0.17m 아래, 가운데(|x| < 0.05) 중 가장 앞쪽 정점
     let best = -1;
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < xs.length; i++) {
       if (ys[i]! > top - 0.09 || ys[i]! < top - 0.17 || Math.abs(xs[i]!) > 0.05) continue;
       if (best < 0 || zs[i]! > zs[best]!) best = i;
     }
@@ -201,7 +227,8 @@ export class Avatar {
     for (let k = 0; k < 4; k++) if (wgt.getComponent(best, k) > bw) { bw = wgt.getComponent(best, k); bi = idx.getComponent(best, k); }
     const bone = m.skeleton.bones[bi];
     if (!bone) return null;
-    this.hatCache = { bone: bone.name, at: new THREE.Vector3(0, ys[best]!, zs[best]! + 0.015) };
+    // 앞으로 3cm: 자세(대기 클립)에 따라 머리가 1~2cm 앞으로 숙여져 노랑·분홍·검정에서 렌즈가 묻혔음 (2026-11-13)
+    this.hatCache = { bone: bone.name, at: new THREE.Vector3(0, ys[best]!, zs[best]! + 0.03) };
     return this.hatCache;
   }
 

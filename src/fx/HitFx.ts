@@ -64,8 +64,18 @@ export class HitFx {
     scene.add(this.root);
   }
 
-  /** 총구 섬광 + 총구 → 명중 지점 빛줄기 + 명중 팡 */
-  shot(muzzle: THREE.Vector3, hit: THREE.Vector3): void {
+  private color = '';
+  /** 탄 줄기·명중 빛 색 (총 월드 색). 바뀔 때만 재질 색을 바꿈 (풀 재질 고정 개수) */
+  private setColor(c: string): void {
+    if (c === this.color) return;
+    this.color = c;
+    for (const tr of this.tracers) tr.mat.color.set(c);
+    for (const h of this.hits) { (h.s.material as THREE.SpriteMaterial).color.set(c); h.ringMat.color.set(c); }
+  }
+
+  /** 총구 섬광 + 총구 → 명중 지점 빛줄기 + 명중 팡. color = 총알 색 (GunDef.bullet) */
+  shot(muzzle: THREE.Vector3, hit: THREE.Vector3, color = '#fff3a6'): void {
+    this.setColor(color);
     this.flash.position.copy(muzzle);
     this.flash.material.rotation = Math.random() * Math.PI;
     this.flash.scale.setScalar(0.5 + Math.random() * 0.15);
