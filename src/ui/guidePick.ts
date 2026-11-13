@@ -14,15 +14,15 @@ const HUB_LAST_STAGE = BALANCE.stage.perWorld;
 export const TUTORIAL_DONE = 99;
 
 /**
- * 첫 튜토리얼 (사용자 2026-11-13): 사격장(공격) → 러닝머신(연사) → 자동 DPS가 1-1 체력만큼 되면 포털.
- * DPS가 1-1 체력(180)이면 1-1을 1초에 깸 = 첫 전투가 시원함. 훈련 둘 다 해 보고 나서 포털로
+ * 첫 튜토리얼 (사용자 2026-11-13): 사격장(공격) → 러닝머신(연사) → 자동 DPS가 1-1 체력의 절반이 되면 포털.
+ * 1-1을 약 2초에 깸 = 첫 전투가 시원함. 훈련 둘 다 해 보고 나서 포털로
  */
 export const TUT_ATK = 10;
 export const TUT_SPD = 50;
 
-/** 포털 안내 DPS = 1-1 체력 */
+/** 포털 안내 DPS = 1-1 체력의 절반 (첫 전투 약 2초, 포털까지 약 55초 — 체력만큼이면 약 94초라 김, 사용자 2026-11-13) */
 export function portalDps(): number {
-  return stageHp(1);
+  return stageHp(1) / 2;
 }
 
 /** 지금 공격력으로 다음 스테이지를 깰 수 있는지 (자동 사격만, 여유 margin배) */
