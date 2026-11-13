@@ -280,7 +280,7 @@ function readAct(st: Record<string, unknown> | null): ActRecord | null {
   return a && Number.isInteger(a.f) && Number.isInteger(a.l) && typeof a.id === 'string' ? (a as ActRecord) : null;
 }
 
-type RetFilter = { field: string; operator: string; value: number };
+type RetFilter = { field: string; operator: '==' | '<=' | '>='; value: number };
 function retCount(id: string, filters: RetFilter[]): Promise<number> {
   return $global.countCollectionItems(id, { filters });
 }
