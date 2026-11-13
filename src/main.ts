@@ -70,6 +70,22 @@ async function boot(): Promise<void> {
   // retention access log: once per account per UTC day, not awaited
   if (cloud.online) void net.call('actPing').catch(() => undefined);
   // console retention(): server checks admin account, returns counts only
+  // 관리자 콘솔 resetPass(): 내 공격력 패스를 ×1로 (서버가 관리자 계정인지 확인), 성공하면 새로고침
+  Object.assign(window, {
+    resetPass: async () => {
+      try {
+        const r = await withTimeout(net.call<{ ok: boolean; reason?: string; account?: string }>('adminResetPass', [], 10000), 12000);
+        if (!r.ok) { console.warn('[resetPass]', r.reason === 'not_admin' ? `관리자 계정만 (지금 계정 ${r.account ?? '?'})` : r.reason); return r; }
+        game.saver.hold = true;
+        await cloud.stopWrites();
+        location.reload();
+        return r;
+      } catch (e) {
+        console.error('[resetPass] 서버에 연결하지 못했어요', e);
+        return null;
+      }
+    },
+  });
   installRetentionConsole(async (view) => {
     if (!(await withTimeout(net.connect(), 10000))) throw new Error('connect');
     return withTimeout(net.call<RetentionResult>('retentionGet', [view], 20000), 25000);

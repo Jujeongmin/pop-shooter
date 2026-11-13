@@ -565,6 +565,24 @@ export class Server {
     });
   }
 
+  /**
+   * 관리자 테스트용: 내 공격력 패스를 ×1로 되돌림 (콘솔 resetPass(), 사용자 2026-11-13 테스트 구매 정리).
+   * 관리자 계정(RETENTION_ADMINS)만, 자기 계정만. 팝젬·캐릭터·결제 기록(중복 지급 방지)은 그대로
+   */
+  async adminResetPass(): Promise<{ ok: boolean; reason?: string; account?: string }> {
+    const account = $sender.account;
+    if (!account || !RETENTION_ADMINS.has(account.toLowerCase())) return { ok: false, reason: 'not_admin', account };
+    return $lock(`save:${account}`, async () => {
+      const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+      const raw = saveOf(st);
+      const prev = raw ? normalizeState(raw, Date.now()) : null;
+      const prem = premOf(st, prev);
+      await $global.updateMyState({ prem: { ...prem, passMult: 1 }, ...(raw ? { save: { ...raw, passMult: 1 } } : {}) });
+      slog('admin_reset_pass', '-', account);
+      return { ok: true };
+    });
+  }
+
   /** VXShop 결제 웹훅 (Verse8이 부름): 저장과 같은 락, 같은 purchaseId는 한 번만 (sim/premium grantPurchase) */
   async $onItemPurchased(e: { account?: unknown; purchaseId?: unknown; productId?: unknown; quantity?: unknown; metadata?: unknown }): Promise<{ success: boolean; reason?: string }> {
     // purchaseId는 숫자로 올 수 있음 (2026-11-13 실제 테스트 구매 실패: 문자열만 받아서 success false) → 문자열로 맞춤. pop-battle과 같은 처리
