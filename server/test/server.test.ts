@@ -6,6 +6,7 @@ import { checkNickname, safeDisplayNick } from '../../src/net/shared/nickFilter.
 import { HUB_AREA, HUB_MAX_PLAYERS } from '../../src/net/shared/hub.ts';
 import { normalizeState } from '../../src/sim/normalize.ts';
 import { autoDps } from '../../src/sim/actions.ts';
+import { trainCeiling } from '../../src/sim/econ.ts';
 
 // 2026-11-12 갱신: v2 저장(훈련치), 방 정원 16, 월드 1~8 열림, 광장 44×42m(시작 z 8), 보이는 pw = DPS, 기록판 = 최고 DPS
 
@@ -327,7 +328,9 @@ describe('hub info (hello / info validation)', () => {
     expect((await server.hubHello({ c: 'blue', r: 99, pw: 1e30 })).ok).toBe(true);
     let u = await hubUser(server, 'cap');
     expect(u.r).toBe(0);
-    expect(u.pw).toBe(base);
+    // 상한 = 저장(없으면 새 판) + 그 뒤 훈련으로 오를 수 있는 만큼 (방금이라 거의 그대로)
+    expect(u.pw >= base).toBe(true);
+    expect(u.pw <= autoDps(trainCeiling(normalizeState({}, Date.now()), 5))).toBe(true);
     server.connect({ account: 'cap', roomId: HUB });
     await server.saveWrite(BIG_SAVE);
     // 상한 = 서버 저장으로 계산한 DPS (서버가 기록 스테이지로 무료 캐릭터를 줘서 보유 효과가 붙음)
@@ -336,7 +339,8 @@ describe('hub info (hello / info validation)', () => {
     expect((await server.hubInfo({ r: 1e6, pw: 1e300 })).ok).toBe(true);
     u = await hubUser(server, 'cap');
     expect(u.r).toBe(3);
-    expect(u.pw).toBe(cap);
+    expect(u.pw >= cap).toBe(true);
+    expect(u.pw <= autoDps(trainCeiling(normalizeState((await server.saveLoad()).save, Date.now()), 5))).toBe(true);
     // 저장보다 낮은 값은 그대로
     server.connect({ account: 'cap', roomId: HUB });
     await server.hubInfo({ r: 1, pw: 1 });

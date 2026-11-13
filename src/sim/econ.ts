@@ -40,6 +40,25 @@ const FREE_BY_STAGE: readonly [CharId, number][] = [['yellow', 10], ['red', 20],
 /** 유료 캐릭터 */
 export const PAID_CHARS: readonly CharId[] = ['white', 'black'];
 
+/** 광장에 보이는 값의 훈련 한도를 셀 때 인정하는 최대 경과 시간(초): 저장이 30초마다라 그 몇 배면 충분 (오래된 저장으로 한도가 끝없이 커지지 않게) */
+export const CEILING_MAX_SEC = 120;
+
+/**
+ * 저장된 진행 s에서 elapsedSec 동안 훈련으로 오를 수 있는 최대치를 더한 상태 (저장 검사 checkSave와 같은 한도 식).
+ * 광장에서 남에게 보이는 DPS 상한용 (2026-11-13: 예전엔 마지막 저장값까지만 보여, 훈련 중 DPS가 다음 저장(최대 30초 뒤)에야 남에게 보였음).
+ * 랭킹·저장 검사에는 쓰지 않음
+ */
+export function trainCeiling(s: GameState, elapsedSec: number): GameState {
+  const dt = Math.max(0, Math.min(CEILING_MAX_SEC, elapsedSec));
+  const world = highestWorld(s);
+  const out: GameState = { ...s };
+  for (const k of TRAIN_KINDS) {
+    const shots = dt * (trainRate(s, k) + BALANCE.tap.maxPerSec);
+    out[TR_FIELD[k]] = trainValue(s, k) + MARGIN * shots * gainPerShot(s, k, world) + TRAIN_FLOOR;
+  }
+  return out;
+}
+
 /** 산 것 값: 총 + 기구 + 장비 */
 export function levelWorth(s: GameState): number {
   let g = 0;

@@ -68,3 +68,15 @@ test('premium values come from the server, paid chars only if owned', () => {
   const owned = checkSave(prev, { ...prev, char: 'black' }, 5, { ...P, paid: ['black'] }, NOW);
   assert.ok(owned.ok && owned.state.char === 'black');
 });
+
+test('trainCeiling: visible-DPS allowance grows with time since the save, capped, never below the save', async () => {
+  const { trainCeiling, CEILING_MAX_SEC } = await import('../../src/sim/econ.ts');
+  const s: GameState = { ...newState(0), trAtk: 100, trSpd: 50 };
+  const now0 = trainCeiling(s, 0);
+  assert.ok(now0.trAtk >= s.trAtk && now0.trAtk <= s.trAtk + 2);
+  const t10 = trainCeiling(s, 10);
+  const t30 = trainCeiling(s, 30);
+  assert.ok(t10.trAtk > now0.trAtk && t30.trAtk > t10.trAtk);
+  assert.equal(trainCeiling(s, 1e9).trAtk, trainCeiling(s, CEILING_MAX_SEC).trAtk);
+  assert.equal(trainCeiling(s, -5).trAtk, now0.trAtk);
+});

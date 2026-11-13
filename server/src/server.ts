@@ -12,7 +12,7 @@
  * 요청마다 새 인스턴스라 상태는 모듈 변수에 두지 않음.
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
-import { allowedChars, checkSave } from '../../src/sim/econ.ts';
+import { allowedChars, checkSave, trainCeiling } from '../../src/sim/econ.ts';
 import { AD_KINDS, AD_LIMIT, buySkipRebirth, buyWithGems, claimAd, PRODUCTS, claimDaily, dailyReady, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
 import { newState, type CharId, type GameState } from '../../src/sim/state.ts';
@@ -181,14 +181,16 @@ const HUB_FIELDS: readonly HubInfoField[] = ['c', 'g', 'r', 'pw', 's', 'q'];
 const HUB_DEFAULTS: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub', q: 0 };
 
 /**
- * 보이는 환생·DPS는 내 저장값을 넘지 못함 (글로벌 사용자 상태 한 번 읽은 것 st): 환생 ≤ save.rebirths, pw(= DPS, 사용자 2026-11-12) ≤ 저장으로 계산한 autoDps.
- * 저장이 조금 늦으면 잠깐 낮게 보일 수 있음 → 클라이언트는 저장 뒤 hubInfo를 다시 보냄 (Task 3)
+ * 보이는 환생·DPS는 내 저장값을 넘지 못함 (글로벌 사용자 상태 한 번 읽은 것 st): 환생 ≤ save.rebirths,
+ * pw(= DPS, 사용자 2026-11-12) ≤ 저장 + 저장 뒤 지난 시간 동안 훈련으로 오를 수 있는 최대치로 계산한 autoDps (econ trainCeiling,
+ * 2026-11-13: 저장값까지만 인정하면 훈련 중 DPS가 다음 저장(최대 30초 뒤)에야 남에게 보였음). 사람마다 자기 저장만 봄
  */
 function capBySave(patch: Partial<HubInfo>, st: Record<string, unknown>): void {
   if (patch.r === undefined && patch.pw === undefined && patch.q === undefined) return;
-  const saved = normalizeState(saveOf(st) ?? {}, Date.now());
+  const now = Date.now();
+  const saved = normalizeState(saveOf(st) ?? {}, now);
   if (patch.r !== undefined) patch.r = Math.min(patch.r, saved.rebirths);
-  if (patch.pw !== undefined) patch.pw = Math.min(patch.pw, autoDps(saved));
+  if (patch.pw !== undefined) patch.pw = Math.min(patch.pw, autoDps(trainCeiling(saved, (now - saved.lastSeen) / 1000)));
   // 장비는 저장에 있는 것만 보임
   if (patch.q !== undefined) patch.q = patch.q & saved.gear;
 }
