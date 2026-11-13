@@ -2,7 +2,7 @@
  * POP Shooter 서버
  * 1) 계정별 진행 저장 (원본 = Verse8 글로벌 사용자 상태 `save`).
  *    - 저장값은 sim/normalize로 형식·범위를 고친 뒤 저장, lastSeen은 서버 시각으로 찍음 (오프라인 보상 = 서버 시각 기준).
- *    - 코인 증가량 상한 검사(스펙 8장)는 아직 없음 → 기록은 공식 랭킹이 아님.
+ *    - 경제 검사(sim/econ checkSave): 지난 시간만큼만 훈련·골드·스테이지·환생 인정. 첫 저장은 서버가 처음 본 시각의 새 판이 기준.
  *    위치·전투 중 상태는 저장하지 않음: 다시 켜면 늘 광장 시작 지점, 끝나지 않은 연속 도전은 버려짐.
  * 2) 광장 멀티 (월드별 룸 w<월드>-<번호>, 정원 16): 서로 보이기만 함 (충돌 없음, 전투·훈련은 혼자). pop-battle 허브를 복사해 고침.
  * 3) 닉네임 (계정별 글로벌 사용자 상태 nick + 중복 방지 컬렉션 ps_nick). pop-battle에서 복사.
@@ -12,7 +12,7 @@
  * 요청마다 새 인스턴스라 상태는 모듈 변수에 두지 않음.
  */
 import { normalizeState } from '../../src/sim/normalize.ts';
-import { allowedChars, checkSave, trainCeiling } from '../../src/sim/econ.ts';
+import { allowedChars, checkSave, firstSaveBase, trainCeiling } from '../../src/sim/econ.ts';
 import { AD_KINDS, AD_LIMIT, buySkipRebirth, buyWithGems, claimAd, PRODUCTS, claimDaily, dailyReady, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
 import { newState, type CharId, type GameState } from '../../src/sim/state.ts';
@@ -393,10 +393,21 @@ export class Server {
 
   // ---------------- 저장 ----------------
 
-  /** 내 저장 + 서버 지금 시각 (오프라인 보상 계산용) */
+  /**
+   * 내 저장 + 서버 지금 시각 (오프라인 보상 계산용).
+   * 저장이 아직 없으면 처음 본 시각 saveBorn을 한 번 적음 → 첫 저장은 이 시각의 새 판에서 그 사이 시간만큼만 인정 (econ firstSaveBase)
+   */
   async saveLoad(): Promise<{ ok: true; save: Record<string, unknown> | null; now: number }> {
-    const st = await $global.getMyState();
-    return { ok: true, save: saveOf(st), now: Date.now() };
+    const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+    const save = saveOf(st);
+    const account = $sender.account;
+    if (!save && typeof st.saveBorn !== 'number' && account) {
+      await $lock(`save:${account}`, async () => {
+        const cur = ((await $global.getMyState()) || {}) as Record<string, unknown>;
+        if (!saveOf(cur) && typeof cur.saveBorn !== 'number') await $global.updateMyState({ saveBorn: Date.now() });
+      });
+    }
+    return { ok: true, save, now: Date.now() };
   }
 
   /**
@@ -429,18 +440,22 @@ export class Server {
     try { size = JSON.stringify(raw).length; } catch { return { ok: false, reason: 'bad', now }; }
     if (!raw || typeof raw !== 'object' || size > MAX_SAVE_CHARS) return { ok: false, reason: 'bad', now };
     const account = $sender.account;
+    if (!account) return { ok: false, reason: 'no_account', now };
     return $lock(`save:${account}`, async (): Promise<SaveWriteResult> => {
       const st = ((await $global.getMyState()) || {}) as Record<string, unknown>;
       const prevRaw = saveOf(st);
-      const prev = prevRaw ? normalizeState(prevRaw, now) : null;
+      // 첫 저장도 검사: 서버가 처음 본 시각의 새 판이 기준 (검사 없이 받으면 조작한 첫 저장이 기록판·대장 팝젬으로 이어짐)
+      const prev = prevRaw ? normalizeState(prevRaw, now) : firstSaveBase(st.saveBorn, now);
       const prem = premOf(st, prev);
       const clean = normalizeState(raw, now);
-      const elapsed = prev ? (now - prev.lastSeen) / 1000 : 0;
+      const elapsed = (now - prev.lastSeen) / 1000;
       const r = checkSave(prev, clean, elapsed, prem, now);
       if (!r.ok) {
-        slog(`save_reject_${r.reason}`, '-', account);
-        // 이전 서버 저장 유지, 클라이언트는 이 값으로 맞춤 (거절이 반복되지 않게)
-        return { ok: false, reason: r.reason, now, prem: premView(prem, prev), fix: prev ? { ...prev } as unknown as Record<string, unknown> : undefined };
+        slog(`save_reject_${r.reason}${prevRaw ? '' : '_first'}`, '-', account);
+        // saveLoad 없이 바로 저장했거나 그때 못 적었으면 지금 적음 (안 적으면 다음 첫 저장도 지난 시간 0으로 계속 거절)
+        if (!prevRaw && typeof st.saveBorn !== 'number') await $global.updateMyState({ saveBorn: now });
+        // 이전 서버 저장(첫 저장이면 새 판) 유지, 클라이언트는 이 값으로 맞춤 (거절이 반복되지 않게)
+        return { ok: false, reason: r.reason, now, prem: premView(prem, prev), fix: { ...prev } as unknown as Record<string, unknown> };
       }
       const saved = { ...r.state, lastSeen: now };
       // checkSave는 econ Premium 형태로 돌려줌 → 광고·결제 기록까지 담은 PremState로 (필드는 그대로 실려 있음)

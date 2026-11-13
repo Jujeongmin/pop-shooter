@@ -3,7 +3,7 @@ import { BALANCE } from './balance.ts';
 import { gunPrice } from './guns.ts';
 import { RUN_GAP_SEC } from './run.ts';
 import { firstClearCoins, isBoss, replayCoins, stageHp, stageTime } from './stages.ts';
-import type { CharId, GameState } from './state.ts';
+import { newState, type CharId, type GameState } from './state.ts';
 import { gainPerShot, TRAIN_KINDS, trainValue, trainWorth, type TrainKind } from './training.ts';
 
 /**
@@ -102,7 +102,17 @@ export type CheckResult =
   | { ok: false; reason: 'rebirth_skip' | 'rebirth_early' | 'stage' | 'levels' };
 
 /**
- * prev = 서버에 있던 저장 (없으면 첫 저장: 프리미엄 덮기만), next = 클라이언트가 보낸 저장 (normalize 뒤),
+ * 첫 저장(서버 저장 없음)의 비교 기준: 서버가 이 계정을 처음 본 시각(saveLoad가 적는 saveBorn)의 새 판.
+ * 모르거나 이상한 값이면 지금 = 그 사이 시간 0. 서버 저장이 없다고 검사 없이 받으면 조작한 첫 저장으로
+ * 기록판 1위·대장 첫 클리어 팝젬을 가져갈 수 있었음 (2026-11-13 검수). 서버에 연결 못 한 채 쌓은 기기 진행은 그만큼 잘림
+ */
+export function firstSaveBase(born: unknown, now: number): GameState {
+  const t = typeof born === 'number' && Number.isFinite(born) && born <= now ? born : now;
+  return newState(t);
+}
+
+/**
+ * prev = 서버에 있던 저장 (없으면 프리미엄 덮기만 — 서버는 대신 firstSaveBase를 넘김), next = 클라이언트가 보낸 저장 (normalize 뒤),
  * elapsedSec = 서버 시각 기준 지난 시간, prem = 서버 프리미엄 (부스트 판단은 prem.boostUntil).
  */
 export function checkSave(prev: GameState | null, next: GameState, elapsedSec: number, prem: Premium, now: number): CheckResult {

@@ -35,6 +35,11 @@ function hubPkt(q: number, x: number, z: number): number[] {
 
 const INFO = { c: 'blue', g: 0, r: 0, pw: 10, s: 'hub' };
 
+/** 서버 저장을 직접 넣음 (첫 저장은 새 판 기준으로 검사하므로, 진행이 있는 계정은 이렇게 준비) */
+async function seedSave(account: string, save: Record<string, unknown>): Promise<void> {
+  await $global.updateUserState(account, { save: { ...save, lastSeen: Date.now() } });
+}
+
 /** 장부에 예약을 직접 적음 (hubFind가 다른 룸을 고를 상황에서 특정 룸으로 넣을 때) */
 async function reserve(roomId: string, account: string): Promise<void> {
   const key = 'hub_book_' + roomId.split('-')[0];
@@ -66,8 +71,8 @@ async function hubUser(server: any, account: string, roomId = HUB): Promise<any>
 
 describe('account save', () => {
   test('round trip, lastSeen is server time', async (server) => {
+    await seedSave('alice', { v: 2, coins: 1234, mAtk: 5, bestStage: 3, char: 'blue', chars: ['blue'] });
     server.connect({ account: 'alice' });
-    expect((await server.saveLoad()).save).toBe(null);
     const w = await server.saveWrite({ v: 2, coins: 1234, mAtk: 5, bestStage: 3, char: 'blue', chars: ['blue'], lastSeen: 1 });
     expect(w.ok).toBe(true);
     const r = await server.saveLoad();
@@ -91,6 +96,34 @@ describe('account save', () => {
     expect(r.save.coins).toBe(0);
     expect(r.save.mAtk).toBe(0);
     expect(r.save.char).toBe('blue');
+  });
+
+  // 2026-11-13 검수: 서버 저장이 없을 때 검사 없이 받아 조작한 첫 저장으로 기록판 1위·대장 팝젬을 가져갈 수 있었음
+  test('forged first save is refused against a fresh game since the first load: no progress, no boss gems, no rank row', async (server) => {
+    server.connect({ account: 'forger' });
+    expect((await server.saveLoad()).save).toBe(null);
+    const r = await server.saveWrite({ v: 2, bestStage: 80, runBest: 80, rebirths: 40, tokens: 40, trAtk: 1e12, coins: 1e15, char: 'blue', chars: ['blue'] });
+    expect(r.ok).toBe(false);
+    expect(r.fix.bestStage).toBe(0);
+    expect(r.fix.rebirths).toBe(0);
+    expect(r.prem.gems).toBe(0);
+    expect((await server.saveLoad()).save).toBe(null);
+    expect((await server.rankTop()).rows.length).toBe(0);
+  });
+
+  test('first save without saveLoad is checked too (time since = 0)', async (server) => {
+    server.connect({ account: 'forger2' });
+    const r = await server.saveWrite({ v: 2, bestStage: 10, char: 'blue', chars: ['blue'] });
+    expect(r.ok).toBe(false);
+    expect((await server.saveLoad()).save).toBe(null);
+  });
+
+  test('honest first save after loading passes', async (server) => {
+    server.connect({ account: 'newbie' });
+    expect((await server.saveLoad()).save).toBe(null);
+    const r = await server.saveWrite({ v: 2, bestStage: 1, char: 'blue', chars: ['blue'] });
+    expect(r.ok).toBe(true);
+    expect((await server.saveLoad()).save.bestStage).toBe(1);
   });
 
   test('non-object or huge saves are rejected', async (server) => {
@@ -291,8 +324,8 @@ describe('hub info (hello / info validation)', () => {
 
   test('hubInfo: changes only given fields; any bad field changes nothing', async (server) => {
     await fillHub(server, HUB, ['bob']);
+    await seedSave('bob', BIG_SAVE);
     server.connect({ account: 'bob', roomId: HUB });
-    await server.saveWrite(BIG_SAVE);
     const cap = autoDps(normalizeState(BIG_SAVE, Date.now()));
     expect((await server.hubInfo({ g: 31, r: 3, pw: cap / 2, s: 'training' })).ok).toBe(true);
     let u = await hubUser(server, 'bob');
@@ -331,9 +364,9 @@ describe('hub info (hello / info validation)', () => {
     // 상한 = 저장(없으면 새 판) + 그 뒤 훈련으로 오를 수 있는 만큼 (방금이라 거의 그대로)
     expect(u.pw >= base).toBe(true);
     expect(u.pw <= autoDps(trainCeiling(normalizeState({}, Date.now()), 5))).toBe(true);
+    await seedSave('cap', BIG_SAVE);
     server.connect({ account: 'cap', roomId: HUB });
-    await server.saveWrite(BIG_SAVE);
-    // 상한 = 서버 저장으로 계산한 DPS (서버가 기록 스테이지로 무료 캐릭터를 줘서 보유 효과가 붙음)
+    // 상한 = 서버 저장으로 계산한 DPS
     const cap = autoDps(normalizeState((await server.saveLoad()).save, Date.now()));
     expect(cap > base).toBe(true);
     expect((await server.hubInfo({ r: 1e6, pw: 1e300 })).ok).toBe(true);
@@ -547,8 +580,8 @@ describe('nickname storage (server final check)', () => {
   });
 
   test('stored nickname shows in the hub (client value ignored); nickSet inside the hub updates it; save is untouched', async (server) => {
+    await seedSave('ns', { v: 2, coins: 77 });
     server.connect({ account: 'ns', roomId: OUT });
-    await server.saveWrite({ v: 2, coins: 77 });
     await server.nickSet('저장된이름');
     await fillHub(server, HUB, ['ns']);
     expect((await hubUser(server, 'ns')).n).toBe('저장된이름');
@@ -642,6 +675,7 @@ describe('nickname filter (shared client/server check)', () => {
 describe('rank board', () => {
   test('rows ordered by best DPS (kept after it drops); my rank; no account ids', async (server) => {
     const put = async (acc: string, trAtk: number) => {
+      await seedSave(acc, { v: 2, trAtk, char: 'blue', chars: ['blue'] });
       server.connect({ account: acc });
       await server.saveWrite({ v: 2, trAtk, char: 'blue', chars: ['blue'] });
     };

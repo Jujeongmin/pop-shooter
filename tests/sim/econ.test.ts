@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { rebirthReq, shotsPerSec } from '../../src/sim/actions.ts';
 import { BALANCE } from '../../src/sim/balance.ts';
-import { checkSave, worth, type Premium } from '../../src/sim/econ.ts';
+import { checkSave, firstSaveBase, worth, type Premium } from '../../src/sim/econ.ts';
 import { replayCoins } from '../../src/sim/stages.ts';
 import { newState, type GameState } from '../../src/sim/state.ts';
 import { buyMachine, gainPerShot, train } from '../../src/sim/training.ts';
@@ -79,4 +79,28 @@ test('trainCeiling: visible-DPS allowance grows with time since the save, capped
   assert.ok(t10.trAtk > now0.trAtk && t30.trAtk > t10.trAtk);
   assert.equal(trainCeiling(s, 1e9).trAtk, trainCeiling(s, CEILING_MAX_SEC).trAtk);
   assert.equal(trainCeiling(s, -5).trAtk, now0.trAtk);
+});
+
+// 첫 저장(서버 저장 없음)도 검사: 기준 = 서버가 처음 본 시각(saveBorn)의 새 판 (2026-11-13 검수: 조작 첫 저장으로 기록판 1위·대장 팝젬)
+test('firstSaveBase: fresh game at the server-recorded first load, else now', () => {
+  const b = firstSaveBase(NOW - 30_000, NOW);
+  assert.deepEqual(b, newState(NOW - 30_000));
+  for (const bad of [undefined, null, 'x', NaN, NOW + 5000]) assert.equal(firstSaveBase(bad, NOW).lastSeen, NOW);
+});
+
+test('forged first save (stage, rebirths, training, gold) is refused against the fresh base', () => {
+  const base = firstSaveBase(NOW - 30_000, NOW);
+  const forged: GameState = { ...newState(NOW), bestStage: 80, runBest: 80, rebirths: 40, tokens: 40, trAtk: 1e12, coins: 1e15 };
+  const r = checkSave(base, forged, 30, P, NOW);
+  assert.equal(r.ok, false);
+  // 대장 기록만 올려도 깰 수 없는 스테이지 → 거절 (대장 팝젬 없음)
+  assert.equal(checkSave(base, { ...newState(NOW), bestStage: 10 }, 30, P, NOW).ok, false);
+});
+
+test('honest first save after a short session passes', () => {
+  const base = firstSaveBase(NOW - 30_000, NOW);
+  const next = train(base, 'atk', 30 * shotsPerSec(base), 1);
+  const r = checkSave(base, next, 30, P, NOW);
+  assert.ok(r.ok);
+  if (r.ok) assert.equal(r.clamped, false);
 });
