@@ -176,18 +176,20 @@ function hubPatch(raw: unknown, fields: readonly HubInfoField[]): { patch: Parti
   return { patch: patch as Partial<HubInfo> };
 }
 
-const HUB_FIELDS: readonly HubInfoField[] = ['c', 'g', 'r', 'pw', 's'];
-const HUB_DEFAULTS: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub' };
+const HUB_FIELDS: readonly HubInfoField[] = ['c', 'g', 'r', 'pw', 's', 'q'];
+const HUB_DEFAULTS: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub', q: 0 };
 
 /**
  * 보이는 환생·DPS는 내 저장값을 넘지 못함 (글로벌 사용자 상태 한 번 읽은 것 st): 환생 ≤ save.rebirths, pw(= DPS, 사용자 2026-11-12) ≤ 저장으로 계산한 autoDps.
  * 저장이 조금 늦으면 잠깐 낮게 보일 수 있음 → 클라이언트는 저장 뒤 hubInfo를 다시 보냄 (Task 3)
  */
 function capBySave(patch: Partial<HubInfo>, st: Record<string, unknown>): void {
-  if (patch.r === undefined && patch.pw === undefined) return;
+  if (patch.r === undefined && patch.pw === undefined && patch.q === undefined) return;
   const saved = normalizeState(saveOf(st) ?? {}, Date.now());
   if (patch.r !== undefined) patch.r = Math.min(patch.r, saved.rebirths);
   if (patch.pw !== undefined) patch.pw = Math.min(patch.pw, autoDps(saved));
+  // 장비는 저장에 있는 것만 보임
+  if (patch.q !== undefined) patch.q = patch.q & saved.gear;
 }
 
 /** 광장 룸 사용자 상태 중 서버가 보는 것 */
@@ -531,7 +533,7 @@ export class Server {
     if (bad) return { ok: false, reason: `bad_${bad}` };
     if (!Object.keys(patch).length) return { ok: true };
     if (!hubJoined(((await $room.getMyState()) || {}) as HubMine)) return { ok: false, reason: 'not_joined' };
-    if (patch.r !== undefined || patch.pw !== undefined) capBySave(patch, ((await $global.getMyState()) || {}) as Record<string, unknown>);
+    if (patch.r !== undefined || patch.pw !== undefined || patch.q !== undefined) capBySave(patch, ((await $global.getMyState()) || {}) as Record<string, unknown>);
     await $room.updateMyState(patch, { returnState: false });
     return { ok: true };
   }
@@ -559,7 +561,7 @@ export class Server {
   async hubState(): Promise<{ ok: boolean; users: Array<{ account: string } & Record<string, unknown>> }> {
     if (!hubOf()) return { ok: false, users: [] };
     const all = await $room.getAllUserStates();
-    return { ok: true, users: all.map((u) => ({ account: u.account, n: u.n, c: u.c, g: u.g, r: u.r, pw: u.pw, s: u.s, p: u.p, x: u.x })) };
+    return { ok: true, users: all.map((u) => ({ account: u.account, n: u.n, c: u.c, g: u.g, r: u.r, pw: u.pw, s: u.s, q: u.q, p: u.p, x: u.x })) };
   }
 
   /** 광장에서 나감 (정상 퇴장): 다른 사람 화면에서 바로 숨기고(x 2, 늦게 온 hubMove로 다시 보이지 않음) 장부에서 바로 지움 → 곧바로 빈자리 */

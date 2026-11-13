@@ -29,6 +29,9 @@ const END_DELAY = 1.1;
 /** 포털 착지 뒤 시작 연출: 카메라가 보스 쪽에서 내 뒤로 돌아옴, 이 동안 전투 안 함 (사용자 2026-11-11: 시작 전에 1-1이 끝나던 문제) */
 const INTRO_SEC = 2.2;
 const INTRO_YAW = Math.PI * 0.8;
+/** 전투 카메라 (스테이지마다 바꾸지 않음): focus -1.2 = 카메라 z 약 15.9 (관중석 3번째 줄 16.4m 앞), 바라보는 높이 +2.0m (가로 폰에서도 대장이 위쪽 체력바에 안 가림) */
+const BATTLE_FOCUS = -1.2;
+const BATTLE_LOOK_UP = 2.0;
 /**
  * 보스 반격: 스테이지 제한 시간을 HITS칸으로 나눠, 칸마다 장난감 공 하나가 날아와 내 체력 한 칸을 깎음.
  * 마지막 공이 닿는 순간 = 제한 시간 끝 → 계산은 sim의 시간 제한 그대로 (밸런스 변화 없음), 보기에는 맞고 쓰러짐.
@@ -186,7 +189,8 @@ export class BattleScene {
     g.setMode('battle');
     g.hud.setVisible(false);
     g.placeAt(PLAYER_AT.x, PLAYER_AT.z, Math.PI);
-    g.cam.focus = -1.2;
+    g.cam.focus = BATTLE_FOCUS;
+    g.cam.lookUp = BATTLE_LOOK_UP;
     audio.setMusic('battle');
     this.applyTheme(world);
     this.run = startRun(g.state, world);
@@ -205,12 +209,11 @@ export class BattleScene {
   private spawnBoss(): void {
     const run = this.run!;
     this.boss = new ToyBoss(run.stage, themeOf(run.world).bossTints);
-    // 큰 보스일수록 카메라가 위를 더 봄 (대장 머리·왕관이 잘리지 않게). 뒤로는 물리지 않음:
-    // 예전엔 focus를 더 낮춰 뒤로 물렸는데 1-6쯤부터 카메라가 둘레 관중석 블록(3번째 줄 반지름 16.4m, 높이 5.2m) 안에 들어가
-    // 블록 면이 화면을 덮고 내 캐릭터가 안 보였음 (사용자 2026-11-12 스크린샷). focus -1.2 = 카메라 z 약 15.9
-    const extra = Math.max(0, this.boss.height - 2.4);
-    this.game.cam.focus = -1.2;
-    this.game.cam.lookUp = extra * 0.55;
+    // 카메라는 모든 스테이지에서 같음 (사용자 2026-11-13: 다음 단계로 갈수록 카메라가 멀어져 벽이 보임).
+    // 예전엔 보스 키에 따라 뒤로 물리거나(1-6쯤부터 관중석 블록 안으로 들어가 캐릭터가 가려짐) 위를 더 봤음.
+    // BATTLE_LOOK_UP 하나로 가장 큰 대장(키 6.4m, 왕관 포함)까지 화면에 들어감
+    this.game.cam.focus = BATTLE_FOCUS;
+    this.game.cam.lookUp = BATTLE_LOOK_UP;
     this.boss.root.position.set(BOSS_AT.x, 0, BOSS_AT.z);
     this.stageT = run.battle.timeLeft;
     this.launched = 0;

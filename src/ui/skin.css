@@ -262,3 +262,16 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 .tr-fill[data-need="red"] { background: #ff4f5e; }
 .tr-fill[data-need="orange"] { background: #ffa53d; }
 .tr-fill[data-need="green"] { background: #4fcf6a; }
+
+/* 가로 폰 전투 HUD 작게 (2026-11-13: 812×375에서 체력바가 내 캐릭터를, DPS 칩이 대장을 가림) */
+@media (max-height: 460px) {
+  .bhud-top { top: 8px; width: min(60vw, 320px); gap: 3px; }
+  .bhud-stage { font-size: 20px; -webkit-text-stroke: 5px var(--ink); }
+  .bhud-bar { height: 18px; border-width: 2px; }
+  .bhud-hp { font-size: 12px; }
+  .bhud-chip { font-size: 13px; padding: 1px 10px 1px 4px; }
+  .bhud-chip .ico { width: 18px; height: 18px; }
+  .bhud-me { bottom: 10px; width: min(40vw, 220px); }
+  .bhud-me .ico { width: 24px; height: 24px; }
+  .bhud-mebar { height: 14px; border-width: 2px; }
+}

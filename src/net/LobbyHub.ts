@@ -23,6 +23,8 @@ export interface HubPeer {
   rebirths: number;
   power: number;
   status: HubStatus;
+  /** 장비 비트 (보이는 장비) */
+  gear: number;
   readonly buffer: HubBuffer;
 }
 
@@ -50,7 +52,7 @@ const INFO_INTERVAL_MS = 500;
 /** 입장 시도당 배정 다시 받기 (full·no_reservation) */
 const FIND_ATTEMPTS = 3;
 
-const INFO_KEYS = ['c', 'g', 'r', 'pw', 's'] as const;
+const INFO_KEYS = ['c', 'g', 'r', 'pw', 's', 'q'] as const;
 /** 서버가 나를 숨긴 것(x ≠ 0)을 끊김으로 보기 전 hello 뒤 대기 (ms): hello 직후 푸시는 아직 예전 상태일 수 있음 */
 const SELF_HIDDEN_GRACE_MS = 2000;
 
@@ -71,9 +73,9 @@ export class LobbyHub {
   private token = 0;
   private world = 1;
   /** 지금 내 보이는 정보 (게임이 알려 줌) */
-  private readonly info: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub' };
+  private readonly info: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub', q: 0 };
   /** 서버에 보낸 값 (다른 칸만 hubInfo) */
-  private readonly sent: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub' };
+  private readonly sent: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub', q: 0 };
   private infoAt = 0;
   private infoBusy = false;
   /**
@@ -159,7 +161,7 @@ export class LobbyHub {
       if (v === undefined) continue;
       const ok = sanitizeHubField(k, k === 'r' ? Math.floor(v as number) : v);
       if (ok === undefined) continue;
-      if ((k === 'r' || k === 'pw') && ok !== this.info[k]) this.resendRP = true;
+      if ((k === 'r' || k === 'pw' || k === 'q') && ok !== this.info[k]) this.resendRP = true;
       (this.info as unknown as Record<string, unknown>)[k] = ok;
     }
   }
@@ -180,6 +182,7 @@ export class LobbyHub {
     // 보낸 값을 비워서 다음 update가 r·pw를 다시 보내게
     this.sent.r = -1;
     this.sent.pw = -1;
+    this.sent.q = -1;
   }
 
   /**
@@ -359,15 +362,17 @@ export class LobbyHub {
       const r = (sanitizeHubField('r', u.r) as number | undefined) ?? 0;
       const pw = (sanitizeHubField('pw', u.pw) as number | undefined) ?? 0;
       const s = (sanitizeHubField('s', u.s) as HubStatus | undefined) ?? 'hub';
+      const q = (sanitizeHubField('q', u.q) as number | undefined) ?? 0;
       let peer = this.peers.get(u.account);
       if (!peer) {
-        peer = { account: u.account, nick, char: c, gun: g, rebirths: r, power: pw, status: s, buffer: new HubBuffer() };
+        peer = { account: u.account, nick, char: c, gun: g, rebirths: r, power: pw, status: s, gear: q, buffer: new HubBuffer() };
         this.peers.set(u.account, peer);
         peer.buffer.push(u.p, now);
         this.events.onPeerJoin(peer);
         continue;
       }
-      if (nick !== peer.nick || c !== peer.char || g !== peer.gun || r !== peer.rebirths || pw !== peer.power || s !== peer.status) {
+      if (nick !== peer.nick || c !== peer.char || g !== peer.gun || r !== peer.rebirths || pw !== peer.power || s !== peer.status || q !== peer.gear) {
+        peer.gear = q;
         peer.nick = nick;
         peer.char = c;
         peer.gun = g;

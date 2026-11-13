@@ -112,7 +112,12 @@ export interface HubInfo {
   pw: number;
   /** 상태 */
   s: HubStatus;
+  /** 가진 장비 비트 (GameState.gear, 다른 사람 화면에 장비가 보이게, 사용자 2026-11-12). 서버는 저장값에 있는 비트만 남김 */
+  q: number;
 }
+
+/** 장비 비트 상한 (장비 16개까지) */
+export const HUB_GEAR_MAX = 0xffff;
 
 /** 광장 룸 사용자 상태 (서버가 저장, SDK가 같은 룸에 푸시) */
 export interface HubUserState extends Partial<HubInfo> {
@@ -145,6 +150,8 @@ export function sanitizeHubField(k: HubInfoField, v: unknown): HubInfo[HubInfoFi
       return finite(v) && v >= 0 ? v : undefined;
     case 's':
       return typeof v === 'string' && (HUB_STATUSES as readonly string[]).includes(v) ? (v as HubStatus) : undefined;
+    case 'q':
+      return finite(v) && Number.isInteger(v) && v >= 0 && v <= HUB_GEAR_MAX ? v : undefined;
     default:
       return undefined;
   }

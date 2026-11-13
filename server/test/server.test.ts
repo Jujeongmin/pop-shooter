@@ -10,7 +10,7 @@ import { autoDps } from '../../src/sim/actions.ts';
 // 2026-11-12 갱신: v2 저장(훈련치), 방 정원 16, 월드 1~8 열림, 광장 44×42m(시작 z 8), 보이는 pw = DPS, 기록판 = 최고 DPS
 
 /** 환생 3번·공격 훈련·총 5인 저장 (보이는 환생·DPS 상한 검사용) */
-const BIG_SAVE = { v: 2, rebirths: 3, tokens: 3, trAtk: 500, gun: 5, bestStage: 20, char: 'blue', chars: ['blue'] };
+const BIG_SAVE = { v: 2, rebirths: 3, tokens: 3, trAtk: 500, gun: 5, bestStage: 20, char: 'blue', chars: ['blue'], gear: 0b0101 };
 
 const HUB = 'w1-1';
 const OUT = '__no_room__';
@@ -273,6 +273,7 @@ describe('hub info (hello / info validation)', () => {
     expect((await server.hubHello({ c: 'red', pw: NaN })).reason).toBe('bad_pw');
     expect((await server.hubHello({ c: 'red', pw: '9' })).reason).toBe('bad_pw');
     expect((await server.hubHello({ c: 'red', s: 'pvp' })).reason).toBe('bad_s');
+    expect((await server.hubHello({ c: 'red', q: -1 })).reason).toBe('bad_q');
     const ok = await server.hubHello({ c: 'pink', n: 'ClientName' });
     expect(ok.ok).toBe(true);
     const u = await hubUser(server, 'alice');
@@ -299,6 +300,10 @@ describe('hub info (hello / info validation)', () => {
     expect(u.pw).toBe(cap / 2);
     expect(u.s).toBe('training');
     expect(u.c).toBe('blue');
+    // 장비 비트: 저장에 있는 장비만 보임
+    expect((await server.hubInfo({ q: 0b1111 })).ok).toBe(true);
+    u = await hubUser(server, 'bob');
+    expect(u.q).toBe(0b1111 & normalizeState(BIG_SAVE, Date.now()).gear);
     server.connect({ account: 'bob', roomId: HUB });
     expect((await server.hubInfo({ c: 'black', g: -1 })).reason).toBe('bad_g');
     expect((await server.hubInfo({ s: 'battle', pw: Infinity })).reason).toBe('bad_pw');

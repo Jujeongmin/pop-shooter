@@ -8,8 +8,8 @@ const OUT = process.argv[2] ?? 'store-assets';
 const S = 720;
 const FPS = 30;
 /** 게임 시간 배속 (전투 사이 쉬는 시간이 길어 조금 빠르게) */
-const SPEED = 1.3;
-const MAX_SEC = 14.5;
+const SPEED = 1.35;
+const MAX_SEC = 14.8;
 
 const b = await launch({ width: S, height: S, port: 9335 });
 await b.send('Network.enable');
@@ -26,7 +26,7 @@ await b.evaluate(`
   for (const el of document.querySelectorAll('#ui *')) if (el.childElementCount === 0 && /마우스 고정/.test(el.textContent || '')) el.style.display = 'none';
   const { stageHp } = await import('/src/sim/stages.ts');
   const { autoDps } = await import('/src/sim/actions.ts');
-  let s = { ...g.state, gun: 4, bestStage: 9, runBest: 9, chars: ['blue', 'yellow', 'red'], tutorial: 99, gear: 0b111111, trSpd: 300, mAtk: 20 };
+  let s = { ...g.state, gun: 4, bestStage: 9, runBest: 9, chars: ['blue', 'yellow', 'red'], tutorial: 99, gear: 0b111111, trSpd: 1e6, mAtk: 20 };
   // 공격 훈련치를 이분 탐색: 대장 체력 / 2.5초
   const want = stageHp(10) / 2.5; let lo = 0, hi = 1e15;
   for (let i = 0; i < 80; i++) { const mid = (lo + hi) / 2; if (autoDps({ ...s, trAtk: mid }) < want) lo = mid; else hi = mid; }

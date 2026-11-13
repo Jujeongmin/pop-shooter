@@ -1,7 +1,7 @@
 // 광장의 다른 플레이어 그리기: LobbyHub가 준 보간 버퍼 → 아바타(캐릭터 + 든 총) 위치·자세 + 머리 위 이름표.
 // pop-battle src/net/LobbyPeers.ts를 복사해 고침 (2026-11-11): 이 게임 Avatar(player/Avatar.ts) 재사용, 이름표는 3D 글자 스프라이트(캔버스 텍스처).
 // 충돌 없음: 나·서로를 밀거나 막지 않고 겹쳐도 됨 (사용자 2026-11-11). 이동 콜라이더에 넣지 않음.
-// 이름표 = 닉네임 / 공격력 (환생 횟수는 넣지 않음, 사용자 2026-11-11). 계정 id는 절대 화면에 내지 않음 (닉네임 없으면 '플레이어').
+// 장비(장갑·고글·돼지 저금통)도 보임 (HubInfo q = 장비 비트, 2026-11-12). 이름표 = 닉네임 / 공격력 (환생 횟수는 넣지 않음, 사용자 2026-11-11). 계정 id는 절대 화면에 내지 않음 (닉네임 없으면 '플레이어').
 // 상태: 훈련 중이면 사격장 과녁을 쏘는 연출(전용 HitFx 풀, 고정 개수), 전투 중이면 포털 앞에 서 있고 이름표에 '전투 중'.
 // 모두 광장 root 아래 → 내가 전투 중이면 광장과 함께 숨음 (그동안은 갱신도 건너뜀).
 //
@@ -14,9 +14,11 @@ import * as THREE from 'three';
 import type { Assets } from '../assets/loadAssets';
 import { HitFx } from '../fx/HitFx';
 import { fontFamily, t } from '../i18n/i18n';
-import { Avatar, type AvatarPose } from '../player/Avatar';
+import { Avatar, type AvatarPose, type GearTiers } from '../player/Avatar';
 import { formatNum } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
+import type { GameState } from '../sim/state.ts';
+import { topGearTier } from '../sim/training.ts';
 import type { CharId } from '../sim/state.ts';
 import type { HubSample } from './hubBuffer';
 import type { HubPeer } from './LobbyHub';
@@ -81,6 +83,12 @@ const LABEL_LIFT = 0.3;
 const LABEL_HEIGHT = 0.4;
 /** 안 받은 글자 묶음(한글 웹폰트 unicode-range)을 기다리는 최대 시간 (ms). 넘으면 지금 글꼴 그대로 */
 const GLYPH_WAIT_MS = 2500;
+
+/** 장비 비트 → 보일 장비 단계 (내 캐릭터와 같은 규칙: 종류마다 가장 높은 단계) */
+function gearOf(bits: number): GearTiers {
+  const s = { gear: bits } as GameState;
+  return { atk: topGearTier(s, 'atk'), spd: topGearTier(s, 'spd'), coin: topGearTier(s, 'coin') };
+}
 
 const _muzzle = new THREE.Vector3();
 /** 화면 안 판정 (지난 프레임 카메라). 반지름에 여유를 둬 화면 가장자리 그림자·이름표가 끊기지 않게 */
@@ -185,7 +193,7 @@ export class LobbyPeers {
   add(peer: HubPeer): void {
     if (this.disposed || this.items.has(peer.account)) return;
     const char = peer.char as CharId;
-    const avatar = this.makeAvatar(char, peer.gun);
+    const avatar = this.makeAvatar(char, peer.gun, peer.gear);
     const item: Item = {
       peer,
       avatar,
@@ -220,12 +228,16 @@ export class LobbyPeers {
     const char = peer.char as CharId;
     if (char !== item.char) {
       this.releaseAvatar(item.avatar);
-      item.avatar = this.makeAvatar(char, peer.gun);
+      item.avatar = this.makeAvatar(char, peer.gun, peer.gear);
       item.char = char;
       item.gun = peer.gun;
-    } else if (peer.gun !== item.gun) {
-      item.avatar.setGun(GUNS[peer.gun] ?? GUNS[0]!);
-      item.gun = peer.gun;
+    } else {
+      if (peer.gun !== item.gun) {
+        item.avatar.setGun(GUNS[peer.gun] ?? GUNS[0]!);
+        item.gun = peer.gun;
+      }
+      // 장비 (바뀐 종류만 다시 붙음)
+      item.avatar.setGear(gearOf(peer.gear));
     }
     this.setPlate(item);
   }
@@ -375,9 +387,10 @@ export class LobbyPeers {
     });
   }
 
-  private makeAvatar(char: CharId, gun: number): Avatar {
+  private makeAvatar(char: CharId, gun: number, gear: number): Avatar {
     const a = new Avatar(this.ctx.assets, char, GUNS[gun] ?? GUNS[0]!);
     this.ctx.parent.add(a.root);
+    if (gear) a.setGear(gearOf(gear));
     return a;
   }
 

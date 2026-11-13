@@ -23,6 +23,7 @@ function infoOf(s: GameState, status: HubStatus, out: HubInfo): HubInfo {
   // 머리 위 숫자·오라 = DPS (사용자 2026-11-12: 띄운다면 DPS)
   out.pw = autoDps(s);
   out.s = status;
+  out.q = s.gear;
   return out;
 }
 
@@ -38,7 +39,7 @@ export function startLobby(game: Game, net: NetClient, cloud: CloudSave, trainin
     });
     const statusNow = (): HubStatus => (game.mode === 'battle' ? 'battle' : training.active ? 'training' : 'hub');
     let status = statusNow();
-    const info: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub' };
+    const info: HubInfo = { c: 'blue', g: 0, r: 0, pw: 0, s: 'hub', q: 0 };
     game.onStateChange((s) => hub.setInfo(infoOf(s, status, info)));
     cloud.onSaved.add((saved) => {
       const s = saved as unknown as GameState;
