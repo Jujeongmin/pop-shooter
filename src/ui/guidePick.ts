@@ -17,7 +17,7 @@ export const TUTORIAL_DONE = 99;
  * 첫 튜토리얼 (사용자 2026-11-13): 사격장(공격) → 러닝머신(연사) → 자동 DPS가 1-1 체력만큼 되면 포털.
  * DPS가 1-1 체력(180)이면 1-1을 1초에 깸 = 첫 전투가 시원함. 훈련 둘 다 해 보고 나서 포털로
  */
-export const TUT_ATK = 30;
+export const TUT_ATK = 10;
 export const TUT_SPD = 50;
 
 /** 포털 안내 DPS = 1-1 체력 */
