@@ -295,6 +295,11 @@ export class BattleScene {
       const hop = Math.abs(Math.sin(this.cheerT * Math.PI * 1.4)) * 0.55;
       g.pos.y = hop;
       g.pose.grounded = hop < 0.05;
+      // 카메라(나)를 보고 만세 (보스 쪽을 보고 하던 것, 사용자 2026-11-13): 빠르게 돌아섬
+      const cam = g.stage.camera.position;
+      const want = Math.atan2(cam.x - g.pos.x, cam.z - g.pos.z);
+      const d = Math.atan2(Math.sin(want - g.yaw), Math.cos(want - g.yaw));
+      g.yaw += d * Math.min(1, dt * 10);
     }
     this.boss?.update(dt);
     if (this.dying) {
