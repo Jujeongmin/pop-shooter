@@ -49,6 +49,12 @@ export interface LobbyPeersContext {
 const DRAW_BUDGET = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 9 : 15;
 /** 이 거리(m)보다 멀면 오라·발사 연출 생략 */
 const FAR_FX = 40;
+/**
+ * LOD (2026-11-13 광장 프레임: 16명이면 그리기 호출 192 → 723, 렌더 2.3 → 9.1ms):
+ * 이 거리(m)보다 멀면 장비 숨김·그림자 없음, 애니메이션은 초당 LOD_FPS번만
+ */
+const LOD_DIST = 14;
+const LOD_FPS = 15;
 /** 가까운 순서 다시 고르는 간격 (초) */
 const PICK_SEC = 0.5;
 /** 캐릭터를 안 그릴 때 이름표 높이 (m) */
@@ -76,6 +82,8 @@ interface Item {
   /** 내 화면에 캐릭터로 그리는지 (DRAW_BUDGET 안), 나와의 거리 제곱 */
   drawn: boolean;
   dist2: number;
+  /** 멀리 있을 때 애니메이션을 건너뛴 시간 (초) */
+  lodAcc: number;
 }
 
 /** 남의 훈련 발사 연출 빈도 (초당, 실제 발사 속도와 무관한 고정값 — 가볍게) */
@@ -215,6 +223,7 @@ export class LobbyPeers {
       cheer: 0,
       drawn: true,
       dist2: 0,
+      lodAcc: 0,
     };
     item.aura.setPower(peer.power);
     this.ctx.parent.add(item.aura.root);
@@ -343,7 +352,14 @@ export class LobbyPeers {
       item.cheer = cheering ? Math.min(1, item.cheer + dt * 4) : Math.max(0, item.cheer - dt * 5);
       p.cheer = item.cheer;
 
-      item.avatar.update(dt, p);
+      // LOD: 멀면 장비·그림자 생략, 애니메이션은 드문드문 (건너뛴 시간은 모아서 한 번에)
+      const far = item.dist2 > LOD_DIST * LOD_DIST;
+      item.avatar.setDetail(!far);
+      item.lodAcc += dt;
+      if (!far || item.lodAcc >= 1 / LOD_FPS) {
+        item.avatar.update(item.lodAcc, p);
+        item.lodAcc = 0;
+      }
       item.aura.root.visible = near;
       if (near) item.aura.update(dt, p.pos.x, 0, p.pos.z);
       label.position.set(p.pos.x, item.avatar.headTop() + LABEL_LIFT, p.pos.z);

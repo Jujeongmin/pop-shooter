@@ -192,6 +192,8 @@ export class Avatar {
         cur.objs.push(this.attach(makePiggy(cur.tier), 'Chest', this.piggySpot(cur.tier)));
       }
     }
+    // 멀리 있어 세부를 끈 아바타면 새로 붙인 장비도 숨김
+    if (!this.detail) for (const k of ['atk', 'spd', 'coin'] as const) for (const o of this.gear[k].objs) o.visible = false;
   }
 
   /** 몸 메시 정점의 현재 자세 위치 (아바타 기준, 한 번 계산해 둠: 고글·저금통 자리 찾기용) */
@@ -278,6 +280,18 @@ export class Avatar {
     this.root.getWorldQuaternion(_q2);
     obj.quaternion.copy(_q.invert().multiply(_q2));
     return obj;
+  }
+
+  /**
+   * 세부 표시 (LOD, 2026-11-13 광장 프레임): false면 장비를 숨기고 그림자를 안 드리움 (멀리 있는 다른 사람).
+   * 바뀔 때만 순회. 장비를 새로 붙일 때(setGear)도 지금 단계를 따름
+   */
+  private detail = true;
+  setDetail(high: boolean): void {
+    if (high === this.detail) return;
+    this.detail = high;
+    for (const k of ['atk', 'spd', 'coin'] as const) for (const o of this.gear[k].objs) o.visible = high;
+    this.root.traverse((o) => { if ((o as THREE.Mesh).isMesh && o.userData.gear !== true) o.castShadow = high; });
   }
 
   dispose(): void {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { TrainKind } from '../sim/training.ts';
 
 /**
@@ -66,7 +67,56 @@ function part(geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number
 }
 
 /** 장난감 장갑 한 짝 (크기 1 ≈ 주먹 지름 0.13m) */
+/**
+ * 부품 그룹을 재질별로 합친 그룹 (2026-11-13 광장 프레임: 장비 부품이 아바타 하나에 24개 메시였음 → 재질마다 하나, 8개로).
+ * 합친 geometry는 (종류·단계)마다 한 번 만들어 공유 (모듈 캐시, dispose 안 함 — shared). 그림자 없음: 작은 부품이라 안 보이고
+ * 그림자 패스 그리기 호출만 늘었음
+ */
+const merged = new Map<string, Array<{ geo: THREE.BufferGeometry; mat: THREE.Material }>>();
+function mergedGroup(key: string, build: () => THREE.Group): THREE.Group {
+  let parts = merged.get(key);
+  if (!parts) {
+    const src = build();
+    src.updateMatrixWorld(true);
+    const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
+    src.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(m.matrixWorld);
+      for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k);
+      const list = byMat.get(m.material as THREE.Material) ?? [];
+      list.push(g);
+      byMat.set(m.material as THREE.Material, list);
+    });
+    parts = [...byMat].map(([mat, geos]) => {
+      const geo = mergeGeometries(geos)!;
+      for (const g of geos) g.dispose();
+      return { geo, mat };
+    });
+    merged.set(key, parts);
+  }
+  const grp = new THREE.Group();
+  for (const p of parts) {
+    const m = new THREE.Mesh(p.geo, p.mat);
+    m.userData.gear = true;
+    grp.add(m);
+  }
+  return grp;
+}
+
 export function makeGlove(tier: number): THREE.Group {
+  return mergedGroup(`glove${tier}`, () => buildGlove(tier));
+}
+
+export function makeGoggles(tier: number): THREE.Group {
+  return mergedGroup(`goggles${tier}`, () => buildGoggles(tier));
+}
+
+export function makePiggy(tier: number): THREE.Group {
+  return mergedGroup(`piggy${tier}`, () => buildPiggy(tier));
+}
+
+function buildGlove(tier: number): THREE.Group {
   const grp = new THREE.Group();
   const body = tierMat('atk', tier);
   const ink = mat(INK);
@@ -79,7 +129,7 @@ export function makeGlove(tier: number): THREE.Group {
 }
 
 /** 고글 (이마에 걸침, 앞 = +z) */
-export function makeGoggles(tier: number): THREE.Group {
+function buildGoggles(tier: number): THREE.Group {
   const grp = new THREE.Group();
   const frame = tierMat('spd', tier);
   const lens = mat(LENS[tier] ?? LENS[1]!, 0.1, 0.15, LENS[tier]);
@@ -97,7 +147,7 @@ export function piggySize(tier: number): number {
 }
 
 /** 돼지 저금통 가방 (등에 멤, 앞 = +z: 돼지 얼굴은 바깥(−z)을 봄) */
-export function makePiggy(tier: number): THREE.Group {
+function buildPiggy(tier: number): THREE.Group {
   const grp = new THREE.Group();
   const body = tierMat('coin', tier);
   const ink = mat(INK);
