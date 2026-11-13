@@ -13,6 +13,8 @@
 import * as THREE from 'three';
 import type { Assets } from '../assets/loadAssets';
 import { HitFx } from '../fx/HitFx';
+import { audio } from '../audio/audio';
+import { FIRE_SOUND } from '../config/audio';
 import { fontFamily, t } from '../i18n/i18n';
 import { Avatar, type AvatarPose, type GearTiers } from '../player/Avatar';
 import { formatNum } from '../sim/format.ts';
@@ -90,6 +92,8 @@ function gearOf(bits: number): GearTiers {
   return { atk: topGearTier(s, 'atk'), spd: topGearTier(s, 'spd'), coin: topGearTier(s, 'coin') };
 }
 
+/** 다른 사람 총소리 크기 (내 총소리 대비) */
+const PEER_SHOT_GAIN = 0.28;
 const _muzzle = new THREE.Vector3();
 /** 화면 안 판정 (지난 프레임 카메라). 반지름에 여유를 둬 화면 가장자리 그림자·이름표가 끊기지 않게 */
 const _frustum = new THREE.Frustum();
@@ -323,6 +327,10 @@ export class LobbyPeers {
           item.avatar.getMuzzle(_muzzle);
           _hit.set(tg.position.x + (Math.random() - 0.5) * 0.4, 1.6 + (Math.random() - 0.5) * 0.4, tg.position.z + 0.12);
           this.fx.shot(_muzzle, _hit);
+          // 다른 사람 총소리: 작게, 가까울수록 크게 (6m 안 최대, 25m 밖 안 들림), 한 채널로 묶어 여럿이 쏴도 겹쳐 커지지 않음 (사용자 2026-11-13)
+          const d = Math.sqrt(item.dist2);
+          const near = Math.max(0, Math.min(1, (25 - d) / 19));
+          if (near > 0.02) audio.play(FIRE_SOUND[(GUNS[item.gun] ?? GUNS[0]!).model], { gain: PEER_SHOT_GAIN * near, channel: 'peerFire', pitch: 0.95 + Math.random() * 0.1 });
           item.target = (item.target + 1) % targets.length;
         }
       }
