@@ -55,14 +55,18 @@ async function boot(): Promise<void> {
   // 서버 연결은 에셋 받는 동안 같이 (안 되면 기기 저장으로, 혼자 모드). 연결은 계정당 하나: 계정 저장·광장이 net을 함께 씀
   const net = new NetClient();
   const cloud = new CloudSave(net);
-  const cloudReady = cloud.connect();
+  // 연결 → 저장 읽기까지 에셋 받는 동안 같이 (예전엔 에셋을 다 받은 뒤에야 저장을 읽기 시작: 새 컴퓨터 첫 시작이 느렸음)
+  const savePick = cloud.connect().catch(() => false).then(() => pickSave(cloud));
   const stage = new Stage3D(document.getElementById('view') as HTMLCanvasElement);
   // 캐릭터는 내 캐릭터(기기 사본으로 짐작)만 먼저, 나머지는 시작 뒤 뒤에서 (2026-11-13 로딩 줄이기). 개발용 ?allchars=1 = 6종 다
   const firstChars: CharId[] = import.meta.env.DEV && new URLSearchParams(location.search).has('allchars') ? [...CHAR_IDS] : [guessChar()];
-  const [assets, kit] = await Promise.all([loadAssets(stage.renderer, firstChars, (p) => loading.set(p * 0.9)), loadBricks()]);
+  const [assets, kit] = await Promise.all([
+    loadAssets(stage.renderer, firstChars, (p) => loading.set(p * 0.9), savePick.then((sv) => sv.state.char, () => null)),
+    loadBricks(),
+  ]);
   // 3D 글자 라벨이 언어 글꼴로 구워지도록 글꼴 먼저
   await fontReady;
-  await cloudReady;
+  const save = await savePick;
   // retention access log: once per account per UTC day, not awaited
   if (cloud.online) void net.call('actPing').catch(() => undefined);
   // console retention(): server checks admin account, returns counts only
@@ -70,7 +74,6 @@ async function boot(): Promise<void> {
     if (!(await withTimeout(net.connect(), 10000))) throw new Error('connect');
     return withTimeout(net.call<RetentionResult>('retentionGet', [view], 20000), 25000);
   });
-  const save = await pickSave(cloud);
   // 서버 저장 캐릭터가 짐작과 다르면 그것도 받음 (못 받으면 받은 캐릭터로 시작, 받은 뒤 바꿔 입음)
   if (!assets.characters[save.state.char]) await assets.char(save.state.char).catch(() => undefined);
   // 서버 저장을 실제로 읽었을 때만 서버에 씀 (읽기 실패한 채 쓰면 새 판·옛 사본으로 서버 저장을 덮음)

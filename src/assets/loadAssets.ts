@@ -35,7 +35,13 @@ async function loadGlb(loader: GLTFLoader, url: string, label: string, onBytes: 
  * 시작할 때는 총 4종 + first 캐릭터만 받음 (2026-11-13 로딩 줄이기: 예전엔 캐릭터 6종 6.5MB를 다 받아야 시작).
  * 나머지 캐릭터는 char(id)로 필요할 때 / loadRest()로 시작 뒤 뒤에서. onProgress = 0..1 (파일 수 기준 + 받은 바이트 근사)
  */
-export async function loadAssets(renderer: THREE.WebGLRenderer, first: readonly CharId[], onProgress?: (p: number) => void): Promise<Assets> {
+export async function loadAssets(
+  renderer: THREE.WebGLRenderer,
+  first: readonly CharId[],
+  onProgress?: (p: number) => void,
+  /** 서버 저장을 읽으면 알게 되는 내 캐릭터: 알게 되는 즉시 같이 받기 시작 (짐작과 다를 때 총·짐작 캐릭터를 다 받은 뒤에야 받던 것) */
+  mine?: Promise<CharId | null>,
+): Promise<Assets> {
   const loader = new GLTFLoader();
   const aniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
   const prep = (g: GLTF): void => {
@@ -66,6 +72,7 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, first: readonly 
     return p;
   };
 
+  void mine?.then((id) => { if (id) charJob(id).catch(() => undefined); }).catch(() => undefined);
   const firstIds = [...new Set(first)];
   const n = firstIds.length + GUN_MODELS.length;
   const progress = new Array<number>(n).fill(0);
