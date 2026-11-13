@@ -40,19 +40,20 @@ function tierMat(kind: TrainKind, tier: number): THREE.MeshStandardMaterial {
   return t ? mat(t.color, t.metal, t.rough, t.glow) : mat(BASE_COLOR[kind]);
 }
 
+// 분할 수는 화면에서 작게 보이는 크기에 맞춤 (2026-11-13 광장 프레임: 장비 한 벌 약 7천 → 약 2.5천 삼각형)
 let geos: Record<string, THREE.BufferGeometry> | null = null;
 function g(): Record<string, THREE.BufferGeometry> {
   geos ??= {
-    ball: new THREE.SphereGeometry(1, 20, 14),
-    cuff: new THREE.TorusGeometry(1, 0.32, 10, 24),
-    thumb: new THREE.CapsuleGeometry(0.42, 0.6, 4, 10),
-    lens: new THREE.CylinderGeometry(1, 1, 0.5, 24).rotateX(Math.PI / 2),
-    ring: new THREE.TorusGeometry(1, 0.22, 10, 26),
+    ball: new THREE.SphereGeometry(1, 12, 8),
+    cuff: new THREE.TorusGeometry(1, 0.32, 6, 16),
+    thumb: new THREE.CapsuleGeometry(0.42, 0.6, 3, 8),
+    lens: new THREE.CylinderGeometry(1, 1, 0.5, 16).rotateX(Math.PI / 2),
+    ring: new THREE.TorusGeometry(1, 0.22, 6, 18),
     bridge: new RoundedBoxGeometry(1, 0.35, 0.35, 2, 0.12),
-    pig: new THREE.SphereGeometry(1, 22, 16).scale(1, 0.85, 1.15),
-    snout: new THREE.CylinderGeometry(0.42, 0.46, 0.3, 18).rotateX(Math.PI / 2),
-    ear: new THREE.ConeGeometry(0.32, 0.5, 10),
-    leg: new THREE.CylinderGeometry(0.2, 0.22, 0.4, 10),
+    pig: new THREE.SphereGeometry(1, 16, 11).scale(1, 0.85, 1.15),
+    snout: new THREE.CylinderGeometry(0.42, 0.46, 0.3, 12).rotateX(Math.PI / 2),
+    ear: new THREE.ConeGeometry(0.32, 0.5, 8),
+    leg: new THREE.CylinderGeometry(0.2, 0.22, 0.4, 8),
     slot: new RoundedBoxGeometry(0.75, 0.14, 0.22, 2, 0.06),
   };
   return geos;

@@ -111,7 +111,10 @@ export class Avatar {
     this.wantGun = gun;
     const gm = this.heldModel(gun);
     const prev = this.gunObj;
-    this.gunObj = this.assets.guns[gm]!.clone(true);
+    // 멀리 있으면(세부 끔) 가벼운 총 (같은 축·원점이라 장착값 공용)
+    const low = !this.detail ? this.assets.gunsLow[gm] : undefined;
+    this.lowGun = !!low;
+    this.gunObj = (low ?? this.assets.guns[gm]!).clone(true);
     this.avatar.setWeapon(this.gunObj, WEAPONS[gm]!.mount);
     this.tintGun(gun);
     // 예전 총은 다시 들지 않음 (다음 교체도 새 복제본) → 재질 해제
@@ -290,7 +293,9 @@ export class Avatar {
   /** 멀리 있을 때 쓰는 가벼운 몸 (원본 몸과 같은 뼈대·재질, 형상만 assets.lods 공유) */
   private lodBody: THREE.SkinnedMesh | null = null;
   setDetail(high: boolean): void {
-    if (high === this.detail) return;
+    // 이미 그 단계면 그만 — 단, 멀리 있는데 가벼운 몸·총을 그 뒤에 받았으면 이제 바꿈 (먼저 만든 아바타가 영영 원래 몸이던 것)
+    const pending = !high && ((!this.lodBody && !!this.assets.lods[this.char]) || (!this.lowGun && !!this.assets.gunsLow[this.wantGun.model]));
+    if (high === this.detail && !pending) return;
     this.detail = high;
     for (const k of ['atk', 'spd', 'coin'] as const) for (const o of this.gear[k].objs) o.visible = high;
     this.root.traverse((o) => { if ((o as THREE.Mesh).isMesh && o.userData.gear !== true) o.castShadow = high; });
@@ -312,7 +317,13 @@ export class Avatar {
     }
     body.visible = high;
     if (this.lodBody) this.lodBody.visible = !high;
+    // 총도 가벼운 것으로 (받아 둔 경우만, 바뀔 때만 다시 듦)
+    const gm = this.wantGun.model;
+    if (!high !== this.lowGun && (high || this.assets.gunsLow[gm])) this.setGun(this.wantGun);
   }
+
+  /** 지금 든 총이 가벼운 총인지 */
+  private lowGun = false;
 
   dispose(): void {
     this.disposed = true;

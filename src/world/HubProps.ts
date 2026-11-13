@@ -28,6 +28,11 @@ export type Animate = (dt: number, clock: number) => void;
  * 외곽선 전용 도형: 같은 자리 꼭짓점을 합쳐 부드러운 법선으로 다시 계산.
  * 원뿔 끝·상자 모서리처럼 면마다 법선이 갈라진 도형을 그대로 부풀리면 면이 벌어지고 끝이 튀어나옴 (사용자 2026-11-12 지적).
  */
+function tiny(geo: THREE.BufferGeometry): boolean {
+  if (!geo.boundingSphere) geo.computeBoundingSphere();
+  return geo.boundingSphere!.radius < 0.18;
+}
+
 function outlineGeometry(geo: THREE.BufferGeometry): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', geo.getAttribute('position').clone());
@@ -95,7 +100,8 @@ export class ToyBuilder {
     mesh.position.set(x, y, z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    if (outline) {
+    // 외곽선: 아주 작은 부품(지름 약 0.36m 미만, 불빛·단추 등)은 생략 — 멀리서 안 보이고 삼각형만 두 배 (2026-11-13 광장 프레임)
+    if (outline && !tiny(geo)) {
       const o = new THREE.Mesh(this.own(outlineGeometry(geo)), this.ink);
       o.castShadow = false;
       mesh.add(o);

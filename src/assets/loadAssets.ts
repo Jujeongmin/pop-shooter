@@ -15,6 +15,8 @@ export interface LoadedModel {
 export interface GunSource {
   /** 그 총을 이미 받았으면 바로, 아니면 받은 뒤 cb (원본을 넘김: 복제해서 쓸 것) */
   whenGun(m: GunModel, cb: (model: THREE.Object3D) => void): void;
+  /** 가벼운 총 (있으면 진열에 씀) */
+  gunsLow?: Partial<Record<GunModel, THREE.Object3D>>;
 }
 
 export interface Assets extends GunSource {
@@ -32,6 +34,13 @@ export interface Assets extends GunSource {
   loadRest(): void;
   /** 받은 캐릭터 LOD 형상 (멀리 있을 때 쓰는 가벼운 몸, 뼈 번호는 원본 뼈대 순서로 맞춤). 아직이면 undefined */
   lods: Partial<Record<CharId, THREE.BufferGeometry>>;
+  /** 받은 가벼운 총 (약 600 삼각형, 멀리 있는 사람·벽 진열용). 아직이면 undefined */
+  gunsLow: Partial<Record<GunModel, THREE.Object3D>>;
+}
+
+/** 가벼운 총 파일: 게임용 총 파일 이름의 _lod1w를 _lod2w로 (optimize_glb.py --tris 600 → webp_glb.mjs) */
+function gunLowUrl(m: GunModel): string {
+  return WEAPONS[m]!.model.glb!.replace(/_lod\w+\.glb$/, '_lod2w.glb');
 }
 
 /** 캐릭터 LOD 파일: 게임용 캐릭터 파일 이름의 _t1kq를 _lod로 (tools/blender/char_lod.py → tools/store/quant_glb.mjs) */
@@ -148,9 +157,18 @@ export async function loadAssets(
     lods[id] = geo;
   };
 
+  const gunsLow: Partial<Record<GunModel, THREE.Object3D>> = {};
+  const gunLowJob = async (m: GunModel): Promise<void> => {
+    if (gunsLow[m]) return;
+    const g = await loader.loadAsync(gunLowUrl(m));
+    prep(g);
+    gunsLow[m] = g.scene;
+  };
+
   let resting = false;
   return {
     lods,
+    gunsLow,
     characters,
     guns,
     char: (id) => charJob(id),
@@ -172,9 +190,12 @@ export async function loadAssets(
         for (const id of CHAR_IDS) {
           try { await charJob(id); } catch { /* 필요할 때 다시 받음 */ }
         }
-        // 멀리 있는 사람용 가벼운 몸 (약 85KB씩)
+        // 멀리 있는 사람용 가벼운 몸 (약 85KB씩)·가벼운 총 (약 60KB씩)
         for (const id of CHAR_IDS) {
           try { await lodJob(id); } catch { /* 없으면 원래 몸으로 */ }
+        }
+        for (const m of GUN_MODELS) {
+          try { await gunLowJob(m); } catch { /* 없으면 원래 총으로 */ }
         }
       })();
     },

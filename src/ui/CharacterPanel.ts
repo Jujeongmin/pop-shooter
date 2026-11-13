@@ -74,6 +74,9 @@ export class CharacterPanel {
     if (g.mode === 'battle') return;
     // 장비가 바뀔 때만 다시 붙임 (매 프레임 setGear는 행렬 갱신이 들어 비쌈)
     if (g.state.gear !== this.displayGear) { this.displayGear = g.state.gear; d.setGear(gearTiers(g.state)); }
+    // 진열 캐릭터도 멀면 가벼운 몸 (다른 사람·멘토와 같은 14m)
+    const dx = g.pos.x - this.displayPos.x, dz = g.pos.z - this.displayPos.z;
+    d.setDetail(dx * dx + dz * dz < 14 * 14);
     this.displayYaw += dt * 0.8;
     d.update(dt, { pos: this.displayPos, yaw: this.displayYaw, velocity: ZERO, aimAt: null, kick: 0 });
   }

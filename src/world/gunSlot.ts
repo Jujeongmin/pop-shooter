@@ -9,11 +9,28 @@ import type { GunModel } from '../sim/guns.ts';
  */
 export function gunSlot(src: GunSource, m: GunModel, len: number): THREE.Group {
   const slot = new THREE.Group();
-  src.whenGun(m, (model) => {
+  const put = (model: THREE.Object3D): void => {
     const gun = model.clone(true);
     const box = new THREE.Box3().setFromObject(gun);
     gun.scale.multiplyScalar(len / Math.max(0.01, box.max.x - box.min.x, box.max.z - box.min.z));
     slot.add(gun);
+  };
+  // 벽 진열은 작게 멀리 보여서 가벼운 총이 있으면 그것 (뒤에서 받으면 바꿔 끼움)
+  src.whenGun(m, (model) => {
+    const low = src.gunsLow?.[m];
+    if (low) model = low;
+    else if (src.gunsLow) void waitLow(src, m).then((l) => { if (l) { slot.clear(); put(l); } });
+    put(model);
   });
   return slot;
+}
+
+/** 가벼운 총이 올 때까지 (최대 60초, 0.5초마다 확인) */
+async function waitLow(src: GunSource, m: GunModel): Promise<THREE.Object3D | undefined> {
+  for (let i = 0; i < 120; i++) {
+    const l = src.gunsLow?.[m];
+    if (l) return l;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return undefined;
 }
