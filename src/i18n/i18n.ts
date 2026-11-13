@@ -50,7 +50,7 @@ const STRINGS = {
   'shop.gemShort': { en: 'Not enough Pop Gems', ko: '팝젬이 모자라요', ja: 'ジェムが足りません', 'zh-TW': '寶石不足', 'zh-CN': '宝石不足' },
   'shop.passHint': { en: 'Passes are forever. Buy them in order; each tier doubles your damage again.', ko: '패스는 영구예요. 순서대로 사고, 단계마다 피해가 2배씩 쌓여요.', ja: 'パスは永久。順番に購入し、段階ごとにダメージが2倍ずつ重なります。', 'zh-TW': '通行證永久有效。依序購買, 每一級傷害再 ×2。', 'zh-CN': '通行证永久有效。依次购买, 每一级伤害再 ×2。' },
   'shop.pass': { en: 'Attack Pass Tier {n}', ko: '공격력 패스 {n}단계', ja: '攻撃パス 第{n}段階', 'zh-TW': '攻擊通行證 第{n}級', 'zh-CN': '攻击通行证 第{n}级' },
-  'shop.passDesc': { en: 'Damage ×2 more (total ×{m})', ko: '피해 ×2 추가 (합계 ×{m})', ja: 'ダメージさらに×2 (合計 ×{m})', 'zh-TW': '傷害再 ×2 (合計 ×{m})', 'zh-CN': '伤害再 ×2 (合计 ×{m})' },
+  'shop.passDesc': { en: 'Damage ×{m}', ko: '피해 ×{m}', ja: 'ダメージ ×{m}', 'zh-TW': '傷害 ×{m}', 'zh-CN': '伤害 ×{m}' },
   'shop.passNeed': { en: 'Previous tier first', ko: '이전 단계 먼저', ja: '前の段階が先', 'zh-TW': '需先購買上一級', 'zh-CN': '需先购买上一级' },
   'shop.gemPack': { en: '{n} Pop Gems', ko: '팝젬 {n}개', ja: 'ポップジェム {n}個', 'zh-TW': '泡泡寶石 {n}個', 'zh-CN': '泡泡宝石 {n}个' },
   'shop.gemPackDesc': { en: 'For Attack Passes, heroes and Gold ×2', ko: '공격력 패스·캐릭터·골드 2배에 써요', ja: '攻撃パス・キャラ・ゴールド2倍に使える', 'zh-TW': '可用於攻擊通行證、角色、金幣2倍', 'zh-CN': '可用于攻击通行证、角色、金币2倍' },
