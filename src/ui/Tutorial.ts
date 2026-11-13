@@ -15,6 +15,8 @@ const CHECK_SEC = 0.5;
 const HOLD_SEC = 2.5;
 /** 안내 켜기·끄기 (기기 설정) */
 const KEY = 'pop-shooter.guide';
+/** 위쪽 안내 글 줄 (사용자 2026-11-13: 안 뜨는 게 낫다 → 끔). 바닥 화살표·목표 위 표시만 남김. 다시 켜려면 true */
+const SHOW_TEXT = false;
 
 const TEXT: Record<GuideKind, StrKey> = { altar: 'g.altar', portal: 'g.portal', upgrade: 'g.upgrade', range: 'g.range' };
 
@@ -96,7 +98,7 @@ export class Tutorial {
   private show(kind: GuideKind | null): void {
     const changed = kind !== this.kind;
     this.kind = kind;
-    this.bar.hidden = !kind;
+    this.bar.hidden = !SHOW_TEXT || !kind;
     this.group.visible = !!kind;
     if (!kind) return;
     setText(this.text, t(TEXT[kind], { s: stageLabel(this.game.state.bestStage + 1) }));
@@ -125,14 +127,14 @@ export class Tutorial {
       const want = next === this.dismissed ? null : next;
       // 바뀐 지 얼마 안 됐으면 유지 (단, 할 일이 없어진 경우는 바로 내림)
       if (want !== this.kind && (this.holdT <= 0 || want === null)) this.show(want);
-      else if (this.kind) this.bar.hidden = false;
+      else if (this.kind) this.bar.hidden = !SHOW_TEXT;
     }
     const kind = this.kind;
     if (!kind) return;
     const f = WORLD1_FACILITIES.find((x) => x.id === kind)!;
     // 목표에 들어와 있으면 화살표·안내 숨김
     const there = g.near?.id === f.id;
-    this.bar.hidden = there;
+    this.bar.hidden = !SHOW_TEXT || there;
     this.group.visible = !there;
     if (there) return;
     this.marker.position.set(f.x, 3.2 + Math.abs(Math.sin(this.clock * 3)) * 0.5, f.z);
