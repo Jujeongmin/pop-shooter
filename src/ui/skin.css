@@ -315,5 +315,11 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 .tr-bar { background: #d6deee; box-shadow: inset 0 0 0 1.5px rgba(43, 58, 103, 0.2); }
 
 /* 계정 초기화 버튼: 눈에 덜 띄게, 확인 단계는 빨강 */
-.settings .reset-btn { margin-top: 10px; background: #f3f5fb; color: #7a849f; }
+.settings .reset-btn { background: #f3f5fb; color: #7a849f; }
+/* 설정 창이 화면보다 길면 위가 잘렸음 (사용자 2026-11-13): 화면 높이 안에 두고 넘치면 안에서 스크롤, 언어 3칸, 초기화·닫기 한 줄 */
+.result-card.settings { box-sizing: border-box; max-height: calc(100% - 16px); min-height: 0; flex-shrink: 1; overflow-y: auto; overscroll-behavior: contain; gap: 9px; padding-top: 16px; padding-bottom: 16px; }
+.settings .lang-grid { grid-template-columns: repeat(3, 1fr); }
+.settings .lang-btn { padding-left: 4px; padding-right: 4px; }
+.settings-foot { display: flex; gap: 10px; align-items: center; justify-content: center; width: 100%; flex-wrap: wrap; margin-top: 4px; }
+.settings-foot .btn { flex: 0 0 auto; }
 .settings .reset-btn.armed { background: #ff5f6d; color: #fff; }

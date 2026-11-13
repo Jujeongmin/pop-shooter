@@ -64,11 +64,14 @@ export class SettingsPanel {
       });
     }, 'btn small reset-btn');
     resetBtn.hidden = !reset;
-    card.append(grid, resetBtn, button(t('settings.close'), () => {
+    // 초기화·닫기 한 줄 (따로 두 줄이면 설정 창이 화면보다 길어져 위가 잘림, 사용자 2026-11-13)
+    const foot = el('div', 'settings-foot');
+    foot.append(resetBtn, button(t('settings.close'), () => {
       resetBtn.classList.remove('armed');
       resetBtn.textContent = t('settings.reset');
       this.close();
     }, 'btn'));
+    card.append(grid, foot);
     this.root.append(card);
     this.root.hidden = true;
     // 바깥 어두운 곳 누르면 닫기
