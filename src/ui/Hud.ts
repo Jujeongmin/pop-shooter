@@ -63,7 +63,7 @@ export class Hud {
       return v;
     };
     this.atk = row(t('stat.atk'), 'bullet');
-    this.sps = row(t('stat.sps'), 'timer');
+    this.sps = row(t('stat.sps'), 'rapid');
     this.dps = row(t('stat.dps'), 'bolt');
     const tr = el('div', 'hud-train');
     tr.append(el('div', 'tr-head', t('tr.title')));

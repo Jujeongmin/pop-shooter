@@ -40,11 +40,14 @@ export class HitFx {
   /** parent: 붙일 곳 (장면, 또는 광장 root — 광장과 함께 숨김) */
   constructor(scene: THREE.Object3D) {
     this.flash.visible = false;
+    this.flash.renderOrder = 3;
     this.root.add(this.flash);
     for (let i = 0; i < POOL; i++) {
       // 풀 항목마다 투명도가 달라 material을 따로 (고정 개수, dispose에서 해제)
       const mat = new THREE.MeshBasicMaterial({ color: '#fff3a6', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
       const m = new THREE.Mesh(this.tracerGeo, mat);
+      // 바닥 구역 원(ZoneRing renderOrder 2)보다 나중에 그려 탄 줄기가 원에 가려지지 않게 (사용자 2026-11-13)
+      m.renderOrder = 3;
       m.visible = false;
       this.root.add(m);
       this.tracers.push({ m, mat, t: 1 });
@@ -53,6 +56,8 @@ export class HitFx {
       const ringMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, side: THREE.DoubleSide });
       const ring = new THREE.Mesh(this.ringGeo, ringMat);
       ring.visible = false;
+      s.renderOrder = 3;
+      ring.renderOrder = 3;
       this.root.add(s, ring);
       this.hits.push({ s, ring, ringMat, t: 1 });
     }
