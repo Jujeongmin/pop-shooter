@@ -45,8 +45,8 @@ export const FOUNTAIN_SPOTS: readonly number[] = [0, -1.1, 1.1];
 /** 포털 고리 중심 (구역은 그 앞 PORTAL_SPOT) */
 export const PORTAL_GATE = { x: 0, z: -14 };
 export const PORTAL_SPOT = { x: 0, z: -10.5 };
-/** 월드 이동 정류장 (북서쪽 구석, 사격장 과녁 뒤). 열린 월드 광장으로 이동 (사용자 2026-11-12: 월드마다 광장 따로) */
-export const TRAVEL_SPOT = { x: -17, z: -15 };
+/** 월드 이동 정류장 (남서쪽, 예전 환생 제단 자리 — 2026-11-13 북서쪽 구석에서 옮김: 시작 지점에서 가까움). 열린 월드 광장으로 이동 (사용자 2026-11-12: 월드마다 광장 따로) */
+export const TRAVEL_SPOT = { x: -11, z: 17 };
 /** 총 상점 가판대 기준점 (몸체·진열은 여기서). 들어가는 원은 가판대 앞(+z, 진열대가 보이는 쪽) — 사용자 2026-11-12: 원이 가판대 밑에 깔려 어색함 */
 export const GUN_SHOP_AT = { x: 7, z: -5 };
 
@@ -71,7 +71,7 @@ export const FOOTPRINTS: readonly Footprint[] = [
   { id: 'upgrade', x: 13, z: 2.4, w: 2.4, d: 1.8, h: 3.0, cap: true },
   { id: 'guns', x: 8.8, z: -4.9, w: 3.6, d: 1.8, h: 3.2, cap: true },
   { id: 'chars', x: 11.3, z: 14, w: 4.0, d: 1.8, h: 2.8, cap: true },
-  { id: 'travel', x: -17, z: -16.6, w: 3.6, d: 3.6, h: 2.9, cap: false },
+  { id: 'travel', x: -11, z: 15.4, w: 3.6, d: 3.6, h: 2.9, cap: false },
   { id: 'treadmill', x: -18.5, z: 10, w: 4.8, d: 2.8, h: 2.0, cap: false },
   { id: 'fountain', x: -9.5, z: 7.5, w: 2.1, d: 2.1, h: 3.8, cap: false },
 ];

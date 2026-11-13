@@ -78,7 +78,7 @@ export const HUB_SNAPS: ReadonlyArray<{ x: number; z: number; r: number; reach: 
   { x: 0, z: -10.5, r: 1, reach: 4 }, // 포털
   { x: -18.5, z: 10.2, r: 2.2, reach: 5 }, // 러닝머신 세 대 (연사)
   { x: -9.5, z: 9, r: 1.6, reach: 5 }, // 동전 분수 세 자리 (골드 보너스)
-  { x: -17, z: -15, r: 1, reach: 4 }, // 월드 이동 정류장
+  { x: -11, z: 17, r: 1, reach: 4 }, // 월드 이동 정류장 (2026-11-13 옛 환생 제단 자리)
 ];
 
 /**

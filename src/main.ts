@@ -92,7 +92,8 @@ async function boot(): Promise<void> {
   const lobbyApi = net.hasVerse ? new LobbyApi(net) : null;
   const nickPanel = lobbyApi ? new NicknamePanel(ui, net, lobbyApi) : null;
   // 광장 3D 기록판 (북동쪽, 남쪽=카메라 쪽을 봄). 내 저장 뒤 조금 있다가 갱신
-  const board = new RankBoard(12, -17.5, lobbyApi);
+  // 기록판: 포털 오른쪽 옆 (시작 지점에서 포털을 보면 같이 보임, 2026-11-13 북동쪽 구석에서 옮김)
+  const board = new RankBoard(6.8, -14.2, lobbyApi);
   game.hub.root.add(board.root);
   game.hub.colliders.push(board.collider);
   cloud.onSaved.add(() => board.refreshSoon());
