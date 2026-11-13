@@ -7,7 +7,7 @@ import { button, el } from './dom';
 export class SettingsPanel {
   private readonly root: HTMLDivElement;
 
-  constructor(parent: HTMLElement, guide: { enabled: boolean; setEnabled(on: boolean): void } | null = null, nick: NicknamePanel | null = null) {
+  constructor(parent: HTMLElement, guide: { enabled: boolean; setEnabled(on: boolean): void } | null = null, nick: NicknamePanel | null = null, reset: (() => Promise<boolean>) | null = null) {
     this.root = el('div', 'result-wrap ui-on');
     const card = el('div', 'result-card settings');
     card.append(el('div', 'result-title', t('settings.title')));
@@ -46,7 +46,29 @@ export class SettingsPanel {
       b.lang = l;
       grid.append(b);
     }
-    card.append(grid, button(t('settings.close'), () => this.close(), 'btn'));
+    // 계정 초기화: 두 번 눌러야 (첫 번째는 확인 문구로 바뀜). 산 것·닉네임은 유지, 기록판에서 빠짐
+    const resetBtn = button(t('settings.reset'), () => {
+      if (!reset || resetBtn.disabled) return;
+      if (!resetBtn.classList.contains('armed')) {
+        resetBtn.classList.add('armed');
+        resetBtn.textContent = t('settings.resetAsk');
+        return;
+      }
+      resetBtn.disabled = true;
+      resetBtn.textContent = t('settings.resetting');
+      void reset().then((ok) => {
+        if (ok) return;
+        resetBtn.disabled = false;
+        resetBtn.classList.remove('armed');
+        resetBtn.textContent = t('settings.resetFail');
+      });
+    }, 'btn small reset-btn');
+    resetBtn.hidden = !reset;
+    card.append(grid, resetBtn, button(t('settings.close'), () => {
+      resetBtn.classList.remove('armed');
+      resetBtn.textContent = t('settings.reset');
+      this.close();
+    }, 'btn'));
     this.root.append(card);
     this.root.hidden = true;
     // 바깥 어두운 곳 누르면 닫기

@@ -75,6 +75,9 @@ function richest(prev: GameState, s: GameState): GameState {
   };
 }
 
+/** 저장 한 번 사이에 받는 환생 수 */
+const MAX_REBIRTHS_PER_SAVE = 4;
+
 export type CheckResult =
   | { ok: true; state: GameState; clamped: boolean; prem: Premium }
   | { ok: false; reason: 'rebirth_skip' | 'rebirth_early' | 'stage' | 'levels' };
@@ -100,7 +103,8 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
     bestStage: Math.max(bestPrev, next.bestStage),
   };
   if (!prev) return { ok: true, state: s, clamped: false, prem: prem2 };
-  if (rebirthGain < 0 || rebirthGain > 1) return { ok: false, reason: 'rebirth_skip' };
+  // 저장 사이 환생은 MAX_REBIRTHS_PER_SAVE번까지 (예전 1번: 30초 안에 두 번 하면 저장이 통째로 거절돼 환생 전 훈련치로 되돌아감, 사용자 2026-11-13)
+  if (rebirthGain < 0 || rebirthGain > MAX_REBIRTHS_PER_SAVE) return { ok: false, reason: 'rebirth_skip' };
   const dt = Math.max(0, elapsedSec);
   const rich = richest(prev, s);
   const world = highestWorld(rich);
@@ -113,12 +117,16 @@ export function checkSave(prev: GameState | null, next: GameState, elapsedSec: n
   for (const k of TRAIN_KINDS) {
     const room = MARGIN * shotsOf(k) * gainPerShot(rich, k, world) + TRAIN_FLOOR;
     prevUp[TR_FIELD[k]] = trainValue(prev, k) + room;
-    const cap = (rebirthGain === 1 ? 0 : trainValue(prev, k)) + room;
+    const cap = (rebirthGain >= 1 ? 0 : trainValue(prev, k)) + room;
     if (trainValue(s, k) > cap) { s = { ...s, [TR_FIELD[k]]: cap }; clamped = true; }
   }
   // 조건 안 된 환생은 팝젬으로 산 건너뛰기가 있어야 (하나 씀)
   let skip = prem.skip ?? 0;
-  if (rebirthGain === 1 && prevUp.trAtk < rebirthReq(prev)) {
+  // 환생마다 그 요구치를 그 사이 훈련 한도에서 채움 (모자라면 건너뛰기 하나씩)
+  let budget = prevUp.trAtk;
+  for (let i = 0; i < rebirthGain; i++) {
+    const req = rebirthReq({ ...prev, rebirths: prev.rebirths + i });
+    if (budget >= req) { budget -= req; continue; }
     if (skip < 1) return { ok: false, reason: 'rebirth_early' };
     skip -= 1;
   }

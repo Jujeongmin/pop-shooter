@@ -154,6 +154,10 @@ const STRINGS = {
   'settings.soundOn': { en: 'Sound: ON', ko: '소리: 켜짐', ja: 'サウンド: ON', 'zh-TW': '聲音:開', 'zh-CN': '声音:开' },
   'settings.soundOff': { en: 'Sound: OFF (muted)', ko: '소리: 꺼짐 (음소거)', ja: 'サウンド: OFF(ミュート)', 'zh-TW': '聲音:關(靜音)', 'zh-CN': '声音:关(静音)' },
   'settings.close': { en: 'Close', ko: '닫기', ja: '閉じる', 'zh-TW': '關閉', 'zh-CN': '关闭' },
+  'settings.reset': { en: 'Reset account', ko: '계정 초기화', ja: 'アカウント初期化', 'zh-TW': '重置帳號', 'zh-CN': '重置账号' },
+  'settings.resetAsk': { en: 'Tap again: all progress resets (purchases kept)', ko: '한 번 더 누르면 진행이 모두 지워져요 (산 것은 유지)', ja: 'もう一度押すと進行がすべて消えます (購入品は残ります)', 'zh-TW': '再按一次將清除所有進度 (購買項目保留)', 'zh-CN': '再按一次将清除所有进度 (购买项目保留)' },
+  'settings.resetting': { en: 'Resetting…', ko: '초기화 중…', ja: '初期化中…', 'zh-TW': '重置中…', 'zh-CN': '重置中…' },
+  'settings.resetFail': { en: 'Reset failed, try again', ko: '초기화 실패, 다시 눌러 주세요', ja: '初期化に失敗、もう一度', 'zh-TW': '重置失敗，請再試一次', 'zh-CN': '重置失败，请再试一次' },
 
   'up.tab.mach': { en: 'Machines', ko: '훈련 기구', ja: '訓練器具', 'zh-TW': '訓練器材', 'zh-CN': '训练器材' },
   'up.tab.gear': { en: 'Gear', ko: '장비', ja: '装備', 'zh-TW': '裝備', 'zh-CN': '装备' },

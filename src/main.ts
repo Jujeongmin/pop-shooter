@@ -9,7 +9,7 @@ import { Stage3D } from './core/Stage3D';
 import { MentorNpcs } from './world/MentorNpcs';
 import { Stations } from './training/Stations';
 import { HitFx } from './fx/HitFx';
-import { pickSave } from './save/localSave';
+import { pickSave, clearLocalSaves } from './save/localSave';
 import { CloudSave } from './platform/CloudSave';
 import { NetClient, withTimeout } from './net/NetClient';
 import { startLobby } from './net/lobby';
@@ -110,7 +110,23 @@ async function boot(): Promise<void> {
   cloud.onServerState.add((r) => game.adoptServer(r));
   // 광장 구조물이 다 생긴 뒤: 카메라를 가리면 반투명이 될 대상 등록
   game.occlusion.register(game.hub.root);
-  const settings = new SettingsPanel(ui, guide, nickPanel);
+  // 계정 초기화: 저장 멈춤 → 서버 새 판 + 기록판 줄 지움 → 기기 사본 지움 → 새로고침 (서버가 없으면 기기 사본만)
+  const resetAccount = async (): Promise<boolean> => {
+    game.saver.hold = true;
+    if (cloud.online) {
+      try {
+        const r = await withTimeout(net.call<{ ok: boolean }>('saveReset', [], 10000), 12000);
+        if (!r?.ok) { game.saver.hold = false; return false; }
+      } catch {
+        game.saver.hold = false;
+        return false;
+      }
+    }
+    clearLocalSaves(save.account);
+    location.reload();
+    return true;
+  };
+  const settings = new SettingsPanel(ui, guide, nickPanel, resetAccount);
   game.menuActions.settings = () => settings.open();
   // 처음 보이는 순간의 텍스처 올리기·셰이더 만들기 끊김을 로딩 중에 미리 (다른 사람이 쓸 캐릭터·총 원본까지)
   warmGpu(stage.renderer, stage.scene, stage.camera, [...Object.values(assets.characters).map((c) => c.scene), ...Object.values(assets.guns)]);

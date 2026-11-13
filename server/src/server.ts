@@ -15,7 +15,7 @@ import { normalizeState } from '../../src/sim/normalize.ts';
 import { allowedChars, checkSave } from '../../src/sim/econ.ts';
 import { AD_KINDS, AD_LIMIT, buySkipRebirth, buyWithGems, claimAd, PRODUCTS, claimDaily, dailyReady, dayKey, grantPurchase, readPrem, spendGemBoost, type AdKind, type PremState } from '../../src/sim/premium.ts';
 import { offlineReward } from '../../src/sim/offline.ts';
-import type { CharId, GameState } from '../../src/sim/state.ts';
+import { newState, type CharId, type GameState } from '../../src/sim/state.ts';
 import { autoDps, skipRebirthGems } from '../../src/sim/actions.ts';
 import {
   HUB_MAX_PLAYERS,
@@ -398,6 +398,26 @@ export class Server {
   }
 
   /**
+   * 계정 초기화 (설정 → 계정 초기화, 사용자 2026-11-13): 진행 저장을 새 판으로 바꾸고 기록판 줄을 지움.
+   * 산 것(팝젬·패스·유료 캐릭터 = prem)과 닉네임은 그대로. 빈 저장 대신 새 판을 넣음: 빈 저장이면 다음 저장이
+   * '첫 저장'이라 검사 없이 받아져, 다른 탭·기기에 남은 예전 진행이 그대로 다시 올라옴
+   */
+  async saveReset(): Promise<{ ok: boolean; now: number }> {
+    const now = Date.now();
+    const account = $sender.account;
+    if (!account) return { ok: false, now };
+    return $lock(`save:${account}`, async () => {
+      await $global.updateMyState({ save: { ...newState(now), lastSeen: now } });
+      try {
+        const found = await $global.getCollectionItems(RANK_COLLECTION, { filters: [{ field: 'acc', operator: '==', value: account }], limit: 5 });
+        for (const it of found) await $global.deleteCollectionItem(RANK_COLLECTION, it.__id);
+      } catch { /* 기록판 줄은 다음 저장 때 새 값으로 덮임 */ }
+      slog('save_reset', '-', account);
+      return { ok: true, now };
+    });
+  }
+
+  /**
    * 저장: 형식 고침 → 경제 검사(checkSave: 프리미엄은 서버 값, 늘어난 가치 상한, 깰 수 있는 스테이지, 환생 조건) → 저장 (lastSeen = 서버 시각).
    * 돌려줌: 서버가 정한 프리미엄 값(팝젬·패스·부스트·캐릭터)과, 코인을 잘랐거나 거절했으면 서버 저장값 → 클라이언트가 맞춤.
    */
@@ -431,9 +451,7 @@ export class Server {
         const found = await $global.getCollectionItems(RANK_COLLECTION, { filters: [{ field: 'acc', operator: '==', value: account }], limit: 1 });
         // 최고 DPS: 이 줄의 이전 최고와 지금 저장으로 계산한 DPS 중 큰 값 (사용자 2026-11-12)
         const pw = bestDps((found[0] as Record<string, unknown> | undefined)?.pw, autoDps(saved));
-        // admin (test) accounts: k = 0 -> never listed or counted in ranks (user 2026-11-13)
-        const hidden = RETENTION_ADMINS.has(account.toLowerCase());
-        const row = { acc: account, nick: nk.ok ? nk.value : '', rb: saved.rebirths, bs: saved.bestStage, pw, c: saved.char, k: hidden ? 0 : pw, t: now };
+        const row = { acc: account, nick: nk.ok ? nk.value : '', rb: saved.rebirths, bs: saved.bestStage, pw, c: saved.char, k: pw, t: now };
         if (found[0]) await $global.updateCollectionItem(RANK_COLLECTION, { __id: found[0].__id, ...row });
         else await $global.addCollectionItem(RANK_COLLECTION, row);
       } catch { /* 기록판은 다음 저장 때 다시 */ }

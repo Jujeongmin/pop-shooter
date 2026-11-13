@@ -313,3 +313,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 
 /* 훈련 게이지 빈 칸이 패널 흰색에 묻혀 덜 찬 줄이 가늘어 보였음 (사용자 2026-11-13): 빈 칸도 같은 굵기로 보이게 */
 .tr-bar { background: #d6deee; box-shadow: inset 0 0 0 1.5px rgba(43, 58, 103, 0.2); }
+
+/* 계정 초기화 버튼: 눈에 덜 띄게, 확인 단계는 빨강 */
+.settings .reset-btn { margin-top: 10px; background: #f3f5fb; color: #7a849f; }
+.settings .reset-btn.armed { background: #ff5f6d; color: #fff; }

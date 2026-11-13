@@ -48,6 +48,18 @@ test('legit rebirth passes (training reached), gems and tokens server-computed; 
   assert.equal(checkSave({ ...prev, trAtk: 0 }, next, 1, P, NOW).ok, false);
 });
 
+test('two rebirths between saves pass when training covers both requirements', () => {
+  const base = newState(0);
+  const need = rebirthReq(base) + rebirthReq({ ...base, rebirths: 1 });
+  const prev: GameState = { ...base, trAtk: need, bestStage: 3 };
+  const next: GameState = { ...base, rebirths: 2, tokens: 2, bestStage: 3 };
+  const r = checkSave(prev, next, 5, P, NOW);
+  assert.ok(r.ok);
+  if (r.ok) assert.equal(r.state.tokens, 2);
+  // 첫 요구치만 채웠으면 두 번째는 안 됨
+  assert.equal(checkSave({ ...prev, trAtk: rebirthReq(base) }, next, 1, P, NOW).ok, false);
+});
+
 test('premium values come from the server, paid chars only if owned', () => {
   const prev = newState(0);
   const r = checkSave(prev, { ...prev, passMult: 64, boostUntil: NOW * 2, char: 'black', chars: ['blue', 'black'] }, 5, { ...P, passMult: 2 }, NOW);

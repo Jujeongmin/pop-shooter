@@ -25,6 +25,14 @@ export function loadSave(now: number): GameState {
   return loadLocal(null, now) ?? newState(now);
 }
 
+/** 계정 초기화: 이 계정 사본과 손님 사본을 지움 */
+export function clearLocalSaves(account: string | null): void {
+  try {
+    if (account) localStorage.removeItem(keyFor(account));
+    localStorage.removeItem(keyFor(null));
+  } catch { /* 못 지우면 서버 새 판이 더 새것이라 그쪽을 씀 */ }
+}
+
 export function writeSave(s: GameState, account: string | null = null): void {
   try { localStorage.setItem(keyFor(account), JSON.stringify({ ...s, lastSeen: Date.now() })); } catch { /* 저장 실패해도 게임 계속 */ }
 }
