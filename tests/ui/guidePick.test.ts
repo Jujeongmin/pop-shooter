@@ -10,6 +10,10 @@ test('tutorial: range first, then portal when 1-1 is beatable', () => {
   const strong = { ...s, trAtk: 1000 };
   assert.ok(canBeatNext(strong));
   assert.equal(pickGuide(strong), 'portal');
+  // 겨우 깰 만큼(공격 훈련 8)은 아직 사격장, 2배(17)부터 포털
+  assert.ok(canBeatNext({ ...s, trAtk: 8 }));
+  assert.equal(pickGuide({ ...s, trAtk: 8 }), 'range');
+  assert.equal(pickGuide({ ...s, trAtk: 17 }), 'portal');
 });
 
 test('tutorial: after the first clear, upgrade until something is bought', () => {
