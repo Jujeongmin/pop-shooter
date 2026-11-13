@@ -56,7 +56,7 @@ const STRINGS = {
   'shop.gemPackDesc': { en: 'For Attack Passes, heroes and Gold ×2', ko: '공격력 패스·캐릭터·골드 2배에 써요', ja: '攻撃パス・キャラ・ゴールド2倍に使える', 'zh-TW': '可用於攻擊通行證、角色、金幣2倍', 'zh-CN': '可用于攻击通行证、角色、金币2倍' },
   'shop.charge': { en: 'Get Gems', ko: '팝젬 충전', ja: 'ジェム補充', 'zh-TW': '儲值寶石', 'zh-CN': '充值宝石' },
   'shop.myGems': { en: 'Your Pop Gems: {n}', ko: '보유 팝젬 {n}', ja: '所持ジェム {n}', 'zh-TW': '持有寶石 {n}', 'zh-CN': '持有宝石 {n}' },
-  'shop.heroDesc': { en: 'Owned bonus: damage +{p}% forever, whichever hero you play', ko: '보유 효과: 어떤 캐릭터를 쓰든 피해 영구 +{p}%', ja: '所持効果: どのキャラでもダメージ永久 +{p}%', 'zh-TW': '持有效果: 不論使用哪個角色, 傷害永久 +{p}%', 'zh-CN': '持有效果: 无论使用哪个角色, 伤害永久 +{p}%' },
+  'shop.heroDesc': { en: 'Owned bonus: damage +{p}% more', ko: '보유 효과: 피해 +{p}% 추가', ja: '所持効果: ダメージ +{p}% 追加', 'zh-TW': '持有效果: 傷害額外 +{p}%', 'zh-CN': '持有效果: 伤害额外 +{p}%' },
   'shop.note.open_failed': { en: 'Could not open checkout', ko: '결제창을 열지 못했어요', ja: '決済画面を開けませんでした', 'zh-TW': '無法開啟結帳', 'zh-CN': '无法打开结账' },
   'shop.note.cancelled': { en: 'Purchase cancelled', ko: '결제를 취소했어요', ja: '決済をキャンセルしました', 'zh-TW': '已取消購買', 'zh-CN': '已取消购买' },
   'shop.note.checking': { en: 'Confirming the purchase...', ko: '구매 확인 중...', ja: '購入を確認中...', 'zh-TW': '確認購買中...', 'zh-CN': '确认购买中...' },
