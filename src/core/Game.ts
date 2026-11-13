@@ -65,6 +65,8 @@ export class Game {
   readonly facilityActions: Partial<Record<FacilityKind, (f: Facility) => void>> = {};
   /** 시설 구역에서 나갈 때 (창 닫기·훈련 끝) */
   readonly facilityLeave: Partial<Record<FacilityKind, (f: Facility) => void>> = {};
+  /** 이 시설에 들어가도 되는지 (없으면 다 됨). 첫 튜토리얼 동안 안내하는 곳만 열어 둠 (Tutorial) */
+  facilityGate: ((f: Facility) => boolean) | null = null;
   readonly menuActions: Partial<Record<MenuKind, () => void>> = {};
   /** 상태가 바뀔 때 알림 (창 갱신 등) */
   private readonly stateListeners: ((s: GameState) => void)[] = [];
@@ -250,7 +252,8 @@ export class Game {
     if (this.mode === 'hub') {
       this.updateMove(dt);
       const prev = this.near;
-      this.near = nearestFacility(this.pos.x, this.pos.z, this.hub.facilities);
+      const at = nearestFacility(this.pos.x, this.pos.z, this.hub.facilities);
+      this.near = at && this.facilityGate && !this.facilityGate(at) ? null : at;
       if (prev?.id !== this.near?.id) {
         if (prev) this.leaveFacility(prev);
         if (this.near) this.enterFacility(this.near);

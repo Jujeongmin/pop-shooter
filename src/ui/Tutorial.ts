@@ -87,6 +87,13 @@ export class Tutorial {
     this.group.visible = false;
     game.hub.root.add(this.group);
     game.onTick((dt) => this.update(dt));
+    // 첫 튜토리얼 동안은 안내하는 시설에만 들어감 (화살표를 따라가다 길에 있는 동전 분수·총 상점에 끌려 들어가던 것,
+    // 총을 사면 튜토리얼이 끝나 업그레이드 안내를 건너뛰던 것 — 2026-11-13 점검). 안내를 끄면 제한 없음
+    game.facilityGate = (f) => {
+      const s = game.state;
+      if (!this.enabled || tutorialFinished(s)) return true;
+      return pickGuide(s) === f.id;
+    };
   }
 
   setEnabled(on: boolean): void {
