@@ -66,9 +66,26 @@ export class CloudSave {
     }
   }
 
+  private stopped = false;
+
+  /**
+   * 계정 초기화 전: 대기 중인 저장을 버리고 보내는 중인 것이 끝날 때까지 기다림, 그 뒤 저장 안 함.
+   * (초기화 뒤에 예전 진행 저장이 도착해 환생 횟수 등이 되살아나지 않게, 사용자 2026-11-13)
+   */
+  async stopWrites(): Promise<void> {
+    this.stopped = true;
+    this.pending = null;
+    await this.writing;
+  }
+
+  /** 초기화가 실패하면 다시 저장 */
+  resumeWrites(): void {
+    this.stopped = false;
+  }
+
   /** 저장 보내기: 보내는 중이면 마지막 것만 이어서 보냄 (함수 호출 빈도 제한 안 넘게) */
   write(save: Record<string, unknown>): void {
-    if (!this.online) return;
+    if (!this.online || this.stopped) return;
     this.pending = save;
     if (this.writing) return;
     const flush = async (): Promise<void> => {

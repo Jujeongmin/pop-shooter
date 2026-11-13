@@ -323,3 +323,12 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, #ui ::-webkit-scrollbar { widt
 .settings-foot { display: flex; gap: 10px; align-items: center; justify-content: center; width: 100%; flex-wrap: wrap; margin-top: 4px; }
 .settings-foot .btn { flex: 0 0 auto; }
 .settings .reset-btn.armed { background: #ff5f6d; color: #fff; }
+
+/* 튜토리얼 강조 (ui/Spotlight): 구멍 둘레를 어둡게(큰 그림자), 둘레 네 칸이 입력을 막음, 손가락이 버튼을 톡톡 */
+.spot { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+.spot-hole { position: fixed; border-radius: 18px; box-shadow: 0 0 0 200vmax rgba(20, 28, 56, 0.62), 0 0 0 4px #ffd34d, 0 0 18px 6px rgba(255, 211, 77, 0.8);
+  pointer-events: none; animation: spot-in .35s ease-out both; }
+.spot-block { position: fixed; pointer-events: auto; background: transparent; touch-action: none; }
+.spot .ico.spot-hand { position: fixed; width: 52px; height: 52px; pointer-events: none; animation: zone-tap .7s ease-in-out infinite;
+  filter: drop-shadow(0 0 1.5px #2b3a67) drop-shadow(0 3px 0 rgba(43, 58, 103, 0.45)); }
+@keyframes spot-in { from { opacity: 0 } to { opacity: 1 } }

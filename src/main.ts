@@ -114,10 +114,12 @@ async function boot(): Promise<void> {
   const resetAccount = async (): Promise<boolean> => {
     game.saver.hold = true;
     if (cloud.online) {
+      await cloud.stopWrites();
       try {
         const r = await withTimeout(net.call<{ ok: boolean }>('saveReset', [], 10000), 12000);
-        if (!r?.ok) { game.saver.hold = false; return false; }
+        if (!r?.ok) { cloud.resumeWrites(); game.saver.hold = false; return false; }
       } catch {
+        cloud.resumeWrites();
         game.saver.hold = false;
         return false;
       }

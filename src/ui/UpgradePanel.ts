@@ -16,6 +16,8 @@ import { bakeCharIcons } from './charIcons';
 import { button, el, setText } from './dom';
 import type { FloatText } from './FloatText';
 import { icon, type IconName } from './icons';
+import { pickGuide } from './guidePick';
+import { Spotlight } from './Spotlight';
 import { bump, Panel } from './Panel';
 import type { ZoneCallout } from './ZoneCallout';
 
@@ -69,6 +71,8 @@ export class UpgradePanel {
   private readonly machRows: MachRow[] = [];
   private readonly gearRows: GearRow[] = [];
   private readonly mentorRows: MentorRow[] = [];
+  /** 튜토리얼 강조 (첫 클리어 뒤 '업그레이드' 안내 동안: 살 수 있는 기구 구매 버튼만 밝게·눌리게 + 손가락) */
+  private readonly spot = new Spotlight();
 
   constructor(game: Game, ui: HTMLElement, callout: ZoneCallout, float: FloatText) {
     this.game = game;
@@ -114,9 +118,14 @@ export class UpgradePanel {
       spot: { x: f.x, z: f.z + 1.1 },
       cam: { focus: -0.4, lookUp: -1.4 },
     });
-    this.zone.onLanded = () => { this.refresh(); this.panel.open(); };
+    this.zone.onLanded = () => {
+      // 튜토리얼 '업그레이드' 안내로 왔으면 훈련 기구 탭 (마지막에 본 장비 탭이 열려 뭘 할지 몰랐음, 사용자 2026-11-13)
+      if (pickGuide(this.game.state) === 'upgrade' && this.tab !== 'mach') this.setTab('mach');
+      this.panel.open();
+      this.refresh();
+    };
     game.facilityActions.upgrade = () => this.zone.enter();
-    game.facilityLeave.upgrade = () => { this.zone.leave(); this.panel.close(); };
+    game.facilityLeave.upgrade = () => { this.zone.leave(); this.panel.close(); this.spot.hide(); };
     game.onTick((dt) => this.zone.update(dt));
     game.onStateChange(() => { if (this.panel.isOpen) this.refresh(); });
   }
@@ -199,6 +208,7 @@ export class UpgradePanel {
     for (const [k, b] of this.tabBtns) b.classList.toggle('on', k === tb);
     for (const [k, sec] of this.sections) sec.hidden = k !== tb;
     this.seg.hidden = tb === 'gear' || tb === 'mentor';
+    if (tb !== 'mach') this.spot.hide();
     this.refresh();
   }
 
@@ -255,6 +265,14 @@ export class UpgradePanel {
       setText(r.n, `+${show}`);
       r.btn.disabled = p.n <= 0;
     }
+    this.placePoint(s);
+  }
+
+  /** 튜토리얼 강조: 살 수 있는 기구 중 공격(사격장 과녁) 먼저. 창이 닫히거나 안내가 끝나면(뭐든 사면) 치움 */
+  private placePoint(s: GameState): void {
+    const row = this.machRows.find((r) => !r.btn.disabled);
+    if (pickGuide(s) !== 'upgrade' || this.tab !== 'mach' || !this.panel.isOpen || !row) { this.spot.hide(); return; }
+    this.spot.show(row.btn);
   }
 
   private refreshGear(s: GameState): void {
