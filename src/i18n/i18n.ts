@@ -208,7 +208,7 @@ const STRINGS = {
   'shop.needPrev': { en: 'Buy the one above first', ko: '위 총부터 사요', ja: '上の銃から買おう', 'zh-TW': '先買上面的槍', 'zh-CN': '先买上面的枪' },
   'shop.locked': { en: 'Clear World {w} to unlock', ko: '월드 {w} 깨면 열려요', ja: 'ワールド{w}クリアで解放', 'zh-TW': '通關世界{w}後解鎖', 'zh-CN': '通关世界{w}后解锁' },
   'shop.newGun': { en: 'New gun!', ko: '새 총!', ja: '新しい銃!', 'zh-TW': '新槍!', 'zh-CN': '新枪!' },
-  'reb.title': { en: 'Rebirth Altar', ko: '환생 제단', ja: '転生の祭壇', 'zh-TW': '轉生祭壇', 'zh-CN': '转生祭坛' },
+  'reb.title': { en: 'Rebirth', ko: '환생', ja: '転生', 'zh-TW': '轉生', 'zh-CN': '转生' },
   'reb.need': { en: 'Rebirth #{n} needs Attack training', ko: '{n}회 환생 · 필요 공격 훈련', ja: '{n}回転生 · 必要な攻撃トレーニング', 'zh-TW': '已轉生{n}次 · 所需攻擊訓練', 'zh-CN': '已转生{n}次 · 所需攻击训练' },
   'reb.short': { en: 'Train {n} more Attack at the range', ko: '훈련장에서 공격을 {n} 더 훈련해요', ja: '訓練場で攻撃をあと{n}鍛えよう', 'zh-TW': '在訓練場再訓練 {n} 攻擊', 'zh-CN': '在训练场再训练 {n} 攻击' },
   'reb.tip': { en: 'Each rebirth needs a higher level', ko: '환생할 때마다 필요한 레벨이 올라가요', ja: '転生するたびに必要なレベルが上がるよ', 'zh-TW': '每次轉生所需等級都會提高', 'zh-CN': '每次转生所需等级都会提高' },
