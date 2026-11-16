@@ -26,7 +26,7 @@ import type { HubSample } from './hubBuffer';
 import type { HubPeer } from './LobbyHub';
 import { battleSpot } from './peerView';
 import { PowerAura } from '../player/PowerAura';
-import { standY } from '../world/facilities';
+import { beltRunPose, standY } from '../world/facilities';
 import { HUB_TIMING } from './shared/hub.ts';
 import { NICK_PLACEHOLDER, safeDisplayNick } from './shared/nickFilter.ts';
 
@@ -306,6 +306,8 @@ export class LobbyPeers {
           label.visible = false;
           continue;
         }
+        // 벨트 위에서 멈춰 보이면(그쪽 패킷이 끊김) 제자리 달리기
+        beltRunPose(s);
         p.pos.set(s.x, standY(s.x, s.z), s.z);
         p.velocity.set(s.vx, 0, s.vz);
         p.yaw = s.yaw;

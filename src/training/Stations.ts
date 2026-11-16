@@ -8,11 +8,11 @@ import { gainPerShot, train, type TrainKind } from '../sim/training.ts';
 import type { FloatText } from '../ui/FloatText';
 import type { ZoneCallout } from '../ui/ZoneCallout';
 import { pct } from '../ui/UpgradePanel';
-import { FOUNTAIN, FOUNTAIN_SPOTS, TREADMILL, TREADMILL_LANES, WORLD1_FACILITIES, BELT_Y } from '../world/facilities';
+import { FOUNTAIN, FOUNTAIN_SPOTS, TREADMILL, TREADMILL_LANES, TREADMILL_RUN_SPEED, WORLD1_FACILITIES, BELT_Y } from '../world/facilities';
 
 const FLUSH_SEC = 0.25;
 /** 러닝머신에서 달리는 속도 (걷기·달리기 클립 고르기용, m/s) */
-const RUN_SPEED = 3.4;
+const RUN_SPEED = TREADMILL_RUN_SPEED;
 /** 러닝머신 벨트 윗면 높이 (HubFacilities.buildTreadmill 벨트 0.33m) */
 const _at = new THREE.Vector3();
 const _to = new THREE.Vector3();

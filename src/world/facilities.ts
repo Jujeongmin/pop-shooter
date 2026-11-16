@@ -39,6 +39,22 @@ export function standY(x: number, z: number): number {
   for (const dx of TREADMILL_LANES) if (Math.abs(x - (TREADMILL.x + dx)) < 0.6) return BELT_Y;
   return 0;
 }
+
+/** 러닝머신 제자리 달리기 속도 (m/s, 앞 = −z). 내 화면(training/Stations)과 다른 사람 화면(net/LobbyPeers)이 같은 값 */
+export const TREADMILL_RUN_SPEED = 3.4;
+
+/**
+ * 벨트 위 다른 사람의 보이는 속도·방향 (v를 고침). 벨트 위에서 멈춰 보이면 제자리 달리기로: 내 화면의 러닝머신은 늘 달리는 자세라
+ * 벨트 위 정지는 패킷이 끊긴 경우뿐 (그쪽 앱이 백그라운드·화면 꺼짐 — 그동안도 훈련은 쌓임, 2026-11-16 배포본에서 서 있던 것).
+ * 움직이는 중(벨트에서 내려가는 중)이거나 벨트 밖이면 그대로. 바꿨으면 true
+ */
+export function beltRunPose(v: { x: number; z: number; vx: number; vz: number; yaw: number }): boolean {
+  if (standY(v.x, v.z) <= 0 || v.vx * v.vx + v.vz * v.vz >= 0.01) return false;
+  v.vx = 0;
+  v.vz = -TREADMILL_RUN_SPEED;
+  v.yaw = Math.PI;
+  return true;
+}
 /** 동전 분수(골드 보너스): 받는 자리 가운데 (기계는 북쪽 1.5m), 좌우로 세 자리 */
 export const FOUNTAIN = { x: -9.5, z: 9 };
 export const FOUNTAIN_SPOTS: readonly number[] = [0, -1.1, 1.1];
