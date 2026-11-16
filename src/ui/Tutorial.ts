@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import { t, type StrKey } from '../i18n/i18n';
+import { autoDps } from '../sim/actions.ts';
+import { formatNum } from '../sim/format.ts';
 import { stageLabel } from '../sim/stages.ts';
 import { WORLD1_FACILITIES } from '../world/facilities';
 import { button, el, setText } from './dom';
-import { pickGuide, TUTORIAL_DONE, tutorialFinished, type GuideKind } from './guidePick';
+import { pickGuide, portalDps, TUTORIAL_DONE, tutorialFinished, type GuideKind } from './guidePick';
 import { icon } from './icons';
 
 const _to = new THREE.Vector3();
@@ -17,6 +19,11 @@ const HOLD_SEC = 2.5;
 const KEY = 'pop-shooter.guide';
 /** 위쪽 안내 글 줄 (사용자 2026-11-13: 안 뜨는 게 낫다 → 끔). 바닥 화살표·목표 위 표시만 남김. 다시 켜려면 true */
 const SHOW_TEXT = false;
+
+/** 처음 움직이기 전 조작 안내: 이만큼(m) 움직이면 사라짐 */
+const MOVE_HINT_DIST = 1.5;
+/** 막힌 포털 안내를 다시 띄우기까지(초) */
+const GATE_TIP_SEC = 3.5;
 
 const TEXT: Record<GuideKind, StrKey> = { portal: 'g.portal', upgrade: 'g.upgrade', range: 'g.range', treadmill: 'g.treadmill' };
 
@@ -47,15 +54,30 @@ export class Tutorial {
   private kind: GuideKind | null = null;
   /** 닫은 안내 (같은 안내는 상황이 바뀔 때까지 안 띄움) */
   private dismissed: GuideKind | null = null;
+  /** 조작 안내 (튜토리얼 중, 이번 방문에 처음 움직이기 전까지, CrazyGames 점검 2026-11-16) */
+  private readonly moveHint: HTMLDivElement;
+  private moveFrom: { x: number; z: number } | null = null;
+  private moveTouch: boolean | null = null;
+  /** 튜토리얼 중 막힌 포털에 들어갔을 때 한 줄 (전엔 아무 반응이 없었음) */
+  private readonly gateTip: HTMLDivElement;
+  private gateT = 0;
+  /** 첫 클리어 전 화면 줄이기 (#ui.first-run: 훈련 줄 숨김, 오른쪽 이벤트 버튼 흐리게 — 이동·화살표만 눈에 띄게) */
+  private readonly ui: HTMLElement;
+  private firstRun: boolean | null = null;
   enabled = guideEnabled();
 
   constructor(game: Game, ui: HTMLElement) {
     this.game = game;
+    this.ui = ui;
     this.bar = el('div', 'tut-bar');
     this.text = el('span', 'tut-text');
     this.bar.append(icon('hand', 'tut-ico'), this.text, button(t('g.close'), () => { this.dismissed = this.kind; this.show(null); }, 'btn small tut-skip'));
     this.bar.hidden = true;
-    ui.append(this.bar);
+    this.moveHint = el('div', 'move-hint');
+    this.moveHint.hidden = true;
+    this.gateTip = el('div', 'gate-tip');
+    this.gateTip.hidden = true;
+    ui.append(this.bar, this.moveHint, this.gateTip);
     // 바닥 화살표: 납작한 삼각형 셋 (캐릭터 앞에서 목표 쪽으로 흐름)
     const tri = new THREE.Shape();
     tri.moveTo(0, 0.35);
@@ -92,8 +114,50 @@ export class Tutorial {
     game.facilityGate = (f) => {
       const s = game.state;
       if (!this.enabled || tutorialFinished(s)) return true;
-      return pickGuide(s) === f.id;
+      const pick = pickGuide(s);
+      if (pick === f.id) return true;
+      if (f.id === 'portal') this.showGateTip(pick);
+      return false;
     };
+  }
+
+  /** 막힌 포털: 무엇을 하면 열리는지 (서 있는 동안 GATE_TIP_SEC마다 한 번만 새로 띄움) */
+  private showGateTip(pick: GuideKind | null): void {
+    if (this.gateT > 0) { this.gateT = GATE_TIP_SEC; return; }
+    this.gateT = GATE_TIP_SEC;
+    const s = this.game.state;
+    const fac = WORLD1_FACILITIES.find((x) => x.id === pick);
+    // 첫 클리어 전엔 사격장에서 DPS만 채우면 열림
+    const text = pick === 'range'
+      ? t('g.portalLocked', { n: formatNum(portalDps()), m: formatNum(Math.floor(autoDps(s))) })
+      : t('g.portalFirst', { f: fac?.label ?? '' });
+    setText(this.gateTip, text);
+    this.gateTip.hidden = false;
+    this.gateTip.classList.remove('pop');
+    void this.gateTip.offsetWidth;
+    this.gateTip.classList.add('pop');
+  }
+
+  /** 조작 안내: 튜토리얼 중 광장에서, 처음 MOVE_HINT_DIST만큼 움직일 때까지 */
+  private updateMoveHint(): void {
+    const g = this.game;
+    if (!this.moveFrom) {
+      if (!this.enabled || tutorialFinished(g.state) || g.mode !== 'hub') { this.moveHint.hidden = true; return; }
+      this.moveFrom = { x: g.pos.x, z: g.pos.z };
+    }
+    if (this.moveFrom.x === Infinity) return;
+    if (Math.hypot(g.pos.x - this.moveFrom.x, g.pos.z - this.moveFrom.z) > MOVE_HINT_DIST || g.mode !== 'hub') {
+      this.moveFrom = { x: Infinity, z: Infinity };
+      this.moveHint.hidden = true;
+      return;
+    }
+    const touch = g.controls.touchMode;
+    if (touch !== this.moveTouch) {
+      this.moveTouch = touch;
+      setText(this.moveHint, t(touch ? 'hint.moveTouch' : 'hint.moveKeys'));
+      this.moveHint.classList.toggle('touch', touch);
+    }
+    this.moveHint.hidden = false;
   }
 
   setEnabled(on: boolean): void {
@@ -120,6 +184,13 @@ export class Tutorial {
     const g = this.game;
     this.clock += dt;
     this.holdT -= dt;
+    this.updateMoveHint();
+    const first = this.enabled && g.state.bestStage < 1 && !tutorialFinished(g.state);
+    if (first !== this.firstRun) { this.firstRun = first; this.ui.classList.toggle('first-run', first); }
+    if (this.gateT > 0) {
+      this.gateT -= dt;
+      if (this.gateT <= 0 || g.mode !== 'hub') { this.gateT = 0; this.gateTip.hidden = true; }
+    }
     if (!this.enabled || g.mode === 'battle') {
       this.bar.hidden = true;
       return;

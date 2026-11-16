@@ -319,5 +319,19 @@
 .travel-row > .mentor-st, .travel-row > .btn { flex: none; margin-left: auto; text-align: right; }
 .travel-lock { justify-content: flex-end; }
 
+/* 첫 조작 안내 (CrazyGames 점검 2026-11-16): 튜토리얼 중 처음 움직이기 전까지. PC는 아래 가운데, 터치는 쉬는 조이스틱 바로 위 */
+.move-hint { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); padding: 10px 22px; border-radius: 999px; background: rgba(255,255,255,.96); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); color: var(--ink); font-size: 22px; white-space: nowrap; pointer-events: none; animation: move-hint-bob 1.2s ease-in-out infinite; }
+.move-hint.touch { left: max(8px, calc(min(22vw, 130px) - 64px)); bottom: calc(min(18vh, 150px) + 70px); transform: none; font-size: 17px; padding: 8px 16px; }
+.move-hint.touch::after { content: ''; position: absolute; left: 52px; bottom: -12px; border: 9px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
+@keyframes move-hint-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+/* 튜토리얼 중 막힌 포털 한 줄 */
+.gate-tip { position: absolute; left: 50%; top: 32%; transform: translateX(-50%); max-width: calc(100vw - 32px); box-sizing: border-box; padding: 10px 18px; border-radius: 16px; background: rgba(255,255,255,.96); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); color: var(--ink); font-size: 19px; text-align: center; pointer-events: none; }
+.gate-tip.pop { animation: tut-pop .4s cubic-bezier(.2, 1.8, .4, 1) both; }
+@media (max-width: 760px) { .move-hint { font-size: 18px; } .gate-tip { font-size: 16px; } }
+/* 첫 클리어 전 (CrazyGames 점검 2026-11-16): 훈련 줄은 숨기고 이벤트 버튼은 흐리게 (누를 수는 있음) */
+#ui.first-run .hud-train { display: none; }
+#ui.first-run .event-bar { opacity: .4; filter: saturate(.4); transition: opacity .4s; }
+#ui.first-run .event-bar:hover { opacity: .9; }
+
 /* 로딩 화면 안내 줄 (서버 다시 연결 중) */
 .loading-msg { max-width: min(86vw, 420px); text-align: center; font-size: 15px; color: #2b3a67; background: rgba(255, 255, 255, 0.75); border-radius: 14px; padding: 8px 14px; }

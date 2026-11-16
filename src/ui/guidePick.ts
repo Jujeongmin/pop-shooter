@@ -14,15 +14,18 @@ const HUB_LAST_STAGE = BALANCE.stage.perWorld;
 export const TUTORIAL_DONE = 99;
 
 /**
- * 첫 튜토리얼 (사용자 2026-11-13): 사격장(공격) → 러닝머신(연사) → 자동 DPS가 1-1 체력의 절반이 되면 포털.
- * 1-1을 약 2초에 깸 = 첫 전투가 시원함. 훈련 둘 다 해 보고 나서 포털로
+ * 첫 튜토리얼 (CrazyGames 점검 2026-11-16, 사용자 승인): 사격장(공격) → 자동 DPS가 1-1을 약 10초에 깰 만큼 되면 포털 →
+ * 첫 클리어 뒤 러닝머신(연사) → 골드로 강화.
+ * 예전(2026-11-13)엔 사격장 → 러닝머신 → DPS = 1-1 체력 절반까지 사격장 → 포털이라 첫 적이 약 75초 뒤에 나왔음
+ * (1분 이상 플레이 비율이 낮은 주원인). 지금은 사격장 약 17초, 첫 전투까지 약 30초
  */
-export const TUT_ATK = 10;
 export const TUT_SPD = 50;
+/** 첫 전투에서 1-1을 깨는 데 걸리는 시간(초, 자동 사격만) */
+const FIRST_CLEAR_SEC = 10;
 
-/** 포털 안내 DPS = 1-1 체력의 절반 (첫 전투 약 2초, 포털까지 약 55초 — 체력만큼이면 약 94초라 김, 사용자 2026-11-13) */
+/** 포털 안내 DPS = 1-1 체력 / FIRST_CLEAR_SEC (탭하면 더 빨리 깸) */
 export function portalDps(): number {
-  return stageHp(1) / 2;
+  return stageHp(1) / FIRST_CLEAR_SEC;
 }
 
 /** 지금 공격력으로 다음 스테이지를 깰 수 있는지 (자동 사격만, 여유 margin배) */
@@ -42,16 +45,12 @@ export function tutorialFinished(s: GameState): boolean {
 }
 
 /**
- * 안내 (사용자 2026-11-11, 2026-11-13): 처음 한 번만 사격장(공격) → 러닝머신(연사) → DPS 180이면 포탈(1-1) → 골드로 강화. 끝나면 안내 없음,
- * 그 뒤로는 환생할 수 있을 때만 환생 제단.
+ * 안내: 처음 한 번만 사격장(공격) → 포털(1-1) → 러닝머신(연사) → 골드로 강화. 끝나면 안내 없음 (환생은 오른쪽 버튼이 알림).
  */
 export function pickGuide(s: GameState): GuideKind | null {
   if (!tutorialFinished(s)) {
-    if (s.bestStage < 1) {
-      if (s.trAtk < TUT_ATK) return 'range';
-      if (s.trSpd < TUT_SPD) return 'treadmill';
-      return autoDps(s) >= portalDps() ? 'portal' : 'range';
-    }
+    if (s.bestStage < 1) return autoDps(s) >= portalDps() ? 'portal' : 'range';
+    if (s.trSpd < TUT_SPD) return 'treadmill';
     return 'upgrade';
   }
   // 환생은 안내하지 않음 (제단 없음, 오른쪽 환생 버튼이 차오르고 반짝여 알림, 사용자 2026-11-13)

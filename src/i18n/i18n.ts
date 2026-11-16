@@ -130,6 +130,7 @@ const STRINGS = {
   'battle.cleared': { en: '{s} clear!', ko: '{s} 클리어!', ja: '{s} クリア!', 'zh-TW': '{s} 通關!', 'zh-CN': '{s} 通关!' },
 
   'result.world': { en: 'World {w} clear!', ko: '월드 {w} 클리어!', ja: 'ワールド{w}クリア!', 'zh-TW': '世界{w}通關!', 'zh-CN': '世界{w}通关!' },
+  'result.stage1': { en: '1 stage cleared!', ko: '1스테이지 돌파!', ja: '1ステージ突破!', 'zh-TW': '突破1關!', 'zh-CN': '突破1关!' },
   'result.stages': { en: '{n} stages cleared!', ko: '{n}스테이지 돌파!', ja: '{n}ステージ突破!', 'zh-TW': '突破{n}關!', 'zh-CN': '突破{n}关!' },
   'result.none': { en: 'So close!', ko: '아쉬워요!', ja: 'おしい!', 'zh-TW': '好可惜!', 'zh-CN': '好可惜!' },
   'result.tip': {
@@ -267,6 +268,10 @@ const STRINGS = {
   'g.upgrade': { en: 'You got gold! Buy a training machine at Upgrades', ko: '골드를 얻었어요! 업그레이드에서 훈련 기구를 사요', ja: 'ゴールドをゲット! アップグレードで訓練器具を買おう', 'zh-TW': '獲得金幣! 到升級購買訓練器材', 'zh-CN': '获得金币! 到升级购买训练器材' },
   'g.portal': { en: 'Strong enough for {s}! Enter the portal: battles are automatic, just watch', ko: '{s} 클리어 가능! 포털에 들어가면 자동으로 싸워요, 가만히 있으면 돼요', ja: '{s}をクリアできる! ポータルに入ると自動で戦うよ、見てるだけでOK', 'zh-TW': '可以通關{s}! 進入傳送門會自動戰鬥，看著就好', 'zh-CN': '可以通关{s}! 进入传送门会自动战斗，看着就好' },
   'g.altar': { en: 'Rebirth is ready! Go to the Rebirth Altar', ko: '환생할 수 있어요! 환생 제단으로 가요', ja: '転生できる! 転生の祭壇へ', 'zh-TW': '可以轉生了! 去轉生祭壇', 'zh-CN': '可以转生了! 去转生祭坛' },
+  'g.portalLocked': { en: 'The portal opens at {n} DPS (now {m}). Keep training!', ko: '포털은 DPS {n}부터 열려요 (지금 {m}). 계속 훈련해요!', ja: 'ポータルはDPS {n}で開くよ (今 {m})。訓練を続けよう!', 'zh-TW': '傳送門在DPS {n}開啟 (現在 {m})。繼續訓練!', 'zh-CN': '传送门在DPS {n}开启 (现在 {m})。继续训练!' },
+  'g.portalFirst': { en: 'Train at the {f} first. Follow the arrows!', ko: '먼저 {f}에서 훈련해요. 화살표를 따라가요!', ja: 'まず{f}で訓練しよう。矢印についていこう!', 'zh-TW': '先到{f}訓練。跟著箭頭走!', 'zh-CN': '先到{f}训练。跟着箭头走!' },
+  'hint.moveKeys': { en: 'WASD or arrow keys to move', ko: 'WASD·방향키로 움직여요', ja: 'WASD・矢印キーで移動', 'zh-TW': 'WASD或方向鍵移動', 'zh-CN': 'WASD或方向键移动' },
+  'hint.moveTouch': { en: 'Drag here to move', ko: '여기를 끌어서 움직여요', ja: 'ここをドラッグして移動', 'zh-TW': '拖曳這裡移動', 'zh-CN': '拖动这里移动' },
   'g.close': { en: 'Close', ko: '닫기', ja: '閉じる', 'zh-TW': '關閉', 'zh-CN': '关闭' },
   'ctl.lock': { en: 'Tab: lock mouse', ko: 'Tab: 마우스 고정', ja: 'Tab: マウス固定', 'zh-TW': 'Tab:鎖定滑鼠', 'zh-CN': 'Tab:锁定鼠标' },
   'ctl.unlock': { en: 'Tab: free mouse', ko: 'Tab: 마우스 풀기', ja: 'Tab: マウス解除', 'zh-TW': 'Tab:釋放滑鼠', 'zh-CN': 'Tab:释放鼠标' },

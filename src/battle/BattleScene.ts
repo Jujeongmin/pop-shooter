@@ -431,7 +431,7 @@ export class BattleScene {
     this.opened = run.done === 'worldClear' && prevBest < bossStage && run.world < BALANCE.stage.worlds ? run.world + 1 : 0;
     audio.play(run.cleared.length > 0 ? 'win' : 'lose');
     const failed = run.done === 'fail' ? run.stage : null;
-    const title = run.done === 'worldClear' ? t('result.world', { w: run.world }) : run.cleared.length > 0 ? t('result.stages', { n: run.cleared.length }) : t('result.none');
+    const title = run.done === 'worldClear' ? t('result.world', { w: run.world }) : run.cleared.length === 1 ? t('result.stage1') : run.cleared.length > 0 ? t('result.stages', { n: run.cleared.length }) : t('result.none');
     const tip = failed !== null
       ? t('result.tip', { s: stageLabel(failed), need: formatNum(stageHp(failed) / stageTime(failed)), now: formatNum(autoDps(res.state)) })
       : null;
