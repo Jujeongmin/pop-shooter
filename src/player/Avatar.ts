@@ -151,6 +151,13 @@ export class Avatar {
       f.pitch = -0.1;
     }
     this.avatar.update(f);
+    // 첫 자세가 잡힌 뒤에 장비를 붙임 (아래 setGear 참고)
+    if (!this.posed) {
+      this.posed = true;
+      const pending = this.pendingGear;
+      this.pendingGear = null;
+      if (pending) this.setGear(pending);
+    }
     this.clock += dt;
     const cheer = p.cheer ?? 0;
     this.gunObj.visible = cheer < 0.3;
@@ -169,8 +176,21 @@ export class Avatar {
     this.avatar.getMuzzle(out);
   }
 
-  /** 장비 표시 (종류마다 가장 높은 단계, 0 = 없음). 바뀐 종류만 다시 붙임 */
+  /** 첫 update(애니메이션 자세)를 마쳤는지 */
+  private posed = false;
+  /** 첫 자세 전에 받은 장비 (첫 update에서 붙임) */
+  private pendingGear: GearTiers | null = null;
+
+  /**
+   * 장비 표시 (종류마다 가장 높은 단계, 0 = 없음). 바뀐 종류만 다시 붙임.
+   * 만든 직후(첫 update 전)면 첫 자세가 잡힐 때까지 미룸: 기본 자세(바인드 포즈)의 등·가슴 뼈 기준으로 붙이면
+   * 대기 자세에서 저금통이 등에서 13cm쯤 더 떨어져 떠 보였음 (2026-11-17 배포본: 새로고침한 내 캐릭터·새로 들어온 다른 사람)
+   */
   setGear(tiers: GearTiers): void {
+    if (!this.posed) {
+      this.pendingGear = tiers;
+      return;
+    }
     this.root.updateMatrixWorld(true);
     for (const k of ['atk', 'spd', 'coin'] as const) {
       const cur = this.gear[k];
@@ -201,15 +221,23 @@ export class Avatar {
 
   /** 몸 메시 정점의 현재 자세 위치 (아바타 기준, 한 번 계산해 둠: 고글·저금통 자리 찾기용) */
   private body: { mesh: THREE.SkinnedMesh; xs: Float32Array; ys: Float32Array; zs: Float32Array; top: number } | null | undefined;
-  private bodyPoints(): NonNullable<Avatar['body']> | null {
-    if (this.body !== undefined) return this.body;
-    this.body = null;
+  /** 원래 몸 메시 (정점이 가장 많은 스킨 메시, LOD 몸 제외) */
+  private bodyMesh(): THREE.SkinnedMesh | null {
+    if (this.body) return this.body.mesh;
     let mesh: THREE.SkinnedMesh | null = null;
     this.root.traverse((o) => {
       const m = o as THREE.SkinnedMesh;
       if (m.isSkinnedMesh && m.userData.lod !== true && (!mesh || m.geometry.attributes.position!.count > mesh.geometry.attributes.position!.count)) mesh = m;
     });
-    const m = mesh as THREE.SkinnedMesh | null;
+    return mesh;
+  }
+
+  private bodyPoints(): NonNullable<Avatar['body']> | null {
+    if (this.body !== undefined) return this.body;
+    const m = this.bodyMesh();
+    // 첫 자세 전(바인드 포즈)의 정점은 저장하지 않음 (장비 자리가 대기 자세와 어긋남)
+    if (!this.posed) return null;
+    this.body = null;
     if (!m) return null;
     this.root.updateMatrixWorld(true);
     m.skeleton.update();
@@ -300,7 +328,7 @@ export class Avatar {
     for (const k of ['atk', 'spd', 'coin'] as const) for (const o of this.gear[k].objs) o.visible = high;
     this.root.traverse((o) => { if ((o as THREE.Mesh).isMesh && o.userData.gear !== true) o.castShadow = high; });
     // 캐릭터 LOD (2026-11-13): 약 7,600 → 2,200 삼각형. LOD 형상을 아직 못 받았으면 원래 몸 그대로
-    const body = this.bodyPoints()?.mesh;
+    const body = this.bodyMesh();
     const geo = this.assets.lods[this.char];
     if (!body || !geo) return;
     if (!high && !this.lodBody) {
