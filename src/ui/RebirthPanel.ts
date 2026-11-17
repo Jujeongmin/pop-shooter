@@ -7,7 +7,7 @@ import { atkShown, canRebirth, doRebirth, rebirthReq, skipRebirthGems } from '..
 import { BALANCE } from '../sim/balance.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import { GUNS } from '../sim/guns.ts';
-import { rebirthMult } from '../sim/training.ts';
+import { trainSpeedMult } from '../sim/training.ts';
 import { HUB_SPAWN } from '../world/facilities';
 import { button, el } from './dom';
 import type { FloatText } from './FloatText';
@@ -18,7 +18,8 @@ import type { ZoneCallout } from './ZoneCallout';
 const HOP_SEC = 0.5;
 const _at = new THREE.Vector3();
 
-const mult = (tokens: number, pass: number): string => `×${formatMult(rebirthMult(tokens) * pass)}`;
+/** 훈련 속도 배율 (실제 훈련량, 공격력 패스는 안 곱함) */
+const mult = (tokens: number): string => `×${formatMult(trainSpeedMult({ tokens }))}`;
 
 /**
  * 환생 창 (키보드 탈출 방식, 오른쪽 환생 버튼으로 엶 — 광장 제단은 2026-11-13에 없앰). 배율 지금 → 다음(환생마다 ×multGrowth), 받는 팝젬,
@@ -58,7 +59,7 @@ export class RebirthPanel {
     const card = el('div', 'reb-mult');
     card.append(icon('reb', 'big'), el('div', 'reb-mult-l', t('reb.mult')));
     const v = el('div', 'reb-mult-v');
-    v.append(el('span', '', mult(s.tokens, s.passMult)), el('span', 'arrow', '→'), el('b', '', mult(next, s.passMult)));
+    v.append(el('span', '', mult(s.tokens)), el('span', 'arrow', '→'), el('b', '', mult(next)));
     card.append(v);
     const gems = el('div', 'reb-gems');
     gems.append(icon('gem'), el('span', '', `${t('reb.gems')} +${BALANCE.gems.perRebirth}`));
@@ -149,7 +150,7 @@ export class RebirthPanel {
     this.hopT = 0;
     g.avatar.getMuzzle(_at);
     _at.y += 0.8;
-    this.float.show(t('reb.done', { m: formatMult(rebirthMult(next.tokens) * next.passMult) }), _at, 'coin big');
+    this.float.show(t('reb.done', { m: formatMult(trainSpeedMult(next)) }), _at, 'coin big');
     this.confirming = false;
     this.render();
     this.respawn = true;
@@ -174,7 +175,7 @@ export class RebirthPanel {
       this.callout.flash('rgba(255, 255, 255, 0.9)');
       // 환생 직후 체감 (사용자 2026-11-13): 가운데 크게 '훈련 ×N', 머리 위 환생 아이콘 + 배율
       this.panel.close();
-      const m = formatMult(rebirthMult(g.state.tokens));
+      const m = formatMult(trainSpeedMult(g.state));
       this.callout.show({ title: t('reb.doneTitle'), big: t('reb.doneBig', { m }) });
       window.setTimeout(() => this.callout.hide(), 2200);
       _at.set(g.pos.x, g.avatar.headTop() + 0.35, g.pos.z);

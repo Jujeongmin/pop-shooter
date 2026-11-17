@@ -7,7 +7,7 @@ import type { DailyPanel } from './DailyPanel';
 import type { RebirthPanel } from './RebirthPanel';
 import { canRebirth, rebirthReq } from '../sim/actions.ts';
 import { formatMult } from '../sim/format.ts';
-import { rebirthMult } from '../sim/training.ts';
+import { trainSpeedMult } from '../sim/training.ts';
 import { button, el, setText } from './dom';
 import { icon, type IconName } from './icons';
 import type { ShopPanel } from './ShopPanel';
@@ -101,7 +101,7 @@ export class EventBar {
     const face = it.reb.root.firstElementChild as HTMLElement;
     face.style.setProperty('--p', String(Math.round(Math.min(1, s.trAtk / rebirthReq(s)) * 100)));
     it.reb.root.classList.toggle('ready', ready);
-    setText(it.reb.label, ready ? `×${formatMult(rebirthMult(s.tokens + 1))}` : t('ev.reb'));
+    setText(it.reb.label, ready ? `×${formatMult(trainSpeedMult({ tokens: s.tokens + 1 }))}` : t('ev.reb'));
     // 전투 중에는 숨김 (광장에서만)
     this.root.hidden = this.game.mode === 'battle';
     it.daily.root.hidden = !online;

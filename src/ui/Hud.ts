@@ -2,7 +2,7 @@ import { t } from '../i18n/i18n';
 import { atkShown, autoDps, damagePerShot, rebirthReq, shotsPerSec } from '../sim/actions.ts';
 import { formatMult, formatNum } from '../sim/format.ts';
 import type { GameState } from '../sim/state.ts';
-import { rebirthMult, spdTrainMult, TRAIN_KINDS, trainValue, type TrainKind } from '../sim/training.ts';
+import { spdTrainMult, trainSpeedMult, TRAIN_KINDS, trainValue, type TrainKind } from '../sim/training.ts';
 import { trainNeeds } from '../sim/trainNeed.ts';
 import { FIRE_VIS_MAX } from '../fx/fireGroup';
 import { button, el, setText } from './dom';
@@ -100,7 +100,7 @@ export class Hud {
     this.last = s;
     setText(this.coins, formatNum(s.coins));
     setText(this.gems, formatNum(s.gems));
-    setText(this.mult, `×${formatMult(rebirthMult(s.tokens) * s.passMult)}`);
+    setText(this.mult, `×${formatMult(trainSpeedMult(s))}`);
     setText(this.atk, formatNum(damagePerShot(s)));
     setText(this.sps, shotsPerSec(s).toFixed(2).replace(/\.?0+$/, ''));
     setText(this.dps, formatNum(autoDps(s)));

@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BALANCE } from '../../src/sim/balance.ts';
-import { newState } from '../../src/sim/state.ts';
+import { newState, type GameState } from '../../src/sim/state.ts';
 import { damagePerShot, goldMult, shotsPerSec } from '../../src/sim/actions.ts';
 import {
-  buyGear, buyMachine, gainPerShot, GEAR, gearPrice, machineAffordable, machineCost, mentorCount, rebirthMult, stationMult, train,
+  buyGear, buyMachine, gainPerShot, GEAR, gearPrice, machineAffordable, machineCost, mentorCount, rebirthMult, stationMult, train, trainSpeedMult,
 } from '../../src/sim/training.ts';
 
 test('each station trains only its own stat, without a cap', () => {
@@ -79,4 +79,16 @@ test('trainRate: attack follows fire rate, fire-rate and gold stations run at a 
   assert.equal(trainRate(fast, 'atk'), shotsPerSec(fast));
   assert.equal(trainRate(s, 'spd'), BALANCE.train.actionsPerSec);
   assert.equal(trainRate(fast, 'coin'), BALANCE.train.actionsPerSec);
+});
+
+// 2026-11-17: 환생 창·HUD는 '훈련 속도 배율'에 공격력 패스를 곱해 ×8로, 환생 뒤 가운데 문구는 ×4로 보였음.
+// 실제 훈련량은 환생 배율만 씀 (패스는 공격력) → 화면 배율은 trainSpeedMult 하나로
+test('trainSpeedMult: what training actually gets; the attack pass does not change it', () => {
+  const base: GameState = { ...newState(0), tokens: 4 };
+  const passed: GameState = { ...base, passMult: 2 };
+  assert.equal(trainSpeedMult(base), 4);
+  assert.equal(trainSpeedMult(passed), 4);
+  assert.equal(gainPerShot(passed, 'atk', 1), gainPerShot(base, 'atk', 1));
+  const more: GameState = { ...base, tokens: 5 };
+  assert.equal(gainPerShot(more, 'atk', 1) / gainPerShot(base, 'atk', 1), trainSpeedMult(more) / trainSpeedMult(base));
 });

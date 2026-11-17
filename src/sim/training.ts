@@ -106,6 +106,14 @@ export function rebirthMult(tokens: number): number {
   return (n % 2 === 1 ? 1.5 : 1) * 2 ** Math.floor(n / 2);
 }
 
+/**
+ * 화면에 보이는 '훈련 속도 배율' = 실제 훈련량에 곱하는 환생 배율 (gainPerShot). 공격력 패스는 공격력에만 곱해서 넣지 않음
+ * (2026-11-17: 환생 창·HUD는 패스까지 곱해 ×8, 환생 뒤 가운데 문구는 ×4로 서로 달랐음)
+ */
+export function trainSpeedMult(s: Pick<GameState, 'tokens'>): number {
+  return rebirthMult(s.tokens);
+}
+
 /** 훈련장 등급 배율 (월드 w 광장의 훈련장) */
 export function stationMult(world: number): number {
   return T().station[Math.max(0, Math.min(T().station.length - 1, world - 1))]!;
@@ -114,7 +122,7 @@ export function stationMult(world: number): number {
 /** world 훈련장에서 한 발에 오르는 양 */
 export function gainPerShot(s: GameState, k: TrainKind, world: number): number {
   return T().gain[k] * stationMult(world) * T().machineStep ** machineLv(s, k) * gearMult(s, k)
-    * T().mentorMult ** mentorCount(s.bestStage) * rebirthMult(s.tokens);
+    * T().mentorMult ** mentorCount(s.bestStage) * trainSpeedMult(s);
 }
 
 /** 기구 레벨 lv → lv+n 골드 합 */
